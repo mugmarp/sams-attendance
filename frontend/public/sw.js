@@ -1,4 +1,4 @@
-const CACHE = "sams-plain-js-20261111-v1";
+const CACHE = "sams-workspace-v2";
 const FILES = [
   "/login",
   "/login.html",
@@ -13,7 +13,12 @@ const FILES = [
   ),
 ];
 self.addEventListener("install", (event) =>
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES))),
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) => cache.addAll(FILES))
+      .then(() => self.skipWaiting()),
+  ),
 );
 self.addEventListener("activate", (event) =>
   event.waitUntil(

@@ -16,13 +16,15 @@ export const time = (value) =>
     hour: "2-digit",
     minute: "2-digit",
   });
+let serverOffset = 0;
+export const currentDate = () => new Date(Date.now() + serverOffset);
 export const day = () =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: "Africa/Kampala",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(new Date());
+  }).format(currentDate());
 export const home = (role) =>
   role === "STUDENT"
     ? "/student/checkin"
@@ -61,6 +63,13 @@ export async function init(roles) {
     location.replace(home(user.role));
     return null;
   }
+  try {
+    const health = await api("/health");
+    const timestamp = Date.parse(health.now);
+    if (Number.isFinite(timestamp)) serverOffset = timestamp - Date.now();
+  } catch {
+    /* Keep saved views available offline. */
+  }
   const links =
     user.role === "STUDENT"
       ? [
@@ -73,8 +82,51 @@ export async function init(roles) {
             ["/examiner/dashboard", "Classes"],
           ]
         : [["/examiner/dashboard", "My classes"]];
+  const icons = {
+    "/admin/courses": '<path d="M4 19V5m0 14h16M8 15v-4m5 4V7m5 8v-7"/>',
+    "/examiner/dashboard":
+      '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>',
+    "/student/checkin":
+      '<path d="m5 12 4 4L19 6"/><rect x="3" y="3" width="18" height="18" rx="3"/>',
+    "/student/summary": '<path d="M4 19V5m0 14h16M8 15v-4m5 4V7m5 8v-7"/>',
+  };
+  const active = (path) =>
+    location.pathname === path ||
+    (path === "/admin/courses" &&
+      location.pathname.startsWith("/admin/eligibility/")) ||
+    (path === "/examiner/dashboard" &&
+      location.pathname.startsWith("/examiner/"));
+  const title =
+    location.pathname.includes("/eligibility/") ||
+    location.pathname.includes("/report/")
+      ? "Attendance report"
+      : location.pathname.includes("/session/")
+        ? "Class register"
+        : links.find(([path]) => active(path))?.[1] || "Attendance";
+  const initials = user.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((name) => name[0])
+    .join("");
+  document.body.classList.add("workspace");
   $("#site-header").innerHTML =
-    `<div class="header-inner"><div class="header-top"><a class="brand" href="${home(user.role)}">SAMS <small>MUST attendance</small></a><div class="account"><span>${escape(user.name)} · ${user.role.toLowerCase()}</span><button id="logout">Sign out</button></div></div><nav aria-label="Main navigation">${links.map(([path, label]) => `<a href="${path}" ${location.pathname === path ? 'aria-current="page"' : ""}>${label}</a>`).join("")}</nav></div>`;
+    `<aside class="sidebar"><a class="brand" href="${home(user.role)}"><span class="brand-mark">S</span><span>SAMS<small>MUST attendance</small></span></a><p class="nav-caption">WORKSPACE</p><nav aria-label="Main navigation">${links.map(([path, label]) => `<a href="${path}" ${active(path) ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24" aria-hidden="true">${icons[path]}</svg>${label}</a>`).join("")}</nav><div class="sidebar-bottom"><div class="profile"><span class="avatar">${escape(initials)}</span><div><strong>${escape(user.name)}</strong><small>${user.role === "EXAMINER" ? "Lecturer" : user.role === "ADMIN" ? "Registrar" : "Student"}</small></div></div><button id="logout">Sign out</button></div></aside><div class="workspace-topbar"><span class="workspace-title">${escape(title)}</span><div class="workspace-date"><time id="current-date"></time><span>Africa/Kampala · EAT</span></div></div>`;
+  const renderDate = () => {
+    const date = currentDate();
+    $("#current-date").dateTime = date.toISOString();
+    $("#current-date").textContent = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Kampala",
+      weekday: "short",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(date);
+  };
+  renderDate();
+  setInterval(renderDate, 30000);
   $("#site-header").hidden = false;
   $("#logout").onclick = () => {
     clearSession();

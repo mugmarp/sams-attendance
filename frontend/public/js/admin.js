@@ -1,5 +1,5 @@
 import { api } from "./api.js";
-import { $, escape, init, showError, notice } from "./common.js";
+import { $, escape, init, showError, notice, currentDate } from "./common.js";
 const lecturer = location.pathname.startsWith("/examiner/report/");
 const user = await init(lecturer ? ["EXAMINER", "ADMIN"] : ["ADMIN"]);
 const courseId =
@@ -47,9 +47,7 @@ function renderReport() {
     )
     .join("");
   $("#empty-report").hidden = visible.length > 0;
-  $("#report-rules").textContent =
-    report.rules +
-    " This prototype export is not an official examination register.";
+  $("#report-rules").textContent = report.rules;
 }
 async function loadReport() {
   try {
@@ -147,6 +145,14 @@ async function saveSetup(form, path, body, text) {
   }
 }
 if (user && !courseId) {
+  const calendarYear = Number(
+    new Intl.DateTimeFormat("en", {
+      timeZone: "Africa/Kampala",
+      year: "numeric",
+    }).format(currentDate()),
+  );
+  $("#new-academic-year").defaultValue =
+    calendarYear + "/" + (calendarYear + 1);
   await setupOptions().catch(showError);
   $("#user-form").onsubmit = (event) => {
     event.preventDefault();

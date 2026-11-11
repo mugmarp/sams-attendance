@@ -21,21 +21,21 @@ export async function seedDemo() {
   const hash = await bcrypt.hash("SamsDemo2026!", 12);
   const examiner = await prisma.user.upsert({
     where: { email: "examiner@demo.sams.test" },
-    update: {},
+    update: { name: "Course Lecturer" },
     create: {
       email: "examiner@demo.sams.test",
       passwordHash: hash,
-      name: "Demo Examiner",
+      name: "Course Lecturer",
       role: "EXAMINER",
     },
   });
   await prisma.user.upsert({
     where: { email: "admin@demo.sams.test" },
-    update: {},
+    update: { name: "Academic Registrar" },
     create: {
       email: "admin@demo.sams.test",
       passwordHash: hash,
-      name: "Demo Registrar",
+      name: "Academic Registrar",
       role: "ADMIN",
     },
   });
@@ -104,13 +104,13 @@ export async function seedDemo() {
       const startTime = new Date(now.getTime() - n * 86400000);
       const session = await prisma.session.upsert({
         where: { naturalKey: `demo:${code}:history:${n}` },
-        update: {},
+        update: { room: "Teaching Room" },
         create: {
           naturalKey: `demo:${code}:history:${n}`,
           courseId: course.id,
           startTime,
           endTime: new Date(startTime.getTime() + 3600000),
-          room: "Demo Lab",
+          room: "Teaching Room",
           status: "COMPLETED",
         },
       });
@@ -135,11 +135,11 @@ export async function seedDemo() {
     }
     await prisma.session.upsert({
       where: { naturalKey: `demo:${code}:live:${day}` },
-      update: {},
+      update: { room: "Teaching Room" },
       create: {
         naturalKey: `demo:${code}:live:${day}`,
         courseId: course.id,
-        room: "Demo Lab",
+        room: "Teaching Room",
         startTime: new Date(now.getTime() - 15 * 60000),
         endTime: new Date(now.getTime() + 105 * 60000),
       },
@@ -148,11 +148,11 @@ export async function seedDemo() {
     nextDay.setUTCDate(nextDay.getUTCDate() + 1);
     await prisma.session.upsert({
       where: { naturalKey: `demo:${code}:next:${day}` },
-      update: {},
+      update: { room: "Teaching Room" },
       create: {
         naturalKey: `demo:${code}:next:${day}`,
         courseId: course.id,
-        room: "Demo Lab",
+        room: "Teaching Room",
         startTime: nextDay,
         endTime: new Date(nextDay.getTime() + 3600000),
       },

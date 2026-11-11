@@ -1,5 +1,13 @@
 import { api } from "./api.js";
-import { $, escape, time, day, init, showError } from "./common.js";
+import {
+  $,
+  escape,
+  time,
+  day,
+  init,
+  showError,
+  currentDate,
+} from "./common.js";
 const user = await init(["EXAMINER", "ADMIN"]);
 let current = null,
   roster = [],
@@ -28,7 +36,7 @@ async function loadDashboard() {
 }
 function renderCode() {
   if (!current) return;
-  const now = Date.now(),
+  const now = currentDate().getTime(),
     code =
       current.activeCode &&
       new Date(current.activeCode.expiresAt).getTime() > now
@@ -64,7 +72,7 @@ async function loadSession() {
     $("#roster").innerHTML = roster
       .map(
         (row) =>
-          `<tr><td><strong>${escape(row.student.name)}</strong><br><span class="small">${escape(row.student.regNo)}</span></td><td>${escape(row.attendance?.status || (current.status === "COMPLETED" ? "ABSENT (no record)" : "Not recorded"))}</td><td>${row.attendance ? escape(row.attendance.method) + " · " + time(row.attendance.recordedAt) : "—"}${row.attendance?.changes.length ? `<details><summary>Change history</summary>${row.attendance.changes.map((c) => `<p>${escape(c.actor.name)}: ${escape(c.previousStatus || "unrecorded")} → ${escape(c.status)}. ${escape(c.reason)} (${time(c.recordedAt)})</p>`).join("")}</details>` : ""}</td><td><button data-student="${row.student.id}" ${current.status === "CANCELLED" || Date.now() < new Date(current.startTime).getTime() ? "disabled" : ""}>Correct</button></td></tr>`,
+          `<tr><td><strong>${escape(row.student.name)}</strong><br><span class="small">${escape(row.student.regNo)}</span></td><td>${escape(row.attendance?.status || (current.status === "COMPLETED" ? "ABSENT (no record)" : "Not recorded"))}</td><td>${row.attendance ? escape(row.attendance.method) + " · " + time(row.attendance.recordedAt) : "—"}${row.attendance?.changes.length ? `<details><summary>Change history</summary>${row.attendance.changes.map((c) => `<p>${escape(c.actor.name)}: ${escape(c.previousStatus || "unrecorded")} → ${escape(c.status)}. ${escape(c.reason)} (${time(c.recordedAt)})</p>`).join("")}</details>` : ""}</td><td><button data-student="${row.student.id}" ${current.status === "CANCELLED" || currentDate().getTime() < new Date(current.startTime).getTime() ? "disabled" : ""}>Correct</button></td></tr>`,
       )
       .join("");
     $("#roster")
@@ -177,8 +185,10 @@ if (user && !sessionId) {
     );
     return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
   };
-  $("#create-start").value = inputDate(new Date());
-  $("#create-end").value = inputDate(new Date(Date.now() + 3600000));
+  $("#create-start").value = inputDate(currentDate());
+  $("#create-end").value = inputDate(
+    new Date(currentDate().getTime() + 3600000),
+  );
   $("#create-session").onsubmit = async (event) => {
     event.preventDefault();
     const button = event.currentTarget.querySelector("button");

@@ -32,7 +32,7 @@ Open [http://localhost:3000](http://localhost:3000). One Express server serves t
 
 The backend reads `backend/.env` when started from that directory or with `npm start --prefix backend`. Keep secrets out of Git. Frontend JavaScript calls same-origin `/api` with fetch().
 
-## Demo accounts
+## Sample accounts
 
 These synthetic accounts exist after seeding; they do not belong to the university.
 
@@ -44,7 +44,7 @@ These synthetic accounts exist after seeding; they do not belong to the universi
 
 Additional students: student2 through student5 at demo.sams.test, with the same password. Seeded data includes two courses, five historical completed classes each, a current class and a next-day class. Repeated seeding preserves existing data. It does not reset completed same-day classes. For another live demonstration, create a new class through the lecturer form; no database reset is necessary.
 
-## Demonstrate the core workflow
+## Core workflow
 
 1. Sign in as the administrator. Create student/lecturer accounts if needed, create a course offering, choose its attendance threshold and enroll students.
 2. Sign in as the lecturer. Choose or create a class with Kampala start/end times and venue. Open the class and click **Start check-in**.
@@ -97,3 +97,5 @@ For Compose, copy root `.env.example` to `.env`, replace the secrets, then run `
 The validated local JSON importer is available with `IMPORT_INITIAL_PASSWORD=... npm run import -- /private/path/dataset.json` from backend. See [IMPORT_GUIDE.md](docs/IMPORT_GUIDE.md). The original weekly timetable/CSV files remain reference material and are not silently loaded as dated semester records.
 
 See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for HTTPS, proxy settings, backup and operational limits. Public hosting, institutional approval, SSO, account recovery/revocation, fee/coursework integration, HoD excuse approval and bulk marking are not claimed. Individual-member contribution work is excluded from this task as requested.
+
+The interface uses server-synchronized Kampala dates and normal attendance terminology. Account fixtures and historical records above are for local testing; live class records retain the dates entered by the lecturer.

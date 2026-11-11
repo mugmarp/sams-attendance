@@ -50,7 +50,11 @@ router.get(
   "/health",
   asyncHandler(async (_req, res) => {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: "ok" });
+    res.json({
+      status: "ok",
+      now: new Date().toISOString(),
+      timeZone: "Africa/Kampala",
+    });
   }),
 );
 router.post(
@@ -138,7 +142,7 @@ router.get(
           .parse(req.query.date)
       : kampalaDay();
     const start = new Date(`${day}T00:00:00+03:00`);
-    if (Number.isNaN(start.getTime()))
+    if (Number.isNaN(start.getTime()) || kampalaDay(start) !== day)
       throw new ValidationError("Invalid date");
     const sessions = await prisma.session.findMany({
       where: {

@@ -620,3 +620,17 @@ test("administrators provision accounts, offerings and enrollment; owners create
     .set(auth(examiner))
     .expect(200);
 });
+
+test("live dates use server time and invalid calendar days are rejected", async () => {
+  const before = Date.now();
+  const health = await request(app).get("/api/health").expect(200);
+  assert.equal(health.body.timeZone, "Africa/Kampala");
+  assert.ok(
+    Date.parse(health.body.now) >= before &&
+      Date.parse(health.body.now) <= Date.now(),
+  );
+  await request(app)
+    .get("/api/examiner/sessions/today?date=2026-02-31")
+    .set(auth(examiner))
+    .expect(400);
+});

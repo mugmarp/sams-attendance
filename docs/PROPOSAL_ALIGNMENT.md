@@ -23,3 +23,7 @@ Reviewed source documents supplied by the user: `SAMS_Proposal.pdf` and `Class_A
 | Individual contribution PRs | Excluded from this task | Explicit latest user instruction; no fabricated authorship or contributions |
 
 The current specification is PROPOSAL.md, API_SPEC.md and the running application. Earlier generic planning documents remain historical references.
+
+## Interface and live dates
+
+The Jibble interface supplied in the open tab informed the sidebar, compact top bar, card spacing and date placement. SAMS keeps its own identity and only its attendance actions; payroll, locations, billing, leave and other unrelated modules are not added. User-facing pages use normal product wording rather than repeated sample/prototype labels. Sample-data disclosure and credentials remain in the README. The live header uses the server clock in Africa/Kampala; class date inputs and the suggested (editable) academic-year pair derive from current dates, while persisted class timestamps remain unchanged.

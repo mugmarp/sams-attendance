@@ -232,7 +232,7 @@ test("plain forms provision a course and student, then create a lecturer class",
     .fill("Browser Setup Course");
   await page
     .getByLabel("Assigned examiner")
-    .selectOption({ label: "Demo Examiner (examiner@demo.sams.test)" });
+    .selectOption({ label: "Course Lecturer (examiner@demo.sams.test)" });
   await page.getByLabel("Attendance threshold (%)").fill("75");
   await page
     .getByRole("button", { name: "Create course", exact: true })
@@ -280,4 +280,41 @@ test("plain forms provision a course and student, then create a lecturer class",
     page.getByRole("heading", { name: "Attendance qualification" }),
   ).toBeVisible();
   await expect(page.locator("tbody")).toContainText(name);
+});
+
+test("workspace uses the real Kampala day and clean product wording", async ({
+  page,
+  request,
+}) => {
+  await login(page, "examiner");
+  const health = await (await request.get(`${apiURL}/api/health`)).json();
+  const expected = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Kampala",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(health.now));
+  await expect(page.locator("#date")).toHaveValue(expected);
+  await expect(page.locator("#current-date")).toContainText(
+    new Intl.DateTimeFormat("en", {
+      timeZone: "Africa/Kampala",
+      year: "numeric",
+    }).format(new Date(health.now)),
+  );
+  await expect(
+    page.getByRole("navigation", { name: "Main navigation" }),
+  ).toBeVisible();
+  // Course and venue names are user data; check the application shell wording.
+  await expect(page.locator("#site-header")).not.toContainText(
+    /\bdemo\b|\bprototype\b/i,
+  );
+  await expect(page.locator("footer")).not.toContainText(
+    /\bdemo\b|\bprototype\b/i,
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });
