@@ -9,6 +9,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { UnauthorizedError } from "../utils/errors.js";
 const publicUser = {
   id: true,
+  isActive: true,
   email: true,
   name: true,
   role: true,
@@ -27,7 +28,10 @@ export const login = asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { email: req.body.email.toLowerCase().trim() },
   });
-  if (!user || !(await bcrypt.compare(req.body.password, user.passwordHash)))
+  if (
+    !user?.isActive ||
+    !(await bcrypt.compare(req.body.password, user.passwordHash))
+  )
     throw new UnauthorizedError("Invalid email or password");
   const safe = await prisma.user.findUniqueOrThrow({
     where: { id: user.id },
@@ -46,7 +50,7 @@ export const refresh = asyncHandler(async (req, res) => {
     where: { id },
     select: publicUser,
   });
-  if (!user) throw new UnauthorizedError();
+  if (!user?.isActive) throw new UnauthorizedError();
   res.json({ ...tokens(user), user });
 });
 export const me = asyncHandler(async (req, res) => {
@@ -54,6 +58,6 @@ export const me = asyncHandler(async (req, res) => {
     where: { id: req.user.userId },
     select: publicUser,
   });
-  if (!user) throw new UnauthorizedError();
+  if (!user?.isActive) throw new UnauthorizedError();
   res.json(user);
 });

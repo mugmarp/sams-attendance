@@ -25,7 +25,7 @@ export function sessionDTO(session, lecturer = false) {
     ...(lecturer ? { activeCode: active } : {}),
   };
 }
-async function locked(tx, id) {
+export async function locked(tx, id) {
   await tx.$queryRaw`SELECT id FROM "Session" WHERE id = ${id} FOR UPDATE`;
   const session = await tx.session.findUnique({
     where: { id },
@@ -34,7 +34,7 @@ async function locked(tx, id) {
   if (!session) throw new NotFoundError("Session not found");
   return session;
 }
-function owns(actor, examinerId) {
+export function owns(actor, examinerId) {
   if (actor.role !== "ADMIN" && actor.userId !== examinerId)
     throw new ForbiddenError("This class belongs to another examiner");
 }
@@ -78,7 +78,9 @@ export async function manageSession(actor, id, action) {
     const updated = await tx.session.update({
       where: { id },
       data: {
-        ...(action === "stop" ? {} : { status: action }),
+        ...(action === "stop"
+          ? {}
+          : { status: action, version: { increment: 1 } }),
         checkinSecret: null,
         checkinStartedAt: null,
         checkinClosesAt: null,
@@ -161,23 +163,42 @@ export async function correctAttendance(
       where: { studentId_courseId: { studentId, courseId: session.courseId } },
     });
     if (!enrollment) throw new ValidationError("Student not enrolled");
-    const previous = await tx.attendance.findUnique({
-      where: { studentId_sessionId: { studentId, sessionId } },
-    });
-    const attendance = await tx.attendance.upsert({
-      where: { studentId_sessionId: { studentId, sessionId } },
-      create: { studentId, sessionId, status, method: "MANUAL" },
-      update: { status, method: "MANUAL" },
-    });
-    await tx.attendanceChange.create({
-      data: {
-        attendanceId: attendance.id,
-        actorId: actor.userId,
-        previousStatus: previous?.status,
-        status,
-        reason,
-      },
-    });
-    return attendance;
+    return writeManualAttendance(
+      tx,
+      actor,
+      sessionId,
+      studentId,
+      status,
+      reason,
+    );
   });
+}
+export async function writeManualAttendance(
+  tx,
+  actor,
+  sessionId,
+  studentId,
+  status,
+  reason,
+  operationId,
+) {
+  const previous = await tx.attendance.findUnique({
+    where: { studentId_sessionId: { studentId, sessionId } },
+  });
+  const attendance = await tx.attendance.upsert({
+    where: { studentId_sessionId: { studentId, sessionId } },
+    create: { studentId, sessionId, status, method: "MANUAL" },
+    update: { status, method: "MANUAL", version: { increment: 1 } },
+  });
+  await tx.attendanceChange.create({
+    data: {
+      attendanceId: attendance.id,
+      operationId,
+      actorId: actor.userId,
+      previousStatus: previous?.status,
+      status,
+      reason,
+    },
+  });
+  return attendance;
 }

@@ -35,6 +35,7 @@ enum CheckInMethod {
 model User {
   id String @id @default(cuid())
   email String @unique
+  isActive Boolean @default(true)
   passwordHash String
   role UserRole @default(STUDENT)
   regNo String? @unique
@@ -47,6 +48,10 @@ model User {
   enrollments Enrollment[]
   attendances Attendance[]
   changes AttendanceChange[]
+  preparations OfflinePreparation[]
+  receipts SyncReceipt[]
+  claims AttendanceClaim[] @relation("ClaimStudent")
+  decisions AttendanceClaim[] @relation("ClaimReviewer")
 }
 model Course {
   id String @id @default(cuid())
@@ -66,6 +71,7 @@ model Course {
 }
 model Session {
   id String @id @default(cuid())
+  version Int @default(1)
   naturalKey String @unique
   courseId String
   course Course @relation(fields: [courseId], references: [id])
@@ -78,6 +84,8 @@ model Session {
   checkinStartedAt DateTime?
   checkinClosesAt DateTime?
   attendances Attendance[]
+  preparations OfflinePreparation[]
+  claims AttendanceClaim[]
   @@index([courseId, startTime])
 }
 model Enrollment {
@@ -94,6 +102,7 @@ model Attendance {
   student User @relation(fields: [studentId], references: [id])
   sessionId String
   session Session @relation(fields: [sessionId], references: [id])
+  version Int @default(1)
   status AttendanceStatus @default(PRESENT)
   method CheckInMethod @default(CODE)
   recordedAt DateTime @default(now())
@@ -106,8 +115,55 @@ model AttendanceChange {
   attendance Attendance @relation(fields: [attendanceId], references: [id])
   actorId String
   actor User @relation(fields: [actorId], references: [id])
+  operationId String? @db.Uuid
   previousStatus AttendanceStatus?
   status AttendanceStatus
   reason String
   recordedAt DateTime @default(now())
+}
+
+model OfflinePreparation {
+  id String @id @default(cuid())
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  sessionId String
+  session Session @relation(fields: [sessionId], references: [id])
+  purpose String
+  snapshot Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  @@index([actorId, sessionId])
+}
+model SyncReceipt {
+  id String @id @default(cuid())
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  operationId String @db.Uuid
+  payloadHash String
+  payload Json
+  result Json
+  receivedAt DateTime @default(now())
+  @@unique([actorId, operationId])
+}
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+model AttendanceClaim {
+  id String @id @default(cuid())
+  studentId String
+  student User @relation("ClaimStudent", fields: [studentId], references: [id])
+  sessionId String
+  session Session @relation(fields: [sessionId], references: [id])
+  reason String
+  status ClaimStatus @default(PENDING)
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  reviewerId String?
+  reviewer User? @relation("ClaimReviewer", fields: [reviewerId], references: [id])
+  decisionReason String?
+  decidedAt DateTime?
+  @@unique([studentId, sessionId])
+  @@index([sessionId, status])
 }

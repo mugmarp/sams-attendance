@@ -1,20 +1,27 @@
+import { prisma } from "../config/db.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { UnauthorizedError, ForbiddenError } from "../utils/errors.js";
 import { UserRole } from "@prisma/client";
-export function authenticate(req, _res, next) {
+export const authenticate = asyncHandler(async (req, _res, next) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
+  if (!authHeader?.startsWith("Bearer "))
     throw new UnauthorizedError("Missing or invalid authorization header");
-  }
-  const token = authHeader.slice(7);
+  let payload;
   try {
-    const payload = verifyAccessToken(token);
-    req.user = payload;
-    next();
+    payload = verifyAccessToken(authHeader.slice(7));
   } catch {
     throw new UnauthorizedError("Invalid or expired token");
   }
-}
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { role: true, isActive: true },
+  });
+  if (!user?.isActive)
+    throw new UnauthorizedError("This account is unavailable");
+  req.user = { ...payload, role: user.role };
+  next();
+});
 export function authorize(...allowedRoles) {
   return (req, _res, next) => {
     if (!req.user) {

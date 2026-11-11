@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
@@ -27,6 +28,9 @@ before(async () => {
   process.env.JWT_SECRET = "test-access-secret-at-least-32-characters";
   process.env.JWT_REFRESH_SECRET = "test-refresh-secret-at-least-32-characters";
   app = (await import("../src/app.js")).default;
+  await db.syncReceipt.deleteMany();
+  await db.offlinePreparation.deleteMany();
+  await db.attendanceClaim.deleteMany();
   await db.attendanceChange.deleteMany();
   await db.attendance.deleteMany();
   await db.enrollment.deleteMany();
@@ -647,4 +651,429 @@ test("queued check-ins reject an originating account different from the token", 
       ).id,
     })
     .expect(403);
+});
+
+async function freshClass() {
+  return db.session.create({
+    data: {
+      courseId,
+      naturalKey: "offline-test:" + randomUUID(),
+      startTime: new Date(Date.now() - 60000),
+      endTime: new Date(Date.now() + 3600000),
+    },
+  });
+}
+async function preparation(session, purpose = "MARK", token = examiner) {
+  return (
+    await request(app)
+      .post("/api/sync/preparations")
+      .set(auth(token))
+      .send({ sessionId: session.id, purpose })
+      .expect(201)
+  ).body;
+}
+function markOperation(bundle, override = {}) {
+  const row = bundle.roster.find((r) => r.student.id === studentId);
+  return {
+    operationId: randomUUID(),
+    type: "MARK",
+    sessionId: bundle.session.id,
+    preparationId: bundle.id,
+    studentId,
+    baseSessionVersion: bundle.session.version,
+    baseAttendanceVersion: row.attendance?.version || 0,
+    observedAt: new Date().toISOString(),
+    status: "PRESENT",
+    reason: "Observed during the class",
+    ...override,
+  };
+}
+async function upload(token, actorId, operations) {
+  return (
+    await request(app)
+      .post("/api/sync/operations")
+      .set(auth(token))
+      .send({ actorId, operations })
+      .expect(200)
+  ).body.results;
+}
+async function examinerId() {
+  return (await db.course.findUnique({ where: { id: courseId } })).examinerId;
+}
+
+test("prepared rosters are owned, bounded and omit all check-in secrets", async () => {
+  const session = await freshClass();
+  await request(app)
+    .post("/api/sync/preparations")
+    .set(auth(student))
+    .send({ sessionId: session.id })
+    .expect(403);
+  await request(app)
+    .post("/api/sync/preparations")
+    .set(auth(other))
+    .send({ sessionId: session.id })
+    .expect(403);
+  const bundle = await preparation(session);
+  assert.equal(bundle.userId, await examinerId());
+  assert.ok(
+    Date.parse(bundle.expiresAt) - Date.parse(bundle.createdAt) <=
+      72 * 3600000 + 1000,
+  );
+  assert.ok(!JSON.stringify(bundle).includes('"checkinSecret"'));
+  assert.ok(!JSON.stringify(bundle).includes('"activeCode"'));
+  assert.ok(bundle.roster.every((r) => !("passwordHash" in r.student)));
+});
+
+test("offline marks and receipts commit once under concurrent retries; IDs cannot change payload", async () => {
+  const bundle = await preparation(await freshClass()),
+    op = markOperation(bundle),
+    actorId = await examinerId();
+  const results = await Promise.all([
+    upload(examiner, actorId, [op]),
+    upload(examiner, actorId, [
+      { ...op, operationId: op.operationId.toUpperCase() },
+    ]),
+  ]);
+  assert.ok(results.every((r) => r[0].outcome === "ACCEPTED"));
+  assert.equal(results.filter((r) => r[0].replayed).length, 1);
+  assert.equal(
+    await db.attendanceChange.count({ where: { operationId: op.operationId } }),
+    1,
+  );
+  assert.equal(
+    await db.syncReceipt.count({
+      where: { actorId, operationId: op.operationId },
+    }),
+    1,
+  );
+  const [changed] = await upload(examiner, actorId, [
+    { ...op, status: "ABSENT" },
+  ]);
+  assert.equal(changed.code, "OPERATION_ID_REUSED");
+  assert.equal(
+    (
+      await db.attendance.findUnique({
+        where: { studentId_sessionId: { studentId, sessionId: op.sessionId } },
+      })
+    ).status,
+    "PRESENT",
+  );
+});
+
+test("manual changes cause a conflict and an explicit current-version review can resolve it", async () => {
+  const session = await freshClass(),
+    bundle = await preparation(session),
+    op = markOperation(bundle),
+    actorId = await examinerId();
+  await request(app)
+    .post(`/api/examiner/sessions/${session.id}/attendance`)
+    .set(auth(examiner))
+    .send({ studentId, status: "ABSENT", reason: "Initial verified register" })
+    .expect(200);
+  const [conflict] = await upload(examiner, actorId, [op]);
+  assert.equal(conflict.code, "ATTENDANCE_CHANGED");
+  assert.equal(conflict.current.attendance.status, "ABSENT");
+  assert.equal(
+    await db.attendanceChange.count({ where: { operationId: op.operationId } }),
+    0,
+  );
+  const latest = await preparation(session, "REVIEW");
+  assert.ok(!JSON.stringify(latest).includes("Initial verified register"));
+  assert.deepEqual(
+    latest.roster.find((r) => r.student.id === studentId).attendance.changes,
+    [],
+  );
+  const reviewed = markOperation(latest, {
+    type: "REVIEW_MARK",
+    reviewOf: op.operationId,
+    reason: "Reviewed the saved observation with the current record",
+  });
+  const [accepted] = await upload(examiner, actorId, [reviewed]);
+  assert.equal(accepted.outcome, "ACCEPTED");
+  assert.equal(accepted.attendance.version, 2);
+  const receipt = await db.syncReceipt.findUnique({
+    where: { actorId_operationId: { actorId, operationId: op.operationId } },
+  });
+  assert.equal(receipt.result.outcome, "CONFLICT");
+});
+
+test("expiry, cancellation, finalization and enrollment changes never silently overwrite", async () => {
+  const actorId = await examinerId();
+  for (const change of [
+    "expiry",
+    "cancel",
+    "complete",
+    "enrollment",
+    "policy",
+  ]) {
+    const session = await freshClass(),
+      bundle = await preparation(session),
+      op = markOperation(bundle);
+    let restore;
+    if (change === "expiry")
+      await db.offlinePreparation.update({
+        where: { id: bundle.id },
+        data: { expiresAt: new Date(Date.now() - 1000) },
+      });
+    if (change === "cancel" || change === "complete")
+      await request(app)
+        .post(`/api/examiner/sessions/${session.id}/${change}`)
+        .set(auth(examiner))
+        .expect(200);
+    if (change === "enrollment") {
+      const enrollment = await db.enrollment.findUnique({
+        where: { studentId_courseId: { studentId, courseId } },
+      });
+      await db.enrollment.delete({ where: { id: enrollment.id } });
+      await db.enrollment.create({ data: { studentId, courseId } });
+    }
+    if (change === "policy") {
+      const course = await db.course.findUnique({ where: { id: courseId } });
+      await db.course.update({
+        where: { id: courseId },
+        data: {
+          attendanceThreshold: course.attendanceThreshold === 75 ? 80 : 75,
+        },
+      });
+      restore = () =>
+        db.course.update({
+          where: { id: courseId },
+          data: { attendanceThreshold: course.attendanceThreshold },
+        });
+    }
+    try {
+      const [result] = await upload(examiner, actorId, [op]);
+      assert.ok(
+        ["CONFLICT", "DENIED", "NEEDS_REVIEW"].includes(result.outcome),
+        change,
+      );
+      assert.equal(
+        await db.attendance.count({ where: { sessionId: session.id } }),
+        0,
+        change,
+      );
+    } finally {
+      if (restore) await restore();
+    }
+  }
+});
+
+test("sync rechecks ownership, current role, account status and originating identity", async () => {
+  const session = await freshClass(),
+    bundle = await preparation(session),
+    op = markOperation(bundle),
+    actorId = await examinerId();
+  const otherId = (
+    await db.user.findUnique({ where: { email: "other@test.example" } })
+  ).id;
+  await db.course.update({
+    where: { id: courseId },
+    data: { examinerId: otherId },
+  });
+  try {
+    assert.equal(
+      (await upload(examiner, actorId, [op]))[0].code,
+      "OWNERSHIP_CHANGED",
+    );
+  } finally {
+    await db.course.update({
+      where: { id: courseId },
+      data: { examinerId: actorId },
+    });
+  }
+  await request(app)
+    .post("/api/sync/operations")
+    .set(auth(examiner))
+    .send({ actorId: studentId, operations: [op] })
+    .expect(403);
+  await db.user.update({ where: { id: actorId }, data: { role: "STUDENT" } });
+  try {
+    assert.equal(
+      (
+        await upload(examiner, actorId, [{ ...op, operationId: randomUUID() }])
+      )[0].code,
+      "ROLE_CHANGED",
+    );
+  } finally {
+    await db.user.update({
+      where: { id: actorId },
+      data: { role: "EXAMINER" },
+    });
+  }
+  await db.user.update({ where: { id: actorId }, data: { isActive: false } });
+  try {
+    await request(app)
+      .post("/api/sync/operations")
+      .set(auth(examiner))
+      .send({ actorId, operations: [op] })
+      .expect(401);
+    await request(app)
+      .post("/api/auth/login")
+      .send({ email: "teacher@test.example", password: "TestPassword2026!" })
+      .expect(401);
+  } finally {
+    await db.user.update({ where: { id: actorId }, data: { isActive: true } });
+  }
+});
+
+test("independent operations return individual results and batch validation is strict", async () => {
+  const bundle = await preparation(await freshClass()),
+    actorId = await examinerId();
+  const valid = markOperation(bundle),
+    invalid = markOperation(bundle, {
+      preparationId: "c0000000000000000000000000",
+    });
+  const results = await upload(examiner, actorId, [invalid, valid]);
+  assert.equal(results[0].outcome, "DENIED");
+  assert.equal(results[1].outcome, "ACCEPTED");
+  await request(app)
+    .post("/api/sync/operations")
+    .set(auth(examiner))
+    .send({ actorId, operations: [{ ...valid, operationId: "not-a-uuid" }] })
+    .expect(400);
+  await request(app)
+    .post("/api/sync/operations")
+    .set(auth(examiner))
+    .send({ actorId, operations: Array(21).fill(valid) })
+    .expect(400);
+  await request(app)
+    .post("/api/sync/operations")
+    .set(auth(examiner))
+    .send({ actorId, operations: [{ ...valid, untrustedOverride: true }] })
+    .expect(400);
+});
+
+test("attendance, audit and receipt all roll back when the audit write fails", async () => {
+  const bundle = await preparation(await freshClass()),
+    actorId = await examinerId(),
+    op = markOperation(bundle, { reason: "simulate audit failure" });
+  await db.$executeRawUnsafe(
+    "ALTER TABLE \"AttendanceChange\" ADD CONSTRAINT test_fail_sync_audit CHECK (reason <> 'simulate audit failure')",
+  );
+  try {
+    await request(app)
+      .post("/api/sync/operations")
+      .set(auth(examiner))
+      .send({ actorId, operations: [op] })
+      .expect(500);
+    assert.equal(
+      await db.attendance.count({ where: { sessionId: op.sessionId } }),
+      0,
+    );
+    assert.equal(
+      await db.syncReceipt.count({
+        where: { actorId, operationId: op.operationId },
+      }),
+      0,
+    );
+  } finally {
+    await db.$executeRawUnsafe(
+      'ALTER TABLE "AttendanceChange" DROP CONSTRAINT test_fail_sync_audit',
+    );
+  }
+  assert.equal((await upload(examiner, actorId, [op]))[0].outcome, "ACCEPTED");
+});
+
+async function claimFor(session) {
+  const op = {
+    type: "STUDENT_CLAIM",
+    operationId: randomUUID(),
+    sessionId: session.id,
+    observedAt: new Date().toISOString(),
+    reason: "I attended but could not send my check-in",
+  };
+  const [result] = await upload(student, studentId, [op]);
+  assert.equal(result.outcome, "ACCEPTED");
+  return { op, claim: result.claim };
+}
+function decision(session, claim, overrides = {}) {
+  return {
+    type: "CLAIM_DECISION",
+    operationId: randomUUID(),
+    sessionId: session.id,
+    studentId,
+    claimId: claim.id,
+    baseClaimVersion: claim.version,
+    baseSessionVersion: session.version,
+    baseAttendanceVersion: 0,
+    decision: "APPROVE",
+    status: "PRESENT",
+    observedAt: new Date().toISOString(),
+    reason: "Reviewed class observations and verified this request",
+    ...overrides,
+  };
+}
+
+test("student claims remain uncounted until one idempotent lecturer decision", async () => {
+  const session = await freshClass(),
+    { op, claim } = await claimFor(session),
+    actorId = await examinerId();
+  assert.equal((await upload(student, studentId, [op]))[0].replayed, true);
+  assert.equal(
+    await db.attendance.count({ where: { sessionId: session.id } }),
+    0,
+  );
+  await request(app)
+    .get(`/api/examiner/sessions/${session.id}/claims`)
+    .set(auth(other))
+    .expect(403);
+  const approve = decision(session, claim);
+  const [accepted] = await upload(examiner, actorId, [approve]);
+  assert.equal(accepted.claim.status, "APPROVED");
+  assert.equal(accepted.attendance.status, "PRESENT");
+  assert.equal((await upload(examiner, actorId, [approve]))[0].replayed, true);
+  assert.equal(
+    await db.attendanceChange.count({
+      where: { operationId: approve.operationId },
+    }),
+    1,
+  );
+  assert.equal(
+    (
+      await upload(examiner, actorId, [
+        { ...approve, operationId: randomUUID(), decision: "REJECT" },
+      ])
+    )[0].code,
+    "CLAIM_CHANGED",
+  );
+  const visible = await request(app)
+    .get("/api/student/attendance-claims")
+    .set(auth(student))
+    .expect(200);
+  assert.ok(
+    visible.body.some((c) => c.id === claim.id && c.status === "APPROVED"),
+  );
+});
+
+test("claim rejection changes no attendance and stale approvals require review", async () => {
+  const actorId = await examinerId();
+  const session = await freshClass(),
+    { claim } = await claimFor(session);
+  await request(app)
+    .post(`/api/examiner/sessions/${session.id}/attendance`)
+    .set(auth(examiner))
+    .send({
+      studentId,
+      status: "ABSENT",
+      reason: "Verified register before request review",
+    })
+    .expect(200);
+  const [stale] = await upload(examiner, actorId, [decision(session, claim)]);
+  assert.equal(stale.code, "REGISTER_CHANGED");
+  const [rejected] = await upload(examiner, actorId, [
+    decision(session, claim, { decision: "REJECT" }),
+  ]);
+  assert.equal(rejected.claim.status, "REJECTED");
+  assert.equal(rejected.attendance.status, "ABSENT");
+  const second = await freshClass(),
+    pending = await claimFor(second);
+  await request(app)
+    .post(`/api/examiner/sessions/${second.id}/complete`)
+    .set(auth(examiner))
+    .expect(200);
+  const completed = await db.session.findUnique({ where: { id: second.id } });
+  const [approved] = await upload(examiner, actorId, [
+    decision(completed, pending.claim),
+  ]);
+  assert.equal(approved.claim.status, "APPROVED");
 });

@@ -1,3 +1,4 @@
+import syncRoutes from "./sync.js";
 import setupRoutes from "./setup.js";
 import { Router } from "express";
 import { z } from "zod";
@@ -76,6 +77,7 @@ router.post(
 );
 router.get("/auth/me", authenticate, me);
 router.use(authenticate);
+router.use(syncRoutes);
 router.get(
   "/student/sessions/upcoming",
   requireStudent,
