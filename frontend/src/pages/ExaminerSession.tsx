@@ -1,215 +1,294 @@
-// frontend/src/pages/ExaminerSession.tsx
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { api } from '../services/api';
-import type { Session, AttendanceRecord } from '../types/api';
-import { format } from 'date-fns';
-
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { useLoad, formatTime } from "../hooks/useLoad";
+import { api, message } from "../services/api";
+import type { Session, RosterRow, AttendanceStatus } from "../types/api";
 export function ExaminerSession() {
-  const { id } = useParams<{ id: string }>();
-  const [session, setSession] = useState<Session | null>(null);
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [codeLoading, setCodeLoading] = useState(false);
-  const [activeCode, setActiveCode] = useState<{ code: string; expiresAt: string } | null>(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
+  const { id } = useParams();
+  const session = useLoad<Session>(`/examiner/sessions/${id}`, 5000);
+  const roster = useLoad<RosterRow[]>(
+    `/examiner/sessions/${id}/attendance`,
+    5000,
+  );
+  const [now, setNow] = useState(Date.now());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [editing, setEditing] = useState<RosterRow | null>(null);
+  const [status, setStatus] = useState<AttendanceStatus>("PRESENT");
+  const [reason, setReason] = useState("");
+  const [confirm, setConfirm] = useState<"complete" | "cancel" | null>(null);
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [{ data: sessionData }, { data: attendanceData }] = await Promise.all([
-          api.get(`/examiner/sessions/${id}`),
-          api.get(`/examiner/sessions/${id}/attendance`),
-        ]);
-        setSession(sessionData);
-        setAttendance(attendanceData);
-        if (sessionData.hasActiveCode) {
-          setActiveCode({ code: sessionData.checkinCode!, expiresAt: sessionData.codeExpiresAt! });
-        }
-      } catch (err: any) {
-        setError(err.response?.data?.message ?? 'Failed to load session');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [id]);
-
-  useEffect(() => {
-    if (!activeCode) return;
-    const interval = setInterval(() => {
-      const remaining = new Date(activeCode.expiresAt).getTime() - Date.now();
-      if (remaining <= 0) {
-        setActiveCode(null);
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [activeCode]);
-
-  const handleStartCheckin = async () => {
-    setCodeLoading(true);
-    setError('');
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const action = async (path: string, data?: object) => {
+    setBusy(true);
+    setError("");
     try {
-      const { data } = await api.post(`/examiner/sessions/${id}/start-checkin`);
-      setActiveCode(data);
-      setSuccess('Check-in code generated!');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Failed to start check-in');
+      await api.post(`/examiner/sessions/${id}/${path}`, data);
+      await Promise.all([session.reload(), roster.reload()]);
+      setEditing(null);
+      setConfirm(null);
+      setReason("");
+    } catch (e) {
+      setError(message(e));
     } finally {
-      setCodeLoading(false);
+      setBusy(false);
     }
   };
-
-  const handleStopCheckin = async () => {
-    setCodeLoading(true);
-    setError('');
-    try {
-      await api.post(`/examiner/sessions/${id}/stop-checkin`);
-      setActiveCode(null);
-      setSuccess('Check-in stopped');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Failed to stop check-in');
-    } finally {
-      setCodeLoading(false);
-    }
-  };
-
-  if (loading) {
+  const s = session.data;
+  const rows = roster.data ?? [];
+  if (session.loading) return <p role="status">Loading class…</p>;
+  if (!s)
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent"></div>
-      </div>
+      <p role="alert" className="alert">
+        {session.error || "Class unavailable"}
+      </p>
     );
-  }
-
-  if (!session) return null;
-
-  const timeRemaining = activeCode 
-    ? Math.max(0, Math.ceil((new Date(activeCode.expiresAt).getTime() - Date.now()) / 1000))
-    : 0;
-
+  const code =
+    s.activeCode && new Date(s.activeCode.expiresAt).getTime() > now
+      ? s.activeCode
+      : null;
+  const inProgress =
+    s.status === "SCHEDULED" &&
+    now >= new Date(s.startTime).getTime() &&
+    now < new Date(s.endTime).getTime();
+  const count = rows.filter(
+    (r) => r.attendance && ["PRESENT", "LATE"].includes(r.attendance.status),
+  ).length;
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <Link to="/examiner/dashboard" className="text-primary-700">
+        ← Classes
+      </Link>
+      <div className="page-heading">
         <div>
-          <Link to="/examiner/dashboard" className="text-primary-600 hover:underline text-sm mb-2 inline-block">
-            ← Back to Dashboard
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">{session.courseCode} - {session.courseTitle}</h1>
-          <p className="text-gray-600">
-            {format(new Date(session.startTime), 'EEEE, MMMM d, yyyy • HH:mm')} - {format(new Date(session.endTime), 'HH:mm')}
-            {session.room && ` • Room: ${session.room}`}
-            • {session.sessionType}
+          <h1>
+            {s.courseCode} · {s.courseTitle}
+          </h1>
+          <p>
+            {formatTime(s.startTime)} – {formatTime(s.endTime)} · {s.room} ·{" "}
+            {s.status.toLowerCase()}
           </p>
         </div>
+        <span className="badge-info">
+          {count} / {rows.length} attended
+        </span>
       </div>
-
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">{error}</div>}
-      {success && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">{success}</div>}
-
-      {/* Check-in Code Section */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Student Check-in Code</h2>
-        
-        {activeCode ? (
-          <div className="space-y-4">
-            <div className="bg-gray-900 rounded-xl p-8 text-center">
-              <p className="text-sm text-gray-400 mb-2">CURRENT CODE (expires in {timeRemaining}s)</p>
-              <p className="font-mono text-5xl tracking-widest text-green-400">{activeCode.code}</p>
-              <p className="text-xs text-gray-500 mt-2">
-                Rotates every 2 minutes • Valid for 10 minutes total
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="bg-green-50 p-3 rounded-lg">
-                <p className="font-medium text-green-800">Instructions for Students</p>
-                <ol className="list-decimal list-inside text-green-700 mt-1 space-y-1">
-                  <li>Open SAMS app</li>
-                  <li>Tap "Enter Code"</li>
-                  <li>Type: <span className="font-mono">{activeCode.code}</span></li>
-                  <li>Submit</li>
-                </ol>
-              </div>
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="font-medium text-blue-800">Live Attendance</p>
-                <p className="text-blue-700 mt-1">
-                  {attendance.filter(a => a.status === 'PRESENT').length} / {attendance.length} checked in
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={handleStopCheckin}
-              disabled={codeLoading}
-              className="btn-danger w-full"
+      {(error || session.error || roster.error) && (
+        <p role="alert" className="alert">
+          {error || session.error || roster.error}
+        </p>
+      )}
+      <section className="card space-y-4">
+        <h2 className="text-lg font-semibold">Student check-in</h2>
+        {code ? (
+          <div className="bg-slate-900 text-white rounded-xl p-6 text-center">
+            <p className="text-slate-300 text-sm">Current code</p>
+            <p
+              className="font-mono text-4xl sm:text-5xl tracking-widest my-4"
+              aria-label="Current check-in code"
             >
-              {codeLoading ? 'Stopping...' : 'Stop Check-in'}
-            </button>
+              {code.code}
+            </p>
+            <p className="text-sm">
+              Changes in{" "}
+              {Math.max(
+                0,
+                Math.ceil((new Date(code.expiresAt).getTime() - now) / 1000),
+              )}
+              s · window closes {formatTime(code.closesAt)}
+            </p>
           </div>
         ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-500 mb-4">No active check-in session</p>
+          <p>
+            {inProgress
+              ? "Check-in is closed. Open a ten-minute window when students are ready."
+              : "Check-in can only open while this scheduled class is in progress."}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-3">
+          {code ? (
             <button
-              onClick={handleStartCheckin}
-              disabled={codeLoading}
+              disabled={busy}
+              className="btn-secondary"
+              onClick={() => void action("stop-checkin")}
+            >
+              Stop check-in
+            </button>
+          ) : (
+            <button
+              disabled={busy || !inProgress}
               className="btn-primary"
+              onClick={() => void action("start-checkin")}
             >
-              {codeLoading ? 'Starting...' : 'Start Check-in'}
+              Start check-in
+            </button>
+          )}
+          {s.status === "SCHEDULED" && (
+            <>
+              <button
+                className="btn-secondary"
+                disabled={busy || now < new Date(s.startTime).getTime()}
+                onClick={() => setConfirm("complete")}
+              >
+                Complete class
+              </button>
+              <button
+                className="btn-secondary"
+                disabled={busy}
+                onClick={() => setConfirm("cancel")}
+              >
+                Cancel class
+              </button>
+            </>
+          )}
+        </div>
+        {confirm && (
+          <div className="bg-amber-50 p-4 rounded space-y-3" role="alert">
+            <p>
+              {confirm === "complete"
+                ? "Completing this class closes check-in and includes it in attendance percentages. Missing records count as absent."
+                : "Cancelling closes check-in and excludes this class from attendance percentages."}{" "}
+              This class cannot be reopened.
+            </p>
+            <button
+              className="btn-primary mr-2"
+              disabled={busy}
+              onClick={() => void action(confirm)}
+            >
+              Confirm {confirm}
+            </button>
+            <button className="btn-secondary" onClick={() => setConfirm(null)}>
+              Keep class open
             </button>
           </div>
         )}
-      </div>
-
-      {/* Attendance List */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Attendance Records</h2>
-          <span className="badge-info">{attendance.length} total</span>
-        </div>
-
-        {attendance.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No check-ins yet</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-sm text-gray-500 border-b">
-                  <th className="pb-2">Reg No.</th>
-                  <th className="pb-2">Name</th>
-                  <th className="pb-2">Status</th>
-                  <th className="pb-2">Method</th>
-                  <th className="pb-2">Time</th>
+      </section>
+      <section className="card">
+        <h2 className="text-lg font-semibold mb-4">Class register</h2>
+        <p className="text-sm text-slate-600 mb-4">
+          Updates every five seconds. Corrections require a reason and are
+          recorded in the change history.
+        </p>
+        <div className="overflow-x-auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Attendance</th>
+                <th>Recorded</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.student.id}>
+                  <td>
+                    <strong>{row.student.name}</strong>
+                    <br />
+                    <span className="text-xs">{row.student.regNo}</span>
+                  </td>
+                  <td>
+                    {row.attendance?.status ??
+                      (s.status === "COMPLETED"
+                        ? "ABSENT (no record)"
+                        : "Not recorded")}
+                  </td>
+                  <td>
+                    {row.attendance
+                      ? `${row.attendance.method} · ${formatTime(row.attendance.recordedAt)}`
+                      : "—"}
+                    {row.attendance && row.attendance.changes.length > 0 && (
+                      <details className="text-xs mt-2">
+                        <summary>Change history</summary>
+                        {row.attendance.changes.map((c) => (
+                          <p key={c.id}>
+                            {c.actor.name}: {c.previousStatus ?? "unrecorded"} →{" "}
+                            {c.status}. {c.reason} ({formatTime(c.recordedAt)})
+                          </p>
+                        ))}
+                      </details>
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      className="btn-secondary text-sm"
+                      disabled={
+                        s.status === "CANCELLED" ||
+                        now < new Date(s.startTime).getTime()
+                      }
+                      onClick={() => {
+                        setEditing(row);
+                        setStatus(row.attendance?.status ?? "PRESENT");
+                        setReason("");
+                      }}
+                    >
+                      Correct
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {attendance.map(record => (
-                  <tr key={record.id} className="hover:bg-gray-50">
-                    <td className="py-3 font-mono text-sm">{record.student?.regNo ?? 'N/A'}</td>
-                    <td className="py-3">{record.student?.name ?? 'Unknown'}</td>
-                    <td className="py-3">
-                      <span className={`badge ${
-                        record.status === 'PRESENT' ? 'badge-success' :
-                        record.status === 'LATE' ? 'badge-warning' :
-                        record.status === 'EXCUSED' ? 'badge-info' : 'badge-danger'
-                      }`}>
-                        {record.status}
-                      </span>
-                    </td>
-                    <td className="py-3 text-sm text-gray-600">{record.method}</td>
-                    <td className="py-3 text-sm text-gray-500">
-                      {format(new Date(record.recordedAt), 'HH:mm:ss')}
-                    </td>
-                  </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {!rows.length && <p>No students enrolled.</p>}
+      </section>
+      {editing && (
+        <section
+          className="card border-primary-300"
+          aria-label="Attendance correction"
+        >
+          <h2 className="font-semibold mb-4">
+            Correct attendance · {editing.student.name}
+          </h2>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void action("attendance", {
+                studentId: editing.student.id,
+                status,
+                reason,
+              });
+            }}
+          >
+            <label className="block">
+              Attendance status
+              <select
+                className="input"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as AttendanceStatus)}
+              >
+                {["PRESENT", "LATE", "ABSENT", "EXCUSED"].map((v) => (
+                  <option key={v}>{v}</option>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </select>
+            </label>
+            <label className="block">
+              Reason
+              <textarea
+                className="input"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                minLength={5}
+                maxLength={500}
+                required
+              />
+            </label>
+            <button disabled={busy} className="btn-primary mr-2">
+              Save correction
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setEditing(null)}
+            >
+              Close
+            </button>
+          </form>
+        </section>
+      )}
     </div>
   );
 }

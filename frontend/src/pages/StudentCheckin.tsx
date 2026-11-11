@@ -1,171 +1,241 @@
-// frontend/src/pages/StudentCheckin.tsx
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { api } from '../services/api';
-import type { Session } from '../types/api';
-import { format } from 'date-fns';
-
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "../hooks/useAuth";
+import { useLoad, formatTime } from "../hooks/useLoad";
+import { api, message, networkError } from "../services/api";
+import {
+  attempts,
+  discard,
+  queueAttempt,
+  syncAttempts,
+  Attempt,
+} from "../services/offline";
+import type { Session } from "../types/api";
 export function StudentCheckin() {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [code, setCode] = useState('');
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [checkingIn, setCheckingIn] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const navigate = useNavigate();
-
+  const { user } = useAuth();
+  const sessions = useLoad<Session[]>("/student/sessions/upcoming", 10000);
+  const [selected, setSelected] = useState("");
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [queue, setQueue] = useState<Attempt[]>([]);
+  const refreshQueue = useCallback(() => {
+    if (user)
+      void attempts(user.id)
+        .then(setQueue)
+        .catch((e) => setError(message(e)));
+  }, [user]);
   useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        const { data } = await api.get('/student/sessions/upcoming');
-        setSessions(data);
-      } catch (err: any) {
-        setError(err.response?.data?.message ?? 'Failed to load sessions');
-      } finally {
-        setLoading(false);
-      }
+    refreshQueue();
+    const sync = () => {
+      if (user)
+        void syncAttempts(user.id)
+          .then(() => sessions.reload())
+          .catch((e) => setError(message(e)));
     };
-    fetchSessions();
-  }, []);
-
-  const handleCheckin = async (sessionId: string) => {
-    if (!code.trim()) {
-      setError('Please enter the check-in code');
-      return;
-    }
-    
-    setCheckingIn(true);
-    setError('');
-    setSuccess('');
-    
+    window.addEventListener("sams:queue", refreshQueue);
+    window.addEventListener("online", sync);
+    sync();
+    return () => {
+      window.removeEventListener("sams:queue", refreshQueue);
+      window.removeEventListener("online", sync);
+    };
+  }, [user, refreshQueue, sessions.reload]);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!user) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
     try {
-      const { data } = await api.post('/student/checkin', { sessionId, code: code.trim().toUpperCase() });
-      setSuccess(`Checked in to ${data.session.courseCode}!`);
-      setCode('');
-      setSelectedSession(null);
-      // Refresh sessions
-      const { data: fresh } = await api.get('/student/sessions/upcoming');
-      setSessions(fresh);
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Check-in failed');
+      await api.post("/student/checkin", { sessionId: selected, code });
+      setNotice("Attendance recorded by the server.");
+      setCode("");
+      await discard(`${user.id}:${selected}`);
+      await sessions.reload();
+    } catch (e) {
+      if (networkError(e)) {
+        try {
+          await queueAttempt({
+            userId: user.id,
+            sessionId: selected,
+            code,
+            courseCode:
+              sessions.data?.find((s) => s.id === selected)?.courseCode ??
+              "Saved class",
+          });
+          setNotice(
+            "Saved as pending. This is not recorded attendance. Reconnect before the code expires, or ask your examiner for a correction.",
+          );
+          setCode("");
+        } catch {
+          setError(
+            "Could not save on this device. Ask your examiner to record attendance.",
+          );
+        }
+      } else setError(message(e));
     } finally {
-      setCheckingIn(false);
+      setBusy(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Check In</h1>
-        <p className="text-gray-600">Enter the 6-digit code displayed by your examiner</p>
-      </div>
-
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">{error}</div>}
-      {success && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">{success}</div>}
-
-      {/* Code Input */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Enter Check-in Code</h2>
-        
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="session" className="label">Select Session</label>
-            <select
-              id="session"
-              value={selectedSession?.id ?? ''}
-              onChange={e => {
-                const session = sessions.find(s => s.id === e.target.value);
-                setSelectedSession(session ?? null);
-              }}
-              className="input"
-              disabled={sessions.length === 0}
-            >
-              <option value="">Choose a session...</option>
-              {sessions.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.courseCode} - {format(new Date(s.startTime), 'MMM d, HH:mm')} {s.room ? `(${s.room})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="code" className="label">Check-in Code</label>
-            <input
-              id="code"
-              type="text"
-              value={code}
-              onChange={e => setCode(e.target.value.toUpperCase())}
-              className="input font-mono text-2xl tracking-widest text-center"
-              placeholder="7K9M2P"
-              maxLength={6}
-              autoComplete="off"
-              autoFocus
-            />
-            <p className="text-sm text-gray-500">6 characters • Case insensitive</p>
-          </div>
-
-          <button
-            onClick={() => selectedSession && handleCheckin(selectedSession.id)}
-            disabled={!selectedSession || !code.trim() || code.length !== 6 || checkingIn}
-            className="btn-primary w-full py-3 text-lg disabled:opacity-50"
-          >
-            {checkingIn ? 'Checking In...' : 'Check In'}
-          </button>
+    <div className="space-y-6 max-w-3xl">
+      <div className="page-heading">
+        <div>
+          <h1>Check in to class</h1>
+          <p>
+            Select your class and enter the six-character code displayed by your
+            examiner.
+          </p>
         </div>
       </div>
-
-      {/* Upcoming Sessions */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Upcoming Sessions</h2>
-        
-        {sessions.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No upcoming sessions</p>
-        ) : (
-          <div className="space-y-3">
-            {sessions.map(session => (
-              <div key={session.id} className={`p-4 rounded-lg border ${session.checkedIn ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200 hover:border-primary-300'}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${session.checkedIn ? 'bg-green-100' : 'bg-primary-100'}`}>
-                      {session.checkedIn ? (
-                        <span className="text-green-600">✓</span>
-                      ) : (
-                        <span className="text-primary-600">📅</span>
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{session.courseCode}</p>
-                      <p className="text-sm text-gray-500">{session.courseTitle}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">
-                      {format(new Date(session.startTime), 'MMM d, HH:mm')}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {session.room ?? 'Room TBA'}
-                    </p>
-                    {session.checkedIn && (
-                      <span className="badge-success mt-1 inline-block">Checked In</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+      {notice && (
+        <p role="status" className="notice">
+          {notice}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="alert">
+          {error}
+        </p>
+      )}
+      <form className="card space-y-4" onSubmit={(e) => void submit(e)}>
+        {sessions.error && (
+          <p role="alert">
+            {sessions.error}{" "}
+            <button
+              type="button"
+              className="underline"
+              onClick={() => void sessions.reload()}
+            >
+              Retry
+            </button>
+          </p>
         )}
-      </div>
+        <label className="block">
+          Class
+          <select
+            className="input mt-1"
+            required
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+          >
+            <option value="">Choose a class</option>
+            {sessions.data?.map((s) => (
+              <option key={s.id} value={s.id} disabled={s.checkedIn}>
+                {s.courseCode} · {formatTime(s.startTime)}
+                {s.checkedIn
+                  ? " · recorded"
+                  : s.hasActiveCode
+                    ? " · check-in open"
+                    : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          Check-in code
+          <input
+            className="input mt-1 font-mono text-2xl tracking-widest"
+            autoComplete="off"
+            spellCheck={false}
+            required
+            pattern="[A-HJ-NP-Z2-9]{6}"
+            minLength={6}
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="7K9M2P"
+          />
+        </label>
+        <button
+          className="btn-primary"
+          disabled={busy || !selected || code.length !== 6}
+        >
+          {busy ? "Submitting…" : "Record attendance"}
+        </button>
+      </form>
+      <section className="card">
+        <h2 className="text-lg font-semibold">Your classes</h2>
+        {sessions.loading ? (
+          <p role="status">Loading…</p>
+        ) : !sessions.data?.length ? (
+          <p className="mt-3">
+            No current or upcoming classes in the next 14 days.
+          </p>
+        ) : (
+          <ul className="divide-y mt-3">
+            {sessions.data.map((s) => (
+              <li key={s.id} className="py-3 flex justify-between gap-4">
+                <div>
+                  <strong>
+                    {s.courseCode} · {s.courseTitle}
+                  </strong>
+                  <p className="text-sm text-slate-600">
+                    {formatTime(s.startTime)} · {s.room ?? "Room TBA"}
+                  </p>
+                </div>
+                <span className="text-sm">
+                  {s.checkedIn
+                    ? "Recorded"
+                    : s.hasActiveCode
+                      ? "Check-in open"
+                      : "Not open"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="card space-y-3">
+        <h2 className="text-lg font-semibold">Saved attempts</h2>
+        <p className="text-sm text-slate-600">
+          Pending attempts are sent when you reconnect while this app is open.
+          Expired codes are rejected. Device timestamps do not establish
+          attendance.
+        </p>
+        {!queue.length ? (
+          <p>No saved attempts.</p>
+        ) : (
+          queue.map((a) => (
+            <div className="border rounded p-3" key={a.id}>
+              <strong>
+                {a.courseCode} · {a.state.toLowerCase()}
+              </strong>
+              <p className="text-sm">
+                Saved {formatTime(a.createdAt)}. {a.error}
+              </p>
+              {a.state === "FAILED" && (
+                <p className="text-sm">
+                  Ask your examiner to review this attempt. It has not been
+                  counted.
+                </p>
+              )}
+              <button
+                className="underline text-sm"
+                onClick={() =>
+                  void discard(a.id).catch((e) => setError(message(e)))
+                }
+              >
+                Remove saved attempt
+              </button>
+            </div>
+          ))
+        )}
+        {queue.some((a) => a.state === "PENDING") && (
+          <button
+            className="btn-secondary"
+            onClick={() =>
+              user &&
+              void syncAttempts(user.id)
+                .then(() => sessions.reload())
+                .catch((e) => setError(message(e)))
+            }
+          >
+            Send pending attempts
+          </button>
+        )}
+      </section>
     </div>
   );
 }

@@ -1,81 +1,87 @@
-// frontend/src/components/Layout.tsx
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 export function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
   if (!user) return <Outlet />;
-
-  const navItems = user.role === 'STUDENT' 
-    ? [
-        { path: '/student/checkin', label: 'Check In', icon: '✏️' },
-        { path: '/student/summary', label: 'My Attendance', icon: '📊' },
-      ]
-    : user.role === 'EXAMINER'
-    ? [
-        { path: '/examiner/dashboard', label: 'Dashboard', icon: '📅' },
-      ]
-    : [
-        { path: '/examiner/dashboard', label: 'Examiner View', icon: '📅' },
-      ];
-
+  const links =
+    user.role === "STUDENT"
+      ? [
+          ["/student/checkin", "Check in"],
+          ["/student/summary", "My attendance"],
+        ]
+      : user.role === "ADMIN"
+        ? [
+            ["/admin/courses", "Course reports"],
+            ["/examiner/dashboard", "Classes"],
+          ]
+        : [["/examiner/dashboard", "My classes"]];
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">📚</span>
-              <span className="text-xl font-bold text-primary-700">SAMS Attendance</span>
-              <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 text-primary-700 rounded-full">
-                MUST
-              </span>
-            </div>
-            
-            <nav className="hidden md:flex items-center gap-6">
-              {navItems.map(item => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `flex items-center gap-1 text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'text-primary-600'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`
-                  }
-                >
-                  <span>{item.icon}</span>
-                  <span>{item.label}</span>
-                </NavLink>
-              ))}
-            </nav>
-
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600 hidden sm:block">
-                {user.name} ({user.role})
-              </span>
-              <button
-                onClick={handleLogout}
-                className="btn-secondary text-sm"
-              >
-                Logout
-              </button>
-            </div>
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b">
+        <div className="max-w-6xl mx-auto p-4 flex flex-wrap gap-4 items-center justify-between">
+          <a href="/" className="font-bold text-xl text-primary-700">
+            SAMS{" "}
+            <span className="text-sm font-normal text-slate-500">
+              MUST attendance
+            </span>
+          </a>
+          <div className="flex gap-4 items-center">
+            <span className="text-sm">
+              {user.name} · {user.role.toLowerCase()}
+            </span>
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                logout();
+                navigate("/login");
+              }}
+            >
+              Sign out
+            </button>
           </div>
+          <nav aria-label="Main navigation" className="w-full flex gap-4">
+            {links.map(([path, title]) => (
+              <NavLink
+                key={path}
+                to={path}
+                className={({ isActive }) =>
+                  `rounded px-3 py-2 text-sm font-medium ${isActive ? "bg-primary-100 text-primary-800" : "text-slate-600"}`
+                }
+              >
+                {title}
+              </NavLink>
+            ))}
+          </nav>
         </div>
       </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {!online && (
+        <div
+          className="bg-amber-100 text-amber-900 px-4 py-3 text-center"
+          role="status"
+        >
+          You’re offline. Saved check-ins are pending until the server accepts
+          them.
+        </div>
+      )}
+      <main className="max-w-6xl mx-auto px-4 py-8">
         <Outlet />
       </main>
+      <footer className="max-w-6xl mx-auto p-4 text-xs text-slate-500">
+        Group B prototype · All times Africa/Kampala · Attendance qualification
+        only; fees and coursework are not assessed.
+      </footer>
     </div>
   );
 }

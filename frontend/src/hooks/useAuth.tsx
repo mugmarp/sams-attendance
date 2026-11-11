@@ -1,82 +1,80 @@
-// frontend/src/hooks/useAuth.tsx
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { api } from '../services/api';
-import type { User } from '../types/api';
-
-interface AuthContextType {
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { api, networkError } from "../services/api";
+import type { User } from "../types/api";
+type Auth = {
   user: User | null;
-  accessToken: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
   isLoading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | null>(null);
-
+  login: (email: string, password: string) => Promise<User>;
+  logout: () => void;
+};
+const Context = createContext<Auth | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const initAuth = async () => {
-      const storedToken = localStorage.getItem('accessToken');
-      const storedUser = localStorage.getItem('user');
-      
-      if (storedToken && storedUser) {
-        try {
-          setAccessToken(storedToken);
-          setUser(JSON.parse(storedUser));
-          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-          
-          // Verify token still valid
-          const { data } = await api.get('/auth/me');
-          setUser(data);
-        } catch {
-          // Token invalid, clear storage
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-        }
-      }
-      setIsLoading(false);
-    };
-    
-    initAuth();
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    const { data } = await api.post('/auth/login', { email, password });
-    
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    
-    setAccessToken(data.accessToken);
-    setUser(data.user);
-    api.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
-  };
-
+  const [isLoading, setLoading] = useState(true);
   const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    setAccessToken(null);
+    for (const key of ["accessToken", "refreshToken", "user"])
+      localStorage.removeItem(key);
     setUser(null);
-    delete api.defaults.headers.common['Authorization'];
   };
-
+  useEffect(() => {
+    let active = true;
+    const restore = async () => {
+      try {
+        const cached = JSON.parse(
+          localStorage.getItem("user") ?? "null",
+        ) as User | null;
+        if (!cached || !localStorage.getItem("accessToken")) return;
+        if (active) setUser(cached);
+        try {
+          const { data } = await api.get<User>("/auth/me");
+          if (active) setUser(data);
+          localStorage.setItem("user", JSON.stringify(data));
+        } catch (error) {
+          if (!networkError(error) && active) logout();
+        }
+      } catch {
+        logout();
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void restore();
+    const handler = () => logout();
+    window.addEventListener("sams:logout", handler);
+    return () => {
+      active = false;
+      window.removeEventListener("sams:logout", handler);
+    };
+  }, []);
+  const login = async (email: string, password: string) => {
+    const { data } = await api.post("/auth/login", { email, password });
+    localStorage.setItem("accessToken", data.accessToken);
+    localStorage.setItem("refreshToken", data.refreshToken);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    setUser(data.user);
+    return data.user as User;
+  };
   return (
-    <AuthContext.Provider value={{ user, accessToken, login, logout, isLoading }}>
+    <Context.Provider value={{ user, isLoading, login, logout }}>
       {children}
-    </AuthContext.Provider>
+    </Context.Provider>
   );
 }
-
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
+  const value = useContext(Context);
+  if (!value) throw new Error("AuthProvider missing");
+  return value;
+}
+export function home(role: User["role"]) {
+  return role === "STUDENT"
+    ? "/student/checkin"
+    : role === "ADMIN"
+      ? "/admin/courses"
+      : "/examiner/dashboard";
 }

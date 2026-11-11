@@ -1,174 +1,158 @@
-// frontend/src/pages/AdminEligibility.tsx
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { api } from '../services/api';
-import type { EligibilityStudent } from '../types/api';
-
+import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { useLoad } from "../hooks/useLoad";
+import { api, message } from "../services/api";
+import type { EligibilityResponse } from "../types/api";
 export function AdminEligibility() {
-  const { courseId } = useParams<{ courseId: string }>();
-  const [course, setCourse] = useState<{ code: string; title: string } | null>(null);
-  const [students, setStudents] = useState<EligibilityStudent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [exporting, setExporting] = useState(false);
-
-  useEffect(() => {
-    const fetchEligibility = async () => {
-      try {
-        const { data } = await api.get(`/admin/eligibility/${courseId}`);
-        setCourse(data.course);
-        setStudents(data.students);
-      } catch (err: any) {
-        setError(err.response?.data?.message ?? 'Failed to load eligibility');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchEligibility();
-  }, [courseId]);
-
-  const handleExportPDF = async () => {
-    setExporting(true);
+  const { courseId } = useParams();
+  const { data, loading, error, reload } = useLoad<EligibilityResponse>(
+    `/admin/eligibility/${courseId}`,
+    15000,
+  );
+  const [filter, setFilter] = useState("all");
+  const [busy, setBusy] = useState(false);
+  const [exportError, setExportError] = useState("");
+  const download = async () => {
+    setBusy(true);
+    setExportError("");
     try {
       const response = await api.get(`/admin/eligibility/${courseId}/pdf`, {
-        responseType: 'blob',
+        responseType: "blob",
       });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const url = URL.createObjectURL(response.data);
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `eligibility_${course?.code}_${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
+      a.download = `${data?.course.code ?? "course"}-attendance.pdf`;
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Failed to export PDF');
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setExportError(message(e));
     } finally {
-      setExporting(false);
+      setBusy(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div className="card text-center text-red-600">{error}</div>;
-  }
-
-  const eligibleCount = students.filter(s => s.eligible).length;
-  const totalCount = students.length;
-
+  const students = data?.students ?? [];
+  const met = students.filter((s) => s.eligible).length;
+  const visible = students.filter(
+    (s) =>
+      filter === "all" ||
+      (filter === "met"
+        ? s.eligible
+        : filter === "below"
+          ? s.attendancePct !== null && !s.eligible
+          : s.attendancePct === null),
+  );
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="space-y-6">
+      <Link className="text-primary-700" to="/admin/courses">
+        ← Course reports
+      </Link>
+      <div className="page-heading">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Exam Eligibility</h1>
-          <p className="text-gray-600">
-            {course?.code} - {course?.title}
+          <h1>Attendance qualification</h1>
+          <p>
+            {data
+              ? `${data.course.code} · ${data.course.title} · ${data.course.academicYear}, Semester ${data.course.semester}`
+              : "Course report"}
           </p>
         </div>
         <button
-          onClick={handleExportPDF}
-          disabled={exporting}
           className="btn-primary"
+          disabled={busy || !data}
+          onClick={() => void download()}
         >
-          {exporting ? 'Generating PDF...' : '📄 Export PDF (Appendix D)'}
+          {busy ? "Preparing PDF…" : "Download PDF"}
         </button>
       </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card bg-green-50 border-green-200">
-          <p className="text-sm text-green-700">Eligible</p>
-          <p className="text-3xl font-bold text-green-800">{eligibleCount}</p>
-        </div>
-        <div className="card bg-red-50 border-red-200">
-          <p className="text-sm text-red-700">Not Eligible</p>
-          <p className="text-3xl font-bold text-red-800">{totalCount - eligibleCount}</p>
-        </div>
-        <div className="card bg-blue-50 border-blue-200">
-          <p className="text-sm text-blue-700">Total Students</p>
-          <p className="text-3xl font-bold text-blue-800">{totalCount}</p>
-        </div>
-      </div>
-
-      {/* Eligibility Table */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Student Eligibility List</h2>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Filter:</label>
-            <select
-              onChange={e => {
-                const filter = e.target.value;
-                // In a real app, you'd filter the students array
-              }}
-              className="input w-auto"
-            >
-              <option value="all">All Students</option>
-              <option value="eligible">Eligible Only</option>
-              <option value="ineligible">Not Eligible</option>
-            </select>
-          </div>
-        </div>
-
-        {students.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No students enrolled in this course</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-sm text-gray-500 border-b">
-                  <th className="pb-2">#</th>
-                  <th className="pb-2">Reg No.</th>
-                  <th className="pb-2">Name</th>
-                  <th className="pb-2">Present</th>
-                  <th className="pb-2">Total</th>
-                  <th className="pb-2">Attendance %</th>
-                  <th className="pb-2">Eligible</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {students.map((student, index) => (
-                  <tr key={student.studentId} className={`hover:bg-gray-50 ${!student.eligible ? 'bg-red-50' : ''}`}>
-                    <td className="py-3 font-mono text-sm">{index + 1}</td>
-                    <td className="py-3 font-mono text-sm">{student.regNo}</td>
-                    <td className="py-3">{student.name}</td>
-                    <td className="py-3 text-center font-medium">{student.presentCount}</td>
-                    <td className="py-3 text-center text-gray-500">{student.totalSessions}</td>
-                    <td className="py-3 text-center">
-                      <span className={`font-medium ${
-                        student.attendancePct >= 80 ? 'text-green-600' :
-                        student.attendancePct >= 60 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {student.attendancePct.toFixed(1)}%
-                      </span>
-                    </td>
-                    <td className="py-3 text-center">
-                      <span className={student.eligible ? 'badge-success' : 'badge-danger'}>
-                        {student.eligible ? 'YES' : 'NO'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Legend */}
-        <div className="mt-4 pt-4 border-t flex flex-wrap gap-4 text-sm text-gray-600">
-          <span>🟢 Green = Exam Eligible (≥80%)</span>
-          <span>🔴 Red = Not Eligible (<80%)</span>
-          <span>Per MUST Regulations §2.3</span>
-        </div>
-      </div>
+      {(error || exportError) && (
+        <p className="alert" role="alert">
+          {error || exportError}{" "}
+          <button className="underline" onClick={() => void reload()}>
+            Retry report
+          </button>
+        </p>
+      )}
+      {loading ? (
+        <p role="status">Loading report…</p>
+      ) : (
+        data && (
+          <>
+            <div className="grid sm:grid-cols-3 gap-4">
+              {[
+                ["Enrolled", students.length],
+                ["Attendance requirement met", met],
+                [
+                  "Not assessed",
+                  students.filter((s) => s.attendancePct === null).length,
+                ],
+              ].map(([label, value]) => (
+                <div className="card" key={label}>
+                  <p className="text-sm text-slate-600">{label}</p>
+                  <p className="text-3xl font-semibold mt-2">{value}</p>
+                </div>
+              ))}
+            </div>
+            <section className="card space-y-4">
+              <label className="block sm:max-w-xs">
+                Show students
+                <select
+                  className="input"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                >
+                  <option value="all">All students</option>
+                  <option value="met">Requirement met</option>
+                  <option value="below">Below requirement</option>
+                  <option value="none">Not assessed</option>
+                </select>
+              </label>
+              <div className="overflow-x-auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Attended</th>
+                      <th>Completed</th>
+                      <th>Attendance</th>
+                      <th>Requirement</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visible.map((s) => (
+                      <tr key={s.studentId}>
+                        <td>
+                          <strong>{s.name}</strong>
+                          <br />
+                          <span className="text-xs">{s.regNo}</span>
+                        </td>
+                        <td>{s.presentCount}</td>
+                        <td>{s.totalSessions}</td>
+                        <td>
+                          {s.attendancePct === null
+                            ? "—"
+                            : `${s.attendancePct.toFixed(1)}%`}
+                        </td>
+                        <td>
+                          {s.attendancePct === null
+                            ? "Not assessed"
+                            : s.eligible
+                              ? "Met"
+                              : "Below 80%"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {!visible.length && <p>No students match this filter.</p>}
+            </section>
+            <p className="text-sm text-slate-600">
+              {data.rules} This prototype export is not an official examination
+              register.
+            </p>
+          </>
+        )
+      )}
     </div>
   );
 }

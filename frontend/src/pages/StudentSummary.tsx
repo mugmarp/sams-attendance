@@ -1,122 +1,77 @@
-// frontend/src/pages/StudentSummary.tsx
-import { useState, useEffect } from 'react';
-import { api } from '../services/api';
-import type { StudentAttendanceSummary } from '../types/api';
-import { format } from 'date-fns';
-
+import { useLoad } from "../hooks/useLoad";
+import type { Summary } from "../types/api";
 export function StudentSummary() {
-  const [summary, setSummary] = useState<StudentAttendanceSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        const { data } = await api.get('/student/attendance/summary');
-        setSummary(data);
-      } catch (err: any) {
-        setError(err.response?.data?.message ?? 'Failed to load attendance summary');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSummary();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div className="card text-center text-red-600">{error}</div>;
-  }
-
+  const { data, error, loading, reload } = useLoad<Summary[]>(
+    "/student/attendance/summary",
+    15000,
+  );
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Attendance Summary</h1>
-        <p className="text-gray-600">Track your attendance across all courses</p>
+    <div className="space-y-6 max-w-3xl">
+      <div className="page-heading">
+        <div>
+          <h1>My attendance</h1>
+          <p>
+            Only completed classes count. Present and late records count as
+            attendance.
+          </p>
+        </div>
       </div>
-
-      {summary.length === 0 ? (
-        <div className="card text-center py-12">
-          <span className="text-4xl">📊</span>
-          <h3 className="mt-2 text-lg font-medium text-gray-900">No attendance data yet</h3>
-          <p className="text-gray-500">Your attendance will appear here after you start checking in.</p>
+      {error && (
+        <p role="alert" className="alert">
+          {error}{" "}
+          <button className="underline" onClick={() => void reload()}>
+            Retry
+          </button>
+        </p>
+      )}
+      {loading ? (
+        <p role="status">Loading attendance…</p>
+      ) : !data?.length ? (
+        <div className="card">
+          You are not enrolled in any courses. Contact your course
+          administrator.
         </div>
       ) : (
-        <div className="space-y-4">
-          {summary.map(course => (
-            <div key={course.courseId} className="card">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-mono text-sm text-primary-600">{course.courseCode}</p>
-                  <p className="font-medium text-gray-900">{course.courseTitle}</p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-2xl font-bold ${
-                    course.attendancePct >= 80 ? 'text-green-600' :
-                    course.attendancePct >= 60 ? 'text-yellow-600' : 'text-red-600'
-                  }`}>
-                    {course.attendancePct.toFixed(1)}%
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {course.presentCount} / {course.totalSessions} sessions
-                  </p>
-                </div>
+        data.map((c) => (
+          <article className="card space-y-3" key={c.courseId}>
+            <div className="flex justify-between gap-3">
+              <div>
+                <p className="text-primary-700 font-mono">{c.courseCode}</p>
+                <h2 className="text-lg font-semibold">{c.courseTitle}</h2>
+                <p className="text-sm text-slate-600">
+                  {c.academicYear} · Semester {c.semester}
+                </p>
               </div>
-              
-              <div className="mt-4 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all ${
-                    course.attendancePct >= 80 ? 'bg-green-500' :
-                    course.attendancePct >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                  }`}
-                  style={{ width: `${Math.min(course.attendancePct, 100)}%` }}
-                />
-              </div>
-              
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-gray-500">
-                  {course.attendancePct >= 80 ? '✅ Exam Eligible' : '⚠️ Below 80% threshold'}
-                </span>
-                <span className="text-gray-400">
-                  Need {Math.max(0, Math.ceil(course.totalSessions * 0.8) - course.presentCount)} more sessions
-                </span>
-              </div>
+              <strong className="text-2xl">
+                {c.attendancePct === null
+                  ? "—"
+                  : `${c.attendancePct.toFixed(1)}%`}
+              </strong>
             </div>
-          ))}
-        </div>
+            <p>
+              {c.presentCount} attended / {c.totalSessions} completed classes
+            </p>
+            <div className="h-2 rounded bg-slate-100">
+              <div
+                className={`h-2 rounded ${c.eligible ? "bg-green-600" : "bg-amber-500"}`}
+                style={{ width: `${c.attendancePct ?? 0}%` }}
+              />
+            </div>
+            <p className="text-sm">
+              {c.attendancePct === null
+                ? "Not assessed: no completed classes."
+                : c.eligible
+                  ? "Attendance requirement met (at least 80%)."
+                  : "Below the 80% attendance requirement."}
+            </p>
+          </article>
+        ))
       )}
-
-      {/* Legend */}
-      <div className="card">
-        <h3 className="font-medium text-gray-900 mb-3">Attendance Status</h3>
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div className="p-3 bg-green-50 rounded-lg">
-            <div className="w-8 h-8 bg-green-500 rounded-full mx-auto mb-2"></div>
-            <p className="text-sm font-medium text-green-800">≥ 80%</p>
-            <p className="text-xs text-green-600">Exam Eligible</p>
-          </div>
-          <div className="p-3 bg-yellow-50 rounded-lg">
-            <div className="w-8 h-8 bg-yellow-500 rounded-full mx-auto mb-2"></div>
-            <p className="text-sm font-medium text-yellow-800">60-79%</p>
-            <p className="text-xs text-yellow-600">At Risk</p>
-          </div>
-          <div className="p-3 bg-red-50 rounded-lg">
-            <div className="w-8 h-8 bg-red-500 rounded-full mx-auto mb-2"></div>
-            <p className="text-sm font-medium text-red-800">< 60%</p>
-            <p className="text-xs text-red-600">Not Eligible</p>
-          </div>
-        </div>
-        <p className="text-sm text-gray-500 mt-4 text-center">
-          Per MUST Examination Regulations §2.3: Minimum 80% attendance required to sit for exams
-        </p>
-      </div>
+      <p className="text-sm text-slate-600">
+        This is an attendance report, not final examination clearance. Fees and
+        coursework are assessed separately. Contact your examiner if a record
+        needs correcting.
+      </p>
     </div>
   );
 }

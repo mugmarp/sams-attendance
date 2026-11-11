@@ -1,113 +1,82 @@
-// frontend/src/pages/Login.tsx
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { api } from '../services/api';
-
+import { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { useAuth, home } from "../hooks/useAuth";
+import { message } from "../services/api";
 export function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  const { login } = useAuth();
+  const { login, user, isLoading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const from = (location.state as { from?: Location })?.from?.pathname ?? '/';
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      await login(email, password);
-      navigate(from, { replace: true });
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (isLoading) return <p role="status">Loading…</p>;
+  if (user) return <Navigate to={home(user.role)} replace />;
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <span className="text-4xl">📚</span>
-          <h1 className="mt-4 text-3xl font-bold text-gray-900">SAMS Attendance</h1>
-          <p className="mt-2 text-gray-600">Student Attendance Management System</p>
-          <p className="mt-1 text-sm text-gray-500">Mbarara University of Science and Technology</p>
+    <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="card w-full max-w-md space-y-6">
+        <div>
+          <p className="text-primary-700 font-bold tracking-widest text-sm">
+            MUST · GROUP B
+          </p>
+          <h1 className="text-3xl font-bold mt-3">SAMS Attendance</h1>
+          <p className="text-slate-600 mt-2">
+            A clearer record of every class.
+          </p>
         </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            setError("");
+            try {
+              const signedIn = await login(email, password);
+              navigate(home(signedIn.role), { replace: true });
+            } catch (e) {
+              setError(message(e));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm" role="alert">
+            <p className="alert" role="alert">
               {error}
-            </div>
+            </p>
           )}
-
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="label">Email</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="input"
-                placeholder="student@student.must.ac.ug"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="label">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="input"
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full py-3 text-lg"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Signing in...
-              </span>
-            ) : (
-              'Sign In'
-            )}
+          <label className="block">
+            Email
+            <input
+              className="input mt-1"
+              name="email"
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+          <label className="block">
+            Password
+            <input
+              className="input mt-1"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </label>
+          <button className="btn-primary w-full" disabled={busy}>
+            {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
-
-        <div className="text-center text-sm text-gray-500 space-y-2">
-          <p>Demo credentials:</p>
-          <div className="bg-gray-100 rounded-lg p-3 text-left">
-            <p className="font-mono text-xs"><strong>Admin:</strong> admin@must.ac.ug / admin123</p>
-            <p className="font-mono text-xs"><strong>Examiner:</strong> lecturer.name@must.ac.ug / examiner123</p>
-            <p className="font-mono text-xs"><strong>Student:</strong> alice.nakato@student.must.ac.ug / student123</p>
-          </div>
-        </div>
+        <p className="text-xs text-slate-500">
+          Use the account supplied by your course administrator. The
+          demonstration accounts are documented in the project README.
+        </p>
       </div>
-    </div>
+    </main>
   );
 }
