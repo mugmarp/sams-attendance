@@ -12,6 +12,8 @@ Target: one reverse proxy serving the SAMS HTTPS domain, one Express application
 
 ## Phase 1 — Make existing behavior dependable
 
+Implemented and locally verified on 11 November 2026: immutable saved attempts, identity-bound API/refresh handling, originating-user server validation, cross-tab replay leases, persisted transient retries and local acknowledgement history. Verification: 19 backend tests, 16 browser tests, and 53 Postman requests/176 assertions. Full lecturer-offline marking and server operation receipts remain Phase 2.
+
 Keep the current working online attendance flow. Fix the queued student-attempt foundation before adding offline lecturer writes:
 
 - Bind operations and token refresh to their originating account. Pause replay on logout or cross-tab account changes; never submit one student's saved work using another student's token.

@@ -318,3 +318,37 @@ test("workspace uses the real Kampala day and clean product wording", async ({
     ),
   ).toBe(true);
 });
+
+test("a failed local save is visible and never sends an unsaved check-in", async ({
+  page,
+}) => {
+  await login(page, "student");
+  const classes = page.getByRole("combobox", { name: "Class", exact: true });
+  await expect(classes).toContainText("SWE2103");
+  const option = classes
+    .locator("option")
+    .filter({ hasText: "SWE2103" })
+    .first();
+  await classes.selectOption(await option.getAttribute("value"));
+  let requests = 0;
+  await page.route("**/api/student/checkin", (route) => {
+    requests++;
+    return route.fulfill({
+      status: 500,
+      json: { message: "Unexpected request" },
+    });
+  });
+  await page.evaluate(() => {
+    const original = IDBObjectStore.prototype.add;
+    IDBObjectStore.prototype.add = function (...args) {
+      if (this.name === "attempts")
+        throw new DOMException("Device storage is full", "QuotaExceededError");
+      return original.apply(this, args);
+    };
+  });
+  await page.getByLabel("Check-in code", { exact: true }).fill("ABC234");
+  await page.getByRole("button", { name: "Record attendance" }).click();
+  await expect(page.getByText(/Device storage is full/)).toBeVisible();
+  expect(requests).toBe(0);
+  await expect(page.getByText("No saved attempts.")).toBeVisible();
+});

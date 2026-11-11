@@ -1,4 +1,3 @@
-import { api } from "./api.js";
 import { $, escape, time, init, showError, notice } from "./common.js";
 import { studentData, attempts, queue, remove, sync } from "./offline.js";
 const user = await init(["STUDENT"]);
@@ -39,12 +38,22 @@ async function loadClasses() {
 }
 async function renderQueue() {
   try {
-    const list = await attempts(user.id);
+    const all = await attempts(user.id);
+    const list = all.filter((a) => a.state !== "SYNCED");
+    const receipts = all.filter((a) => a.state === "SYNCED").reverse();
+    $("#receipts").innerHTML = receipts.length
+      ? receipts
+          .map(
+            (a) =>
+              `<p><strong>${escape(a.courseCode)} · confirmed</strong><br><span class="small">Server acknowledged ${time(a.acknowledgedAt)}. ${escape(a.status || "PRESENT")}${a.duplicate ? " · previously recorded" : ""}</span></p>`,
+          )
+          .join("")
+      : "<p>No confirmations saved on this device.</p>";
     $("#queue").innerHTML = list.length
       ? list
           .map(
             (a) =>
-              `<div class="queue-item"><strong>${escape(a.courseCode)} · ${a.state.toLowerCase()}</strong><p class="small">Saved ${time(a.createdAt)}. ${escape(a.error || "")}</p>${a.state === "FAILED" ? '<p class="small">Ask your examiner to review this attempt. It has not been counted.</p>' : ""}<button class="text-button" data-remove="${escape(a.id)}">Remove saved attempt</button></div>`,
+              `<div class="queue-item"><strong>${escape(a.courseCode)} · ${a.state.toLowerCase()}</strong><p class="small">Saved ${time(a.createdAt)}. ${escape(a.error || "")}${a.state === "PENDING" && a.nextAttemptAt ? " Next retry " + time(a.nextAttemptAt) + "." : ""}</p>${a.state === "FAILED" ? '<p class="small">Ask your examiner to review this attempt. It has not been counted.</p>' : ""}<button class="text-button" data-remove="${escape(a.id)}">Remove saved attempt</button></div>`,
           )
           .join("")
       : "<p>No saved attempts.</p>";
@@ -54,7 +63,7 @@ async function renderQueue() {
       .forEach(
         (button) =>
           (button.onclick = () =>
-            remove(button.dataset.remove).catch(showError)),
+            remove(button.dataset.remove, user.id).catch(showError)),
       );
   } catch (error) {
     showError(error);
@@ -101,6 +110,10 @@ if (user) {
     setInterval(loadClasses, 10000);
     addEventListener("sams:queue", renderQueue);
     addEventListener("online", flush);
+    addEventListener("focus", flush);
+    setInterval(() => {
+      void sync(user.id).catch(showError);
+    }, 3000);
     $("#send-pending").onclick = flush;
     void flush();
     $("#code").oninput = () => {
@@ -115,37 +128,34 @@ if (user) {
       notice("");
       showError(null);
       try {
-        await api("/student/checkin", {
-          method: "POST",
-          body: { sessionId: selected, code },
+        const saved = await queue({
+          userId: user.id,
+          sessionId: selected,
+          code,
+          courseCode:
+            classes.find((s) => s.id === selected)?.courseCode || "Saved class",
         });
-        notice("Attendance recorded by the server.");
         $("#code").value = "";
-        await remove(user.id + ":" + selected);
+        await sync(user.id);
+        const result = (await attempts(user.id)).find((a) => a.id === saved.id);
+        if (result?.state === "SYNCED")
+          notice("Attendance recorded by the server.");
+        else if (result?.state === "FAILED") showError(new Error(result.error));
+        else
+          notice(
+            "Saved as pending. This is not recorded attendance. Reconnect before the code expires, or ask your examiner for a correction.",
+          );
         await loadClasses();
+        await renderQueue();
       } catch (error) {
-        if (error.network) {
-          try {
-            await queue({
-              userId: user.id,
-              sessionId: selected,
-              code,
-              courseCode:
-                classes.find((s) => s.id === selected)?.courseCode ||
-                "Saved class",
-            });
-            notice(
-              "Saved as pending. This is not recorded attendance. Reconnect before the code expires, or ask your examiner for a correction.",
-            );
-            $("#code").value = "";
-          } catch {
-            showError(
-              new Error(
-                "Could not save on this device. Ask your examiner to record attendance.",
+        showError(
+          error.identity
+            ? error
+            : new Error(
+                "Could not complete this attempt. Check saved attempts before trying again. " +
+                  error.message,
               ),
-            );
-          }
-        } else showError(error);
+        );
       } finally {
         button.disabled = false;
       }

@@ -1,8 +1,7 @@
 import { api, cachedUser, saveSession } from "./api.js";
 import { $, home, showError } from "./common.js";
 const existing = cachedUser();
-if (existing && localStorage.getItem("accessToken"))
-  location.replace(home(existing.role));
+if (existing) location.replace(home(existing.role));
 $("#login-form").onsubmit = async (event) => {
   event.preventDefault();
   const button = $("#submit");

@@ -50,10 +50,10 @@ Timestamps must be ISO strings with an explicit UTC offset; end must be after st
 | Method | Path | Input / response |
 |---|---|---|
 | GET | /student/sessions/upcoming | Own enrolled scheduled classes in progress or starting within 14 days; no code/secret material |
-| POST | /student/checkin | `{sessionId,code}` → `{success,duplicate,attendance,session:{courseCode}}` |
+| POST | /student/checkin | `{sessionId,code,originatingUserId?}` → `{success,duplicate,attendance,session:{courseCode}}` |
 | GET | /student/attendance/summary | Own offering summaries |
 
-Student identity comes from the token, not a studentId supplied in the body. Enrollment, timing and current code are checked on the server. The first accepted request creates one attendance record; retries return the same code-based record/200 with duplicate=true. Student requests never overwrite lecturer manual corrections.
+Student identity comes from the token, not a studentId supplied in the body. The current client sends originatingUserId as an additional consistency check: a different ID returns 403 before attendance is evaluated. It never grants permission. The field remains optional for existing clients. Enrollment, timing and current code are checked on the server. The first accepted request creates one attendance record; retries return the same code-based record/200 with duplicate=true. Student requests never overwrite lecturer manual corrections.
 
 ## Registrar reports
 

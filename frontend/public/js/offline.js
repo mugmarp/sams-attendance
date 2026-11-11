@@ -1,18 +1,45 @@
-import { api } from "./api.js";
-const connection = new Promise((resolve, reject) => {
-  const request = indexedDB.open("sams-plain-js-v1", 1);
-  request.onupgradeneeded = () => {
-    request.result.createObjectStore("attempts", { keyPath: "id" });
-    request.result.createObjectStore("snapshots");
-  };
-  request.onsuccess = () => {
-    request.result.onversionchange = () => request.result.close();
-    resolve(request.result);
-  };
-  request.onerror = () => reject(request.error);
-});
+import { api, captureSession, sameSession, retryable } from "./api.js";
+let connection;
+function database() {
+  if (!connection)
+    connection = new Promise((resolve, reject) => {
+      let blocked = false;
+      const request = indexedDB.open("sams-plain-js-v1", 2);
+      request.onupgradeneeded = () => {
+        for (const name of ["attempts", "leases"])
+          if (!request.result.objectStoreNames.contains(name))
+            request.result.createObjectStore(name, { keyPath: "id" });
+        if (!request.result.objectStoreNames.contains("snapshots"))
+          request.result.createObjectStore("snapshots");
+      };
+      request.onsuccess = () => {
+        if (blocked) {
+          request.result.close();
+          return;
+        }
+        request.result.onversionchange = () => {
+          request.result.close();
+          connection = null;
+        };
+        resolve(request.result);
+      };
+      request.onerror = () => reject(request.error);
+      request.onblocked = () => {
+        blocked = true;
+        reject(
+          new Error(
+            "Close other SAMS tabs to update saved storage. Your pending work is retained.",
+          ),
+        );
+      };
+    }).catch((error) => {
+      connection = null;
+      throw error;
+    });
+  return connection;
+}
 async function operation(store, mode, perform) {
-  const db = await connection;
+  const db = await database();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(store, mode);
     const request = perform(transaction.objectStore(store));
@@ -25,27 +52,53 @@ async function operation(store, mode, perform) {
     transaction.onabort = () => reject(transaction.error);
   });
 }
+// Read/modify/write within one transaction: never resurrect an explicitly removed operation.
+async function modify(store, id, transform) {
+  const db = await database();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(store, "readwrite");
+    const records = transaction.objectStore(store);
+    const request = records.get(id);
+    let result;
+    request.onsuccess = () => {
+      result = transform(request.result);
+      if (result === null) records.delete(id);
+      else if (result !== undefined) records.put(result);
+    };
+    transaction.oncomplete = () => resolve(result);
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
 const changed = () => dispatchEvent(new Event("sams:queue"));
 export async function attempts(userId) {
-  return (await operation("attempts", "readonly", (s) => s.getAll())).filter(
-    (a) => a.userId === userId,
-  );
+  return (await operation("attempts", "readonly", (s) => s.getAll()))
+    .filter((a) => a.userId === userId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
-export async function remove(id) {
-  await operation("attempts", "readwrite", (s) => s.delete(id));
+export async function remove(id, userId) {
+  captureSession(userId);
+  await modify("attempts", id, (saved) =>
+    saved?.userId === userId ? null : undefined,
+  );
   changed();
 }
 export async function queue(input) {
-  await operation("attempts", "readwrite", (s) =>
-    s.put({
-      ...input,
-      id: input.userId + ":" + input.sessionId,
-      createdAt: new Date().toISOString(),
-      tries: 0,
-      state: "PENDING",
-    }),
-  );
+  captureSession(input.userId);
+  const attempt = {
+    userId: input.userId,
+    sessionId: input.sessionId,
+    code: input.code,
+    courseCode: input.courseCode,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    tries: 0,
+    state: "PENDING",
+    nextAttemptAt: 0,
+  };
+  await operation("attempts", "readwrite", (s) => s.add(attempt));
   changed();
+  return attempt;
 }
 export async function saveSnapshot(userId, path, value) {
   await operation("snapshots", "readwrite", (s) =>
@@ -60,7 +113,7 @@ export async function snapshot(userId, path) {
 }
 export async function studentData(userId, path) {
   try {
-    const data = await api(path);
+    const data = await api(path, { expectedUserId: userId });
     await saveSnapshot(userId, path, data).catch(() => {});
     return { data, cached: false };
   } catch (error) {
@@ -71,29 +124,109 @@ export async function studentData(userId, path) {
     throw error;
   }
 }
-let syncing = false;
+const syncing = new Set();
+const LEASE_MS = 30000;
 export async function sync(userId) {
-  if (syncing || !navigator.onLine) return;
-  syncing = true;
+  if (syncing.has(userId) || !navigator.onLine) return;
+  const session = captureSession(userId);
+  syncing.add(userId);
+  const owner = crypto.randomUUID(),
+    id = "sync:" + userId;
+  let acquired = false,
+    heartbeat;
+  const renew = async (initial = false) => {
+    const lease = await modify("leases", id, (saved) => {
+      if (
+        saved?.owner === owner ||
+        (initial && (!saved || saved.expiresAt <= Date.now()))
+      )
+        return { id, owner, expiresAt: Date.now() + LEASE_MS };
+      return undefined;
+    });
+    return lease?.owner === owner;
+  };
   try {
-    for (const attempt of await attempts(userId)) {
-      if (attempt.state !== "PENDING") continue;
-      try {
-        await api("/student/checkin", {
-          method: "POST",
-          body: { sessionId: attempt.sessionId, code: attempt.code },
+    acquired = await renew(true);
+    if (!acquired) return;
+    let lost = false;
+    heartbeat = setInterval(() => {
+      void renew()
+        .then((ok) => {
+          if (!ok) lost = true;
+        })
+        .catch(() => {
+          lost = true;
         });
-        await remove(attempt.id);
+    }, 5000);
+    for (const attempt of await attempts(userId)) {
+      if (!sameSession(session) || lost || !(await renew())) break;
+      if (
+        attempt.state !== "PENDING" ||
+        (attempt.nextAttemptAt || 0) > Date.now()
+      )
+        continue;
+      // The operation may have been removed after the list was read.
+      const saved = await operation("attempts", "readonly", (s) =>
+        s.get(attempt.id),
+      );
+      if (!saved || !sameSession(session)) continue;
+      try {
+        const result = await api("/student/checkin", {
+          method: "POST",
+          session,
+          expectedUserId: userId,
+          body: {
+            sessionId: attempt.sessionId,
+            code: attempt.code,
+            originatingUserId: userId,
+          },
+        });
+        if (lost || !(await renew())) break;
+        await modify("attempts", attempt.id, (current) => {
+          if (!current) return undefined;
+          const receipt = {
+            ...current,
+            state: "SYNCED",
+            acknowledgedAt: new Date().toISOString(),
+            attendanceId: result.attendance.id,
+            duplicate: !!result.duplicate,
+            status: result.attendance.status,
+          };
+          delete receipt.code;
+          delete receipt.error;
+          delete receipt.nextAttemptAt;
+          return receipt;
+        });
       } catch (error) {
-        attempt.tries++;
-        attempt.error = error.message;
-        if (!error.network || attempt.tries >= 5) attempt.state = "FAILED";
-        await operation("attempts", "readwrite", (s) => s.put(attempt));
-        changed();
-        if (error.network) break;
+        if (error.identity || !sameSession(session)) break;
+        if (lost || !(await renew())) break;
+        await modify("attempts", attempt.id, (current) => {
+          if (!current) return undefined;
+          const tries = (current.tries || 0) + 1;
+          const transient = retryable(error) || error.status === 401;
+          const delay =
+            Math.min(300000, 2000 * 2 ** Math.min(tries - 1, 8)) *
+            (0.75 + Math.random() * 0.5);
+          return {
+            ...current,
+            tries,
+            error: error.message,
+            state: transient ? "PENDING" : "FAILED",
+            nextAttemptAt:
+              Date.now() + Math.max(delay, error.retryAfterMs || 0),
+          };
+        });
+        if (retryable(error) || error.status === 401) break;
       }
+      changed();
     }
   } finally {
-    syncing = false;
+    clearInterval(heartbeat);
+    syncing.delete(userId);
+    if (acquired)
+      await modify("leases", id, (lease) =>
+        lease?.owner === owner ? null : undefined,
+      );
+    changed();
   }
 }

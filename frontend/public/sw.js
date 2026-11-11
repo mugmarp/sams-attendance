@@ -1,4 +1,4 @@
-const CACHE = "sams-workspace-v2";
+const CACHE = "sams-workspace-v3";
 const FILES = [
   "/login",
   "/login.html",

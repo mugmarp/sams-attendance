@@ -65,7 +65,7 @@ Additional students: student2 through student5 at demo.sams.test, with the same 
 
 ## Offline behavior
 
-A prior online visit/sign-in on HTTPS or localhost caches the plain app shell. User-scoped student snapshots last 24 hours. Pending attempts are stored in IndexedDB and sent when reconnecting with the app open or by pressing **Send pending attempts**. Pending does not mean present. An expired/closed code becomes failed and requires lecturer review; client clocks cannot backdate attendance. Five network failures stop automatic retry. First-time offline login is not supported. Clear site data on shared devices because local snapshots/attempts remain on that browser.
+A prior online visit/sign-in on HTTPS or localhost caches the plain app shell. User-scoped student snapshots last 24 hours. Pending attempts are stored in IndexedDB and sent when reconnecting with the app open or by pressing **Send pending attempts**. Pending does not mean present. An expired/closed code becomes failed and requires lecturer review; client clocks cannot backdate attendance. Transient network failures, 408/429 responses and server errors remain pending with persisted backoff; Retry-After is honored. Replay is bound to the originating sign-in and coordinated across tabs. Confirmed attempts retain local server acknowledgements without their codes. First-time offline login is not supported. Clear site data on shared devices because local snapshots/attempts remain on that browser.
 
 ## Postman and tests
 

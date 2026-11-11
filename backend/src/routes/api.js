@@ -111,6 +111,7 @@ router.post(
   validate(
     z.object({
       sessionId: identity,
+      originatingUserId: identity.optional(),
       code: z
         .string()
         .trim()
@@ -119,6 +120,13 @@ router.post(
     }),
   ),
   asyncHandler(async (req, res) => {
+    if (
+      req.body.originatingUserId &&
+      req.body.originatingUserId !== req.user.userId
+    )
+      throw new ForbiddenError(
+        "This attempt belongs to a different signed-in account",
+      );
     res.json(
       await submitCheckin(req.user.userId, req.body.sessionId, req.body.code),
     );

@@ -634,3 +634,17 @@ test("live dates use server time and invalid calendar days are rejected", async 
     .set(auth(examiner))
     .expect(400);
 });
+
+test("queued check-ins reject an originating account different from the token", async () => {
+  await request(app)
+    .post("/api/student/checkin")
+    .set(auth(student))
+    .send({
+      sessionId: activeId,
+      code: "ABC234",
+      originatingUserId: (
+        await db.user.findUnique({ where: { email: "stranger@test.example" } })
+      ).id,
+    })
+    .expect(403);
+});

@@ -1,4 +1,12 @@
-import { api, cachedUser, clearSession } from "./api.js";
+import {
+  api,
+  cachedUser,
+  clearSession,
+  captureSession,
+  sameSession,
+  updateUser,
+  retryable,
+} from "./api.js";
 export const $ = (selector) => document.querySelector(selector);
 export const escape = (value) =>
   String(value ?? "").replace(
@@ -45,16 +53,21 @@ export function notice(text) {
 }
 export async function init(roles) {
   let user = cachedUser();
-  if (!user || !localStorage.getItem("accessToken")) {
+  if (!user) {
     location.replace("/login");
     return null;
   }
+  const session = captureSession(user.id);
+  const checkIdentity = () => {
+    if (!sameSession(session)) location.replace("/login");
+  };
+  addEventListener("sams:session", checkIdentity);
   try {
-    user = await api("/auth/me");
-    localStorage.setItem("user", JSON.stringify(user));
+    user = await api("/auth/me", { session });
+    updateUser(user, session);
   } catch (error) {
-    if (!error.network) {
-      clearSession();
+    if (!retryable(error)) {
+      clearSession(session);
       location.replace("/login");
       return null;
     }
@@ -129,7 +142,7 @@ export async function init(roles) {
   setInterval(renderDate, 30000);
   $("#site-header").hidden = false;
   $("#logout").onclick = () => {
-    clearSession();
+    clearSession(session);
     location.assign("/login");
   };
   const online = () => {
