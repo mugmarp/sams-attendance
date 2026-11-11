@@ -1,3 +1,5 @@
+> Historical planning/reference document from the Hermes work. Its proposed features, regulatory assertions and data models are not the current implementation specification. See README.md, TECH_ARCHITECTURE.md, API_SPEC.md and IMPORT_GUIDE.md for the implemented prototype. Official institutional requirements have not been verified by this codebase.
+
 # Data Dictionary — SAMS Attendance
 
 ## Core Entities
