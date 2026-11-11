@@ -1,0 +1,365 @@
+:root {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+  line-height: 1.55;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+a {
+  color: #0369a1;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+:focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 3px;
+}
+[hidden] {
+  display: none !important;
+}
+header {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+}
+.header-inner,
+main,
+footer {
+  max-width: 1160px;
+  margin: auto;
+  padding: 24px;
+}
+.header-top,
+.heading,
+.spread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.brand {
+  font-size: 1.3rem;
+  font-weight: 750;
+}
+.brand small {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: #64748b;
+}
+.account {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.9rem;
+}
+nav {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+nav a {
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+nav a[aria-current="page"] {
+  background: #e0f2fe;
+  color: #075985;
+}
+h1 {
+  font-size: clamp(1.6rem, 4vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  margin: 0 0 12px;
+}
+h2 {
+  font-size: 1.2rem;
+  margin: 0 0 12px;
+}
+p {
+  margin: 8px 0;
+}
+.muted,
+footer {
+  color: #64748b;
+}
+.small,
+footer {
+  font-size: 0.85rem;
+}
+.card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 2px #0f172a08;
+}
+.stack > * + * {
+  margin-top: 24px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 20px;
+}
+.course {
+  display: block;
+  color: inherit;
+}
+.course:hover {
+  border-color: #38bdf8;
+  text-decoration: none;
+}
+.course .code {
+  color: #0369a1;
+  font-family: ui-monospace, monospace;
+}
+.course h2 {
+  margin-top: 12px;
+}
+.button,
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 600;
+  font-size: 0.9rem;
+  gap: 6px;
+}
+.primary {
+  background: #0369a1;
+  color: white;
+}
+.danger {
+  background: #b91c1c;
+  color: white;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+input,
+select,
+textarea {
+  display: block;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  color: #0f172a;
+}
+form > * + * {
+  margin-top: 16px;
+}
+.field {
+  max-width: 520px;
+}
+textarea {
+  min-height: 90px;
+}
+.alert,
+.notice,
+.offline {
+  padding: 14px 18px;
+  border: 1px solid;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+.alert {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+.notice {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+.offline {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+.code-panel {
+  background: #0f172a;
+  color: white;
+  text-align: center;
+  border-radius: 12px;
+  padding: 28px;
+}
+.large-code {
+  font:
+    700 clamp(2rem, 7vw, 3rem) ui-monospace,
+    monospace;
+  letter-spacing: 0.2em;
+  margin: 16px 0;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 560px;
+  font-size: 0.9rem;
+}
+th,
+td {
+  text-align: left;
+  padding: 14px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+th {
+  color: #64748b;
+  font-weight: 500;
+}
+details {
+  font-size: 0.8rem;
+  margin-top: 8px;
+}
+summary {
+  cursor: pointer;
+}
+.stat {
+  font-size: 2rem;
+  font-weight: 700;
+}
+.badge {
+  font-size: 0.8rem;
+  background: #e0f2fe;
+  color: #075985;
+  border-radius: 20px;
+  padding: 5px 10px;
+}
+.login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.login .card {
+  max-width: 440px;
+  width: 100%;
+}
+.login .eyebrow {
+  color: #0369a1;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+}
+.login button {
+  width: 100%;
+}
+.progress {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+.progress > div {
+  height: 100%;
+  background: #d97706;
+}
+.progress .met {
+  background: #16a34a;
+}
+.list {
+  list-style: none;
+  padding: 0;
+}
+.list li {
+  padding: 14px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+.narrow {
+  max-width: 800px;
+}
+.filter {
+  max-width: 300px;
+}
+.queue-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  margin-top: 12px;
+}
+.text-button {
+  padding: 0;
+  background: none;
+  color: #0369a1;
+  text-decoration: underline;
+}
+.confirm {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+@media (max-width: 600px) {
+  .header-inner,
+  main,
+  footer {
+    padding: 16px;
+  }
+  .card {
+    padding: 18px;
+  }
+  .account {
+    gap: 8px;
+  }
+  .account span {
+    max-width: 150px;
+  }
+  nav {
+    gap: 4px;
+  }
+  .heading {
+    align-items: flex-start;
+  }
+  .brand small {
+    display: none;
+  }
+}

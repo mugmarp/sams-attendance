@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0369a1" />
+    <title>SAMS · MUST Attendance</title>
+    <link rel="icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header id="site-header" hidden></header>
+    <div class="header-inner" id="offline" role="status" hidden>
+      You’re offline. Saved check-ins are pending until the server accepts them.
+    </div>
+    <main class="stack">
+      <p id="error" class="alert" role="alert" hidden></p>
+      <section id="dashboard" class="stack" hidden>
+        <div class="heading">
+          <div>
+            <h1>Class attendance</h1>
+            <p class="muted">
+              Open a class to start check-in, review its roster or complete the
+              register.
+            </p>
+          </div>
+          <div>
+            <label for="date">Date (Kampala)</label
+            ><input id="date" type="date" />
+          </div>
+        </div>
+        <div id="classes" class="grid">
+          <p role="status">Loading classes…</p>
+        </div>
+        <details class="card">
+          <summary>Create class session</summary>
+          <form id="create-session">
+            <div>
+              <label for="create-course">Course offering</label
+              ><select id="create-course" required></select>
+            </div>
+            <div class="grid">
+              <div>
+                <label for="create-start">Starts (Kampala time)</label
+                ><input id="create-start" type="datetime-local" required />
+              </div>
+              <div>
+                <label for="create-end">Ends (Kampala time)</label
+                ><input id="create-end" type="datetime-local" required />
+              </div>
+              <div>
+                <label for="create-room">Venue</label
+                ><input id="create-room" maxlength="120" required />
+              </div>
+              <div>
+                <label for="create-type">Class type</label
+                ><select id="create-type">
+                  <option>LECTURE</option>
+                  <option>TUTORIAL</option>
+                  <option>PRACTICAL</option>
+                  <option>LAB</option>
+                  <option>CLINICAL</option>
+                </select>
+              </div>
+            </div>
+            <button class="primary">Create class</button>
+          </form>
+        </details>
+      </section>
+      <section id="session-view" class="stack" hidden>
+        <a href="/examiner/dashboard">← Classes</a>
+        <div class="heading">
+          <div>
+            <h1 id="class-title">Class register</h1>
+            <p id="class-subtitle" class="muted"></p>
+            <a id="course-report-link">Course attendance report →</a>
+          </div>
+          <span id="class-count" class="badge"></span>
+        </div>
+        <section class="card">
+          <h2>Student check-in</h2>
+          <div id="checkin-panel"></div>
+          <div class="actions">
+            <button id="start" class="primary">Start check-in</button
+            ><button id="stop">Stop check-in</button
+            ><button id="complete">Complete class</button
+            ><button id="cancel">Cancel class</button>
+          </div>
+          <div id="confirmation" class="confirm" hidden>
+            <p id="confirmation-text"></p>
+            <div class="actions">
+              <button id="confirm" class="primary"></button
+              ><button id="dismiss">Keep class open</button>
+            </div>
+          </div>
+        </section>
+        <section class="card">
+          <h2>Class register</h2>
+          <p class="small muted">
+            Updates every five seconds. Corrections require a reason and are
+            recorded in the change history.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Attendance</th>
+                  <th>Recorded</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="roster"></tbody>
+            </table>
+          </div>
+        </section>
+        <section
+          class="card"
+          id="correction"
+          aria-label="Attendance correction"
+          hidden
+        >
+          <h2 id="correction-title"></h2>
+          <form id="correction-form">
+            <div>
+              <label for="attendance-status">Attendance status</label
+              ><select id="attendance-status">
+                <option>PRESENT</option>
+                <option>LATE</option>
+                <option>ABSENT</option>
+                <option>EXCUSED</option>
+              </select>
+            </div>
+            <div>
+              <label for="reason">Reason</label
+              ><textarea
+                id="reason"
+                minlength="5"
+                maxlength="500"
+                required
+              ></textarea>
+            </div>
+            <div class="actions">
+              <button class="primary">Save correction</button
+              ><button id="close-correction" type="button">Close</button>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+    <footer>
+      Group B prototype · All times Africa/Kampala · Attendance qualification
+      only; fees and coursework are not assessed.
+    </footer>
+    <script type="module" src="/js/examiner.js"></script>
+  </body>
+</html>

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0369a1" />
+    <title>SAMS · MUST Attendance</title>
+    <link rel="icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header id="site-header" hidden></header>
+    <div class="header-inner" id="offline" role="status" hidden>
+      You’re offline. Saved check-ins are pending until the server accepts them.
+    </div>
+    <main class="stack">
+      <p id="error" class="alert" role="alert" hidden></p>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <section id="course-view" class="stack" hidden>
+        <div>
+          <h1>Course attendance reports</h1>
+          <p class="muted">
+            Choose a course offering to review attendance qualification and
+            export a report.
+          </p>
+        </div>
+        <div id="courses" class="grid"></div>
+        <section class="stack" aria-label="Administration setup">
+          <details class="card">
+            <summary>Create account</summary>
+            <form id="user-form">
+              <div class="grid">
+                <div>
+                  <label for="new-name">Full name</label
+                  ><input
+                    id="new-name"
+                    minlength="2"
+                    maxlength="120"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="new-email">Account email</label
+                  ><input id="new-email" type="email" required />
+                </div>
+                <div>
+                  <label for="new-role">Account role</label
+                  ><select id="new-role">
+                    <option>STUDENT</option>
+                    <option>EXAMINER</option>
+                    <option>ADMIN</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="new-password">Initial password</label
+                  ><input
+                    id="new-password"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="12"
+                    maxlength="72"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="new-reg">Registration number (students)</label
+                  ><input id="new-reg" maxlength="60" />
+                </div>
+              </div>
+              <button class="primary">Create account</button>
+            </form>
+          </details>
+          <details class="card">
+            <summary>Create course offering</summary>
+            <form id="course-form">
+              <div class="grid">
+                <div>
+                  <label for="new-code">Course code</label
+                  ><input id="new-code" minlength="2" maxlength="20" required />
+                </div>
+                <div>
+                  <label for="new-title">Course title</label
+                  ><input
+                    id="new-title"
+                    minlength="3"
+                    maxlength="180"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="new-program">Program</label
+                  ><input
+                    id="new-program"
+                    maxlength="30"
+                    value="BSE"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="new-year">Year of study</label
+                  ><input
+                    id="new-year"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value="2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="new-academic-year">Academic year</label
+                  ><input
+                    id="new-academic-year"
+                    pattern="[0-9]{4}/[0-9]{4}"
+                    value="2026/2027"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="new-semester">Semester</label
+                  ><select id="new-semester">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="new-examiner">Assigned examiner</label
+                  ><select id="new-examiner" required></select>
+                </div>
+                <div>
+                  <label for="new-threshold">Attendance threshold (%)</label
+                  ><input
+                    id="new-threshold"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value="80"
+                    required
+                  />
+                </div>
+              </div>
+              <p class="small muted">
+                Confirm the attendance policy with the Registrar. The default is
+                a demonstration setting, not a verified university rule.
+              </p>
+              <button class="primary">Create course</button>
+            </form>
+          </details>
+          <details class="card">
+            <summary>Enroll a student</summary>
+            <form id="enrollment-form">
+              <div>
+                <label for="enroll-course">Course offering</label
+                ><select id="enroll-course" required></select>
+              </div>
+              <div>
+                <label for="enroll-student">Student account</label
+                ><select id="enroll-student" required></select>
+              </div>
+              <button class="primary">Enroll student</button>
+            </form>
+          </details>
+        </section>
+      </section>
+      <section id="report-view" class="stack" hidden>
+        <a href="/admin/courses">← Course reports</a>
+        <div class="heading">
+          <div>
+            <h1>Attendance qualification</h1>
+            <p id="course-title" class="muted"></p>
+          </div>
+          <button id="download" class="primary">Download PDF</button>
+        </div>
+        <div id="stats" class="grid"></div>
+        <section class="card">
+          <div class="filter">
+            <label for="filter">Show students</label
+            ><select id="filter">
+              <option value="all">All students</option>
+              <option value="met">Requirement met</option>
+              <option value="below">Below requirement</option>
+              <option value="none">Not assessed</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Attended</th>
+                  <th>Completed</th>
+                  <th>Attendance</th>
+                  <th>Requirement</th>
+                </tr>
+              </thead>
+              <tbody id="report-rows"></tbody>
+            </table>
+          </div>
+          <p id="empty-report" hidden>No students match this filter.</p>
+        </section>
+        <p id="report-rules" class="small muted"></p>
+      </section>
+    </main>
+    <footer>
+      Group B prototype · All times Africa/Kampala · Attendance qualification
+      only; fees and coursework are not assessed.
+    </footer>
+    <script type="module" src="/js/admin.js"></script>
+  </body>
+</html>

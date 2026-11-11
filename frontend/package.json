@@ -1,31 +1,17 @@
 {
   "name": "sams-frontend",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "private": true,
   "type": "module",
+  "description": "Plain HTML, CSS and browser JavaScript served by Express",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "lint": "tsc --noEmit",
+    "start": "npm --prefix ../backend start",
+    "check": "node scripts/check-js.js",
+    "build": "npm run check",
+    "lint": "npm run check",
     "test:e2e": "playwright test"
   },
-  "dependencies": {
-    "axios": "^1.6.2",
-    "idb": "^8.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^7.18.5"
-  },
   "devDependencies": {
-    "@playwright/test": "^1.65.0",
-    "@types/prop-types": "^15.7.15",
-    "@types/react": "^18.2.45",
-    "@types/react-dom": "^18.2.18",
-    "@vitejs/plugin-react": "^4.7.0",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.32",
-    "tailwindcss": "^3.4.0",
-    "typescript": "^5.3.3",
-    "vite": "^6.4.6"
+    "@playwright/test": "^1.65.0"
   }
 }

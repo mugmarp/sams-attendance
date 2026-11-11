@@ -1,6 +1,6 @@
-import { test, expect, Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { PrismaClient } from "../../backend/node_modules/@prisma/client/index.js";
-const baseURL = process.env.SAMS_BASE_URL || "http://localhost:5173";
+const baseURL = process.env.SAMS_BASE_URL || "http://localhost:3000";
 const apiURL = process.env.SAMS_API_URL || "http://localhost:3000";
 test.beforeAll(async () => {
   const url = process.env.SAMS_E2E_DATABASE_URL;
@@ -34,7 +34,7 @@ test.beforeAll(async () => {
   }
 });
 const password = "SamsDemo2026!";
-async function login(page: Page, role: string) {
+async function login(page, role) {
   await page.goto("/login");
   await page
     .getByLabel("Email", { exact: true })
@@ -56,7 +56,7 @@ test("lecturer, student and registrar complete the attendance journey", async ({
     .click();
   const displayed = page.getByLabel("Current check-in code");
   await expect(displayed).toHaveText(/^[A-HJ-NP-Z2-9]{6}$/);
-  const code = (await displayed.textContent())!;
+  const code = await displayed.textContent();
   const context = await browser.newContext({
     baseURL,
     viewport: { width: 390, height: 844 },
@@ -69,11 +69,11 @@ test("lecturer, student and registrar complete the attendance journey", async ({
   await learner
     .getByRole("combobox", { name: "Class", exact: true })
     .selectOption(
-      (await learner
+      await learner
         .locator("select option")
         .filter({ hasText: "SWE2106" })
         .first()
-        .getAttribute("value"))!,
+        .getAttribute("value"),
     );
   await learner.getByLabel("Check-in code", { exact: true }).fill(code);
   await learner.getByRole("button", { name: "Record attendance" }).click();
@@ -125,8 +125,7 @@ test("offline shell restores user-scoped classes and rejects a stale saved code"
     headers: { Authorization: `Bearer ${token}` },
   });
   const current = (await sessions.json()).find(
-    (s: { courseCode: string; status: string }) =>
-      s.courseCode === "SWE2103" && s.status === "SCHEDULED",
+    (s) => s.courseCode === "SWE2103" && s.status === "SCHEDULED",
   );
   expect(current).toBeTruthy();
   const opened = await request.post(
@@ -171,7 +170,6 @@ test("offline shell restores user-scoped classes and rejects a stale saved code"
   await login(page, "student2");
   await expect(page.getByText("No saved attempts.")).toBeVisible();
 });
-
 test("a valid pending check-in is accepted on reconnection", async ({
   page,
   request,
@@ -184,8 +182,7 @@ test("a valid pending check-in is accepted on reconnection", async ({
     headers: { Authorization: `Bearer ${token}` },
   });
   const current = (await sessions.json()).find(
-    (s: { courseCode: string; status: string }) =>
-      s.courseCode === "SWE2103" && s.status === "SCHEDULED",
+    (s) => s.courseCode === "SWE2103" && s.status === "SCHEDULED",
   );
   const opened = await request.post(
     `${apiURL}/api/examiner/sessions/${current.id}/start-checkin`,
@@ -205,4 +202,82 @@ test("a valid pending check-in is accepted on reconnection", async ({
   await expect(
     page.getByRole("option", { name: /SWE2103.*recorded/ }),
   ).toHaveCount(1);
+});
+
+test("plain forms provision a course and student, then create a lecturer class", async ({
+  page,
+}) => {
+  const suffix = Date.now().toString(36),
+    code = "UI" + suffix.toUpperCase(),
+    name = "Browser Learner " + suffix,
+    email = "browser-" + suffix + "@demo.sams.test",
+    reg = "UI/" + suffix;
+  await login(page, "admin");
+  await page.locator("summary").filter({ hasText: "Create account" }).click();
+  await page.getByLabel("Full name", { exact: true }).fill(name);
+  await page.getByLabel("Account email").fill(email);
+  await page.getByLabel("Initial password").fill("BrowserPassword2026!");
+  await page.getByLabel("Registration number (students)").fill(reg);
+  await page
+    .getByRole("button", { name: "Create account", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Account created");
+  await page
+    .locator("summary")
+    .filter({ hasText: "Create course offering" })
+    .click();
+  await page.getByLabel("Course code", { exact: true }).fill(code);
+  await page
+    .getByLabel("Course title", { exact: true })
+    .fill("Browser Setup Course");
+  await page
+    .getByLabel("Assigned examiner")
+    .selectOption({ label: "Demo Examiner (examiner@demo.sams.test)" });
+  await page.getByLabel("Attendance threshold (%)").fill("75");
+  await page
+    .getByRole("button", { name: "Create course", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "Course offering created",
+  );
+  await page.locator("summary").filter({ hasText: "Enroll a student" }).click();
+  await page
+    .locator("#enroll-course")
+    .selectOption(
+      await page
+        .locator("#enroll-course option")
+        .filter({ hasText: code })
+        .getAttribute("value"),
+    );
+  await page
+    .locator("#enroll-student")
+    .selectOption({ label: name + " · " + reg });
+  await page
+    .getByRole("button", { name: "Enroll student", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Student enrolled");
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await login(page, "examiner");
+  await page
+    .locator("summary")
+    .filter({ hasText: "Create class session" })
+    .click();
+  await page
+    .locator("#create-course")
+    .selectOption(
+      await page
+        .locator("#create-course option")
+        .filter({ hasText: code })
+        .getAttribute("value"),
+    );
+  await page.getByLabel("Venue", { exact: true }).fill("Browser Lab");
+  await page.getByRole("button", { name: "Create class", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: code + " · Browser Setup Course" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Course attendance report →" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Attendance qualification" }),
+  ).toBeVisible();
+  await expect(page.locator("tbody")).toContainText(name);
 });

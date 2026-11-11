@@ -5,7 +5,7 @@ export default defineConfig({
   expect: { timeout: 15000 },
   workers: 1,
   use: {
-    baseURL: process.env.SAMS_BASE_URL || "http://localhost:5173",
+    baseURL: process.env.SAMS_BASE_URL || "http://localhost:3000",
     headless: true,
     launchOptions: process.env.PLAYWRIGHT_EXECUTABLE_PATH
       ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
