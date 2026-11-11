@@ -1,15 +1,15 @@
-// Prisma Schema — SAMS Attendance System
-// Run: npx prisma migrate dev --name init
-
 generator client {
   provider = "prisma-client-js"
 }
-
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
 }
-
+enum UserRole {
+  STUDENT
+  EXAMINER
+  ADMIN
+}
 enum SessionType {
   LECTURE
   TUTORIAL
@@ -17,120 +17,96 @@ enum SessionType {
   LAB
   CLINICAL
 }
-
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
 enum AttendanceStatus {
   PRESENT
   ABSENT
   LATE
   EXCUSED
 }
-
 enum CheckInMethod {
   CODE
-  QR
   MANUAL
-  GEOFENCE
 }
-
-enum UserRole {
-  STUDENT
-  EXAMINER
-  ADMIN
-}
-
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  passwordHash  String
-  role          UserRole @default(STUDENT)
-  regNo         String?  @unique
-  name          String
-  program       String?
-  year          Int?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
-  attendances   Attendance[]
-  examinerCourses Course[] @relation("ExaminerCourses")
-  studentEnrollments Enrollment[] @relation("StudentEnrollments")
+  id String @id @default(cuid())
+  email String @unique
+  passwordHash String
+  role UserRole @default(STUDENT)
+  regNo String? @unique
+  name String
+  program String?
+  year Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  examinerCourses Course[]
+  enrollments Enrollment[]
+  attendances Attendance[]
+  changes AttendanceChange[]
 }
-
 model Course {
-  id            String   @id @default(cuid())
-  code          String   @unique
-  title         String
-  creditUnits   Int      @default(3)
-  program       String
-  year          Int
-  semester      Int
-  examinerId    String?
-  examiner      User?    @relation("ExaminerCourses", fields: [examinerId], references: [id])
-  sessions      Session[]
-  enrollments   Enrollment[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([program, year, semester])
+  id String @id @default(cuid())
+  code String
+  title String
+  creditUnits Int @default(3)
+  program String
+  year Int
+  semester Int
+  academicYear String
+  examinerId String
+  examiner User @relation(fields: [examinerId], references: [id])
+  sessions Session[]
+  enrollments Enrollment[]
+  @@unique([code, academicYear, semester])
 }
-
 model Session {
-  id              String       @id @default(cuid())
-  courseId        String
-  course          Course       @relation(fields: [courseId], references: [id])
-  date            DateTime     // Date only (00:00:00)
-  startTime       DateTime
-  endTime         DateTime
-  room            String?
-  sessionType     SessionType  @default(LECTURE)
-  checkinCode     String?
-  codeExpiresAt   DateTime?
-  codeRotatedAt   DateTime?
-  attendances     Attendance[]
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-
-  @@index([courseId, date])
-  @@index([date])
-  @@index([startTime])
+  id String @id @default(cuid())
+  naturalKey String @unique
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+  startTime DateTime
+  endTime DateTime
+  room String?
+  sessionType SessionType @default(LECTURE)
+  status SessionStatus @default(SCHEDULED)
+  checkinSecret String?
+  checkinStartedAt DateTime?
+  checkinClosesAt DateTime?
+  attendances Attendance[]
+  @@index([courseId, startTime])
 }
-
 model Enrollment {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
   studentId String
-  student   User     @relation("StudentEnrollments", fields: [studentId], references: [id])
-  courseId  String
-  course    Course   @relation(fields: [courseId], references: [id])
-  createdAt DateTime @default(now())
-
+  student User @relation(fields: [studentId], references: [id])
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
   @@unique([studentId, courseId])
-  @@index([studentId])
-  @@index([courseId])
 }
-
 model Attendance {
-  id          String           @id @default(cuid())
-  studentId   String
-  student     User             @relation(fields: [studentId], references: [id])
-  sessionId   String
-  session     Session          @relation(fields: [sessionId], references: [id])
-  status      AttendanceStatus @default(PRESENT)
-  method      CheckInMethod    @default(CODE)
-  recordedAt  DateTime         @default(now())
-  syncedAt    DateTime?
-  deviceInfo  String?
-
+  id String @id @default(cuid())
+  studentId String
+  student User @relation(fields: [studentId], references: [id])
+  sessionId String
+  session Session @relation(fields: [sessionId], references: [id])
+  status AttendanceStatus @default(PRESENT)
+  method CheckInMethod @default(CODE)
+  recordedAt DateTime @default(now())
+  changes AttendanceChange[]
   @@unique([studentId, sessionId])
-  @@index([sessionId])
-  @@index([studentId, recordedAt])
 }
-
-model CheckinCode {
-  id        String   @id @default(cuid())
-  sessionId String   @unique
-  code      String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  @@index([expiresAt])
+model AttendanceChange {
+  id String @id @default(cuid())
+  attendanceId String
+  attendance Attendance @relation(fields: [attendanceId], references: [id])
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  previousStatus AttendanceStatus?
+  status AttendanceStatus
+  reason String
+  recordedAt DateTime @default(now())
 }
