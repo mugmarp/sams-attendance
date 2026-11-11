@@ -1,25 +1,13 @@
 import { randomBytes } from "node:crypto";
-import {
-  Session,
-  Course,
-  Prisma,
-  UserRole,
-  SessionStatus,
-  AttendanceStatus,
-} from "@prisma/client";
-import { prisma } from "../config/db";
+import { prisma } from "../config/db.js";
 import {
   ConflictError,
   NotFoundError,
   ValidationError,
   ForbiddenError,
-} from "../utils/errors";
-import { currentCode, matchesCode, WINDOW_MS } from "./rules";
-export type Actor = { userId: string; role: UserRole };
-export function sessionDTO(
-  session: Session & { course: Course },
-  lecturer = false,
-) {
+} from "../utils/errors.js";
+import { currentCode, matchesCode, WINDOW_MS } from "./rules.js";
+export function sessionDTO(session, lecturer = false) {
   const { checkinSecret, checkinStartedAt, checkinClosesAt, ...safe } = session;
   const active =
     session.status === "SCHEDULED" &&
@@ -37,7 +25,7 @@ export function sessionDTO(
     ...(lecturer ? { activeCode: active } : {}),
   };
 }
-async function locked(tx: Prisma.TransactionClient, id: string) {
+async function locked(tx, id) {
   await tx.$queryRaw`SELECT id FROM "Session" WHERE id = ${id} FOR UPDATE`;
   const session = await tx.session.findUnique({
     where: { id },
@@ -46,15 +34,11 @@ async function locked(tx: Prisma.TransactionClient, id: string) {
   if (!session) throw new NotFoundError("Session not found");
   return session;
 }
-function owns(actor: Actor, examinerId: string) {
+function owns(actor, examinerId) {
   if (actor.role !== "ADMIN" && actor.userId !== examinerId)
     throw new ForbiddenError("This class belongs to another examiner");
 }
-export async function manageSession(
-  actor: Actor,
-  id: string,
-  action: "start" | "stop" | SessionStatus,
-) {
+export async function manageSession(actor, id, action) {
   return prisma.$transaction(async (tx) => {
     const session = await locked(tx, id);
     owns(actor, session.course.examinerId);
@@ -104,11 +88,7 @@ export async function manageSession(
     return sessionDTO(updated, true);
   });
 }
-export async function submitCheckin(
-  studentId: string,
-  sessionId: string,
-  code: string,
-) {
+export async function submitCheckin(studentId, sessionId, code) {
   return prisma.$transaction(async (tx) => {
     const session = await locked(tx, sessionId);
     const enrolled = await tx.enrollment.findUnique({
@@ -166,11 +146,11 @@ export async function submitCheckin(
   });
 }
 export async function correctAttendance(
-  actor: Actor,
-  sessionId: string,
-  studentId: string,
-  status: AttendanceStatus,
-  reason: string,
+  actor,
+  sessionId,
+  studentId,
+  status,
+  reason,
 ) {
   return prisma.$transaction(async (tx) => {
     const session = await locked(tx, sessionId);

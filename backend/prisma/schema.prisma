@@ -56,6 +56,7 @@ model Course {
   program String
   year Int
   semester Int
+  attendanceThreshold Int @default(80)
   academicYear String
   examinerId String
   examiner User @relation(fields: [examinerId], references: [id])

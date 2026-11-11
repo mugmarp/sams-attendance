@@ -5,7 +5,7 @@ import {
   currentCode,
   matchesCode,
   kampalaDay,
-} from "../src/services/rules";
+} from "../src/services/rules.js";
 test("attendance threshold uses exact counts; no classes is unassessed", () => {
   assert.deepEqual(attendanceResult(0, 0), {
     presentCount: 0,
@@ -20,23 +20,22 @@ test("attendance threshold uses exact counts; no classes is unassessed", () => {
 test("code rotation, expiry boundaries and case normalization", () => {
   const start = new Date("2026-11-11T09:00:00Z");
   const end = new Date(start.getTime() + 600000);
-  const at = (ms: number) =>
+  const at = (ms) =>
     currentCode("test-secret", start, end, new Date(start.getTime() + ms));
   assert.equal(at(-1), null);
   assert.equal(at(600000), null);
-  assert.match(at(0)!.code, /^[A-HJ-NP-Z2-9]{6}$/);
-  assert.equal(at(0)!.code, at(119999)!.code);
-  assert.notEqual(at(0)!.code, at(120000)!.code);
-  assert.equal(at(0)!.expiresAt.getTime(), start.getTime() + 120000);
-  assert.equal(matchesCode(at(0)!.code, at(0)!.code.toLowerCase()), true);
-  assert.equal(matchesCode(at(0)!.code, "x"), false);
+  assert.match(at(0).code, /^[A-HJ-NP-Z2-9]{6}$/);
+  assert.equal(at(0).code, at(119999).code);
+  assert.notEqual(at(0).code, at(120000).code);
+  assert.equal(at(0).expiresAt.getTime(), start.getTime() + 120000);
+  assert.equal(matchesCode(at(0).code, at(0).code.toLowerCase()), true);
+  assert.equal(matchesCode(at(0).code, "x"), false);
 });
 test("day selection uses Kampala rather than the server timezone", () => {
   assert.equal(kampalaDay(new Date("2026-11-11T22:00:00Z")), "2026-11-12");
 });
-
 test("import validation rejects unmatched enrollment and invalid session times", async () => {
-  const { validateDataset } = await import("../scripts/import");
+  const { validateDataset } = await import("../scripts/import.js");
   const base = {
     users: [
       { email: "teacher@import.test", name: "Teacher", role: "EXAMINER" },
@@ -86,4 +85,9 @@ test("import validation rejects unmatched enrollment and invalid session times",
       }),
     /Invalid dated/,
   );
+});
+
+test("offering-specific attendance thresholds are respected", () => {
+  assert.equal(attendanceResult(3, 4, 75).eligible, true);
+  assert.equal(attendanceResult(3, 4, 80).eligible, false);
 });

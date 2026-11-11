@@ -1,13 +1,12 @@
-import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { prisma } from "../config/db";
+import { prisma } from "../config/db.js";
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
-} from "../utils/jwt";
-import { asyncHandler } from "../utils/asyncHandler";
-import { UnauthorizedError } from "../utils/errors";
+} from "../utils/jwt.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { UnauthorizedError } from "../utils/errors.js";
 const publicUser = {
   id: true,
   email: true,
@@ -16,19 +15,15 @@ const publicUser = {
   regNo: true,
   program: true,
   year: true,
-} as const;
-function tokens(user: {
-  id: string;
-  email: string;
-  role: import("@prisma/client").UserRole;
-}) {
+};
+function tokens(user) {
   const payload = { userId: user.id, email: user.email, role: user.role };
   return {
     accessToken: generateAccessToken(payload),
     refreshToken: generateRefreshToken(payload),
   };
 }
-export const login = asyncHandler(async (req: Request, res: Response) => {
+export const login = asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { email: req.body.email.toLowerCase().trim() },
   });
@@ -40,8 +35,8 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   });
   res.json({ ...tokens(user), user: safe });
 });
-export const refresh = asyncHandler(async (req: Request, res: Response) => {
-  let id: string;
+export const refresh = asyncHandler(async (req, res) => {
+  let id;
   try {
     id = verifyRefreshToken(req.body.refreshToken).userId;
   } catch {
@@ -54,9 +49,9 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
   if (!user) throw new UnauthorizedError();
   res.json({ ...tokens(user), user });
 });
-export const me = asyncHandler(async (req: Request, res: Response) => {
+export const me = asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({
-    where: { id: req.user!.userId },
+    where: { id: req.user.userId },
     select: publicUser,
   });
   if (!user) throw new UnauthorizedError();

@@ -1,17 +1,15 @@
 import PDFDocument from "pdfkit";
-import { getCourseEligibility } from "./eligibility";
-export async function generateEligibilityPDF(
-  courseId: string,
-): Promise<Buffer> {
+import { getCourseEligibility } from "./eligibility.js";
+export async function generateEligibilityPDF(courseId) {
   const { course, students } = await getCourseEligibility(courseId);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 40, bufferPages: true });
-    const chunks: Buffer[] = [];
+    const chunks = [];
     doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("error", reject);
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     const widths = [25, 120, 165, 55, 65, 85];
-    const row = (cells: string[], y: number, bold = false) => {
+    const row = (cells, y, bold = false) => {
       doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(8);
       let x = 40;
       cells.forEach((cell, i) => {
@@ -33,7 +31,7 @@ export async function generateEligibilityPDF(
         .fontSize(10)
         .text(`${course.code}: ${course.title}`)
         .text(
-          `${course.academicYear} / Semester ${course.semester} | ${course.program}`,
+          `${course.academicYear} / Semester ${course.semester} | ${course.program} | Threshold: ${course.attendanceThreshold}%`,
         )
         .text(
           `Generated: ${new Date().toLocaleString("en-GB", { timeZone: "Africa/Kampala" })} EAT`,

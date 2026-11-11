@@ -4,25 +4,16 @@ import request from "supertest";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 const db = new PrismaClient();
-let app: import("express").Express;
-let examiner: string,
-  other: string,
-  student: string,
-  stranger: string,
-  admin: string;
-let courseId: string,
-  activeId: string,
-  futureId: string,
-  zeroCourse: string,
-  studentId: string,
-  pastAbsent: string;
-const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
-const login = async (email: string) => {
+let app;
+let examiner, other, student, stranger, admin;
+let courseId, activeId, futureId, zeroCourse, studentId, pastAbsent;
+const auth = (token) => ({ Authorization: `Bearer ${token}` });
+const login = async (email) => {
   const res = await request(app)
     .post("/api/auth/login")
     .send({ email, password: "TestPassword2026!" });
   assert.equal(res.status, 200);
-  return res.body.accessToken as string;
+  return res.body.accessToken;
 };
 before(async () => {
   if (
@@ -35,7 +26,7 @@ before(async () => {
   process.env.NODE_ENV = "test";
   process.env.JWT_SECRET = "test-access-secret-at-least-32-characters";
   process.env.JWT_REFRESH_SECRET = "test-refresh-secret-at-least-32-characters";
-  app = (await import("../src/app")).default;
+  app = (await import("../src/app.js")).default;
   await db.attendanceChange.deleteMany();
   await db.attendance.deleteMany();
   await db.enrollment.deleteMany();
@@ -159,7 +150,7 @@ before(async () => {
 });
 after(async () => {
   await db.$disconnect();
-  const { prisma } = await import("../src/config/db");
+  const { prisma } = await import("../src/config/db.js");
   await prisma.$disconnect();
 });
 test("auth failures and role/ownership boundaries are enforced", async () => {
@@ -235,7 +226,7 @@ test("active classes remain visible and student responses never reveal code secr
     .get("/api/student/sessions/upcoming")
     .set(auth(student))
     .expect(200);
-  assert.ok(res.body.some((s: { id: string }) => s.id === activeId));
+  assert.ok(res.body.some((s) => s.id === activeId));
   assert.equal(
     /checkinSecret|checkinStartedAt|checkinClosesAt|activeCode|checkinCode/.test(
       JSON.stringify(res.body),
@@ -302,17 +293,17 @@ test("rotation is authoritative after a new read, and stop closes the window", a
     .set(auth(examiner))
     .expect(200);
   assert.notEqual(view.body.activeCode.code, initial);
-  const { currentCode } = await import("../src/services/rules");
+  const { currentCode } = await import("../src/services/rules.js");
   const stored = await db.session.findUniqueOrThrow({
     where: { id: activeId },
   });
   assert.equal(
     view.body.activeCode.code,
     currentCode(
-      stored.checkinSecret!,
-      stored.checkinStartedAt!,
-      stored.checkinClosesAt!,
-    )!.code,
+      stored.checkinSecret,
+      stored.checkinStartedAt,
+      stored.checkinClosesAt,
+    ).code,
   );
   await request(app)
     .post(`/api/examiner/sessions/${activeId}/stop-checkin`)
@@ -419,9 +410,8 @@ test("PDF handles empty and multi-page reports", async () => {
     (pdf.body.toString("latin1").match(/\/Type \/Page\b/g) ?? []).length >= 2,
   );
 });
-
 test("local imports are repeatable and roll back on identity conflicts", async () => {
-  const { importDataset } = await import("../scripts/import");
+  const { importDataset } = await import("../scripts/import.js");
   const data = {
     users: [
       { email: "teacher@import.test", name: "Teacher", role: "EXAMINER" },
@@ -480,7 +470,6 @@ test("local imports are repeatable and roll back on identity conflicts", async (
     null,
   );
 });
-
 test("a stale offline code cannot create attendance after rotation or closure", async () => {
   const hash = await bcrypt.hash("TestPassword2026!", 4);
   const learner = await db.user.create({
@@ -534,4 +523,100 @@ test("a stale offline code cannot create attendance after rotation or closure", 
     }),
     0,
   );
+});
+
+test("administrators provision accounts, offerings and enrollment; owners create validated classes", async () => {
+  const teacher = await db.user.findUniqueOrThrow({
+    where: { email: "teacher@test.example" },
+  });
+  const body = {
+    email: "setup@test.example",
+    name: "Setup Learner",
+    password: "SetupPassword2026!",
+    role: "STUDENT",
+    regNo: "SETUP/001",
+  };
+  const learner = await request(app)
+    .post("/api/admin/users")
+    .set(auth(admin))
+    .send(body)
+    .expect(201);
+  assert.equal(learner.body.passwordHash, undefined);
+  await request(app)
+    .post("/api/admin/users")
+    .set(auth(admin))
+    .send(body)
+    .expect(409);
+  await request(app)
+    .post("/api/admin/users")
+    .set(auth(student))
+    .send({ ...body, email: "blocked@test.example" })
+    .expect(403);
+  const courseBody = {
+    code: "SETUP1",
+    title: "Setup course",
+    program: "BSE",
+    year: 2,
+    semester: 1,
+    academicYear: "2026/2027",
+    examinerId: teacher.id,
+    attendanceThreshold: 75,
+  };
+  const course = await request(app)
+    .post("/api/admin/courses")
+    .set(auth(admin))
+    .send(courseBody)
+    .expect(201);
+  await request(app)
+    .post("/api/admin/courses")
+    .set(auth(admin))
+    .send({ ...courseBody, code: "INVALID", attendanceThreshold: 101 })
+    .expect(400);
+  const enroll = `/api/admin/courses/${course.body.id}/enroll`;
+  await request(app)
+    .post(enroll)
+    .set(auth(admin))
+    .send({ studentId: learner.body.id })
+    .expect(201);
+  await request(app)
+    .post(enroll)
+    .set(auth(admin))
+    .send({ studentId: learner.body.id })
+    .expect(409);
+  const path = `/api/examiner/courses/${course.body.id}/sessions`,
+    startTime = new Date(Date.now() - 60000).toISOString(),
+    endTime = new Date(Date.now() + 3600000).toISOString();
+  await request(app)
+    .post(path)
+    .set(auth(other))
+    .send({ startTime, endTime, room: "Lab" })
+    .expect(403);
+  await request(app)
+    .post(path)
+    .set(auth(examiner))
+    .send({ startTime: endTime, endTime: startTime, room: "Lab" })
+    .expect(400);
+  const created = await request(app)
+    .post(path)
+    .set(auth(examiner))
+    .send({ startTime, endTime, room: "Lab" })
+    .expect(201);
+  assert.equal(created.body.status, "SCHEDULED");
+  const report = await request(app)
+    .get(`/api/admin/eligibility/${course.body.id}`)
+    .set(auth(admin))
+    .expect(200);
+  assert.equal(report.body.course.attendanceThreshold, 75);
+  await request(app)
+    .get(`/api/examiner/courses/${course.body.id}/attendance-summary`)
+    .set(auth(examiner))
+    .expect(200);
+  await request(app)
+    .get(`/api/examiner/courses/${course.body.id}/attendance-summary`)
+    .set(auth(other))
+    .expect(403);
+  await request(app)
+    .get(`/api/examiner/courses/${course.body.id}/attendance-summary/pdf`)
+    .set(auth(examiner))
+    .expect(200);
 });

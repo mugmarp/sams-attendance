@@ -1,43 +1,42 @@
-import { Router, Request, Response, NextFunction } from "express";
+import setupRoutes from "./setup.js";
+import { Router } from "express";
 import { z } from "zod";
-import { prisma } from "../config/db";
+import { prisma } from "../config/db.js";
 import {
   authenticate,
   requireStudent,
   requireAdmin,
   requireExaminerOrAdmin,
-} from "../middleware/auth";
-import { authRateLimit, checkinRateLimit } from "../middleware/rateLimit";
-import { asyncHandler } from "../utils/asyncHandler";
-import { login, refresh, me } from "../controllers/auth";
+} from "../middleware/auth.js";
+import { authRateLimit, checkinRateLimit } from "../middleware/rateLimit.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { login, refresh, me } from "../controllers/auth.js";
 import {
   ForbiddenError,
   NotFoundError,
   ValidationError,
-} from "../utils/errors";
+} from "../utils/errors.js";
 import {
   manageSession,
   submitCheckin,
   correctAttendance,
   sessionDTO,
-} from "../services/attendance";
+} from "../services/attendance.js";
 import {
   getCourseEligibility,
   getStudentAttendanceSummary,
-} from "../services/eligibility";
-import { generateEligibilityPDF } from "../services/pdf";
-import { kampalaDay } from "../services/rules";
+} from "../services/eligibility.js";
+import { generateEligibilityPDF } from "../services/pdf.js";
+import { kampalaDay } from "../services/rules.js";
 const router = Router();
-const validate =
-  (schema: z.ZodTypeAny) =>
-  (req: Request, _res: Response, next: NextFunction) => {
-    try {
-      req.body = schema.parse(req.body);
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
+const validate = (schema) => (req, _res, next) => {
+  try {
+    req.body = schema.parse(req.body);
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
 const identity = z.string().cuid();
 router.param("id", (req, _res, next, value) => {
   const parsed = identity.safeParse(value);
@@ -80,14 +79,14 @@ router.get(
     const now = new Date();
     const sessions = await prisma.session.findMany({
       where: {
-        course: { enrollments: { some: { studentId: req.user!.userId } } },
+        course: { enrollments: { some: { studentId: req.user.userId } } },
         endTime: { gt: now },
         startTime: { lt: new Date(now.getTime() + 14 * 86400000) },
         status: "SCHEDULED",
       },
       include: {
         course: true,
-        attendances: { where: { studentId: req.user!.userId } },
+        attendances: { where: { studentId: req.user.userId } },
       },
       orderBy: { startTime: "asc" },
     });
@@ -117,7 +116,7 @@ router.post(
   ),
   asyncHandler(async (req, res) => {
     res.json(
-      await submitCheckin(req.user!.userId, req.body.sessionId, req.body.code),
+      await submitCheckin(req.user.userId, req.body.sessionId, req.body.code),
     );
   }),
 );
@@ -125,7 +124,7 @@ router.get(
   "/student/attendance/summary",
   requireStudent,
   asyncHandler(async (req, res) => {
-    res.json(await getStudentAttendanceSummary(req.user!.userId));
+    res.json(await getStudentAttendanceSummary(req.user.userId));
   }),
 );
 router.get(
@@ -143,9 +142,9 @@ router.get(
       throw new ValidationError("Invalid date");
     const sessions = await prisma.session.findMany({
       where: {
-        ...(req.user!.role === "ADMIN"
+        ...(req.user.role === "ADMIN"
           ? {}
-          : { course: { examinerId: req.user!.userId } }),
+          : { course: { examinerId: req.user.userId } }),
         startTime: { gte: start, lt: new Date(start.getTime() + 86400000) },
       },
       include: { course: true },
@@ -154,15 +153,15 @@ router.get(
     res.json(sessions.map((s) => sessionDTO(s, true)));
   }),
 );
-async function owned(req: Request) {
+async function owned(req) {
   const session = await prisma.session.findUnique({
     where: { id: req.params.id },
     include: { course: true },
   });
   if (!session) throw new NotFoundError("Session not found");
   if (
-    req.user!.role !== "ADMIN" &&
-    session.course.examinerId !== req.user!.userId
+    req.user.role !== "ADMIN" &&
+    session.course.examinerId !== req.user.userId
   )
     throw new ForbiddenError();
   return session;
@@ -208,12 +207,12 @@ for (const [endpoint, action] of [
   ["stop-checkin", "stop"],
   ["complete", "COMPLETED"],
   ["cancel", "CANCELLED"],
-] as const) {
+]) {
   router.post(
     `/examiner/sessions/:id/${endpoint}`,
     requireExaminerOrAdmin,
     asyncHandler(async (req, res) => {
-      res.json(await manageSession(req.user!, req.params.id, action));
+      res.json(await manageSession(req.user, req.params.id, action));
     }),
   );
 }
@@ -230,7 +229,7 @@ router.post(
   asyncHandler(async (req, res) => {
     res.json(
       await correctAttendance(
-        req.user!,
+        req.user,
         req.params.id,
         req.body.studentId,
         req.body.status,
@@ -291,4 +290,5 @@ router.get(
       .send(pdf);
   }),
 );
+router.use(setupRoutes);
 export default router;

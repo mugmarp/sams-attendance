@@ -1,7 +1,7 @@
-import { prisma } from "../config/db";
-import { NotFoundError } from "../utils/errors";
-import { attendanceResult } from "./rules";
-export async function getCourseEligibility(courseId: string) {
+import { prisma } from "../config/db.js";
+import { NotFoundError } from "../utils/errors.js";
+import { attendanceResult } from "./rules.js";
+export async function getCourseEligibility(courseId) {
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     include: {
@@ -27,7 +27,11 @@ export async function getCourseEligibility(courseId: string) {
       studentId: student.id,
       regNo: student.regNo ?? "",
       name: student.name,
-      ...attendanceResult(present, course.sessions.length),
+      ...attendanceResult(
+        present,
+        course.sessions.length,
+        course.attendanceThreshold,
+      ),
     };
   });
   return {
@@ -38,14 +42,14 @@ export async function getCourseEligibility(courseId: string) {
       program: course.program,
       year: course.year,
       semester: course.semester,
+      attendanceThreshold: course.attendanceThreshold,
       academicYear: course.academicYear,
     },
     students,
-    rules:
-      "Completed classes only. PRESENT and LATE count. Attendance qualification only; fees and coursework are not assessed.",
+    rules: `Completed classes only. PRESENT and LATE count. Configured attendance threshold: ${course.attendanceThreshold}%. Attendance qualification only; fees and coursework are not assessed.`,
   };
 }
-export async function getStudentAttendanceSummary(studentId: string) {
+export async function getStudentAttendanceSummary(studentId) {
   const enrollments = await prisma.enrollment.findMany({
     where: { studentId },
     include: {
@@ -66,11 +70,13 @@ export async function getStudentAttendanceSummary(studentId: string) {
     courseTitle: course.title,
     academicYear: course.academicYear,
     semester: course.semester,
+    attendanceThreshold: course.attendanceThreshold,
     ...attendanceResult(
       course.sessions.filter((s) =>
         s.attendances.some((a) => ["PRESENT", "LATE"].includes(a.status)),
       ).length,
       course.sessions.length,
+      course.attendanceThreshold,
     ),
   }));
 }

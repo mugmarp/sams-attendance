@@ -1,53 +1,47 @@
-// backend/src/utils/errors.ts
+// Shared API errors
 export class AppError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-    public readonly statusCode: number = 400,
-    public readonly details?: unknown,
-  ) {
+  code;
+  statusCode;
+  details;
+  constructor(code, message, statusCode = 400, details) {
     super(message);
+    this.code = code;
+    this.statusCode = statusCode;
+    this.details = details;
     this.name = "AppError";
     Error.captureStackTrace(this, this.constructor);
   }
 }
-
 export class ValidationError extends AppError {
-  constructor(message: string, details?: unknown) {
+  constructor(message, details) {
     super("VALIDATION_ERROR", message, 400, details);
   }
 }
-
 export class UnauthorizedError extends AppError {
-  constructor(message: string = "Unauthorized") {
+  constructor(message = "Unauthorized") {
     super("UNAUTHORIZED", message, 401);
   }
 }
-
 export class ForbiddenError extends AppError {
-  constructor(message: string = "Forbidden") {
+  constructor(message = "Forbidden") {
     super("FORBIDDEN", message, 403);
   }
 }
-
 export class NotFoundError extends AppError {
-  constructor(message: string = "Not found") {
+  constructor(message = "Not found") {
     super("NOT_FOUND", message, 404);
   }
 }
-
 export class ConflictError extends AppError {
-  constructor(message: string) {
+  constructor(message) {
     super("CONFLICT", message, 409);
   }
 }
-
 export class InternalError extends AppError {
-  constructor(message: string = "Internal server error") {
+  constructor(message = "Internal server error") {
     super("INTERNAL_ERROR", message, 500);
   }
 }
-
-export function isAppError(err: unknown): err is AppError {
+export function isAppError(err) {
   return err instanceof AppError;
 }

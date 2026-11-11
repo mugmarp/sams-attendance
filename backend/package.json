@@ -2,18 +2,19 @@
   "name": "sams-backend",
   "version": "1.0.0",
   "description": "SAMS Attendance System - Backend API",
-  "main": "dist/server.js",
+  "main": "src/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "build": "npm run check",
+    "check": "node scripts/check-js.js",
+    "lint": "npm run check",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "seed": "tsx prisma/seed.ts",
-    "test": "tsx --test tests/*.test.ts",
-    "lint": "tsc -p tsconfig.check.json",
-    "import": "tsx scripts/import.ts"
+    "seed": "node prisma/seed.js",
+    "import": "node scripts/import.js",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "@prisma/client": "^5.7.0",
@@ -29,20 +30,11 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.5",
-    "@types/morgan": "^1.9.9",
-    "@types/node": "^20.10.6",
-    "@types/pdfkit": "^0.17.7",
-    "@types/supertest": "^6.0.2",
     "prisma": "^5.7.0",
-    "supertest": "^7.3.2",
-    "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "supertest": "^7.3.2"
   },
   "engines": {
     "node": ">=20.0.0"
-  }
+  },
+  "type": "module"
 }

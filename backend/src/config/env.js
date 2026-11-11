@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
-function required(key: string): string {
+function required(key) {
   const value = process.env[key];
   if (!value) throw new Error(`Missing environment variable: ${key}`);
   return value;
@@ -22,6 +22,7 @@ if (
 )
   throw new Error("Replace the example JWT secrets before deployment");
 export const env = {
+  TRUST_PROXY: process.env.TRUST_PROXY === "1",
   NODE_ENV: process.env.NODE_ENV ?? "development",
   PORT: Number(process.env.PORT ?? 3000),
   FRONTEND_URL: process.env.FRONTEND_URL ?? "http://localhost:5173",

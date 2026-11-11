@@ -1,7 +1,6 @@
 // backend/src/middleware/rateLimit.ts
 import rateLimit from "express-rate-limit";
-import { env } from "../config/env";
-
+import { env } from "../config/env.js";
 export const globalRateLimit = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
   max: env.RATE_LIMIT_MAX_REQUESTS,
@@ -12,7 +11,6 @@ export const globalRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
 export const authRateLimit = rateLimit({
   windowMs: 60_000, // 1 minute
   max: env.NODE_ENV === "test" ? 100 : 10,
@@ -23,7 +21,6 @@ export const authRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
 export const checkinRateLimit = rateLimit({
   windowMs: 60_000, // 1 minute
   max: 30,

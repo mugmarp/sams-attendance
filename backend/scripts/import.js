@@ -1,6 +1,7 @@
+import { pathToFileURL } from "node:url";
 import "dotenv/config";
 import fs from "node:fs";
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 const email = z.string().trim().toLowerCase().email();
@@ -24,6 +25,7 @@ const dataset = z.object({
       title: z.string().min(1),
       academicYear: z.string().regex(/^\d{4}\/\d{4}$/),
       semester: z.number().int().min(1).max(2),
+      attendanceThreshold: z.number().int().min(1).max(100).default(80),
       program: z.string(),
       year: z.number().int().min(1),
       examinerEmail: email,
@@ -45,11 +47,11 @@ const dataset = z.object({
     }),
   ),
 });
-export function validateDataset(input: unknown) {
+export function validateDataset(input) {
   const data = dataset.parse(input);
   const users = new Map(data.users.map((u) => [u.email, u]));
   const courses = new Map(data.courses.map((c) => [c.key, c]));
-  const unique = (values: string[], label: string) => {
+  const unique = (values, label) => {
     if (new Set(values).size !== values.length)
       throw new Error(`Duplicate ${label}`);
   };
@@ -58,7 +60,7 @@ export function validateDataset(input: unknown) {
     "user email",
   );
   unique(
-    data.users.filter((u) => u.regNo).map((u) => u.regNo!),
+    data.users.filter((u) => u.regNo).map((u) => u.regNo),
     "registration number",
   );
   unique(
@@ -99,19 +101,15 @@ export function validateDataset(input: unknown) {
       throw new Error(`Invalid dated session: ${s.naturalKey}`);
   return data;
 }
-export async function importDataset(
-  db: PrismaClient,
-  input: unknown,
-  initialPassword: string,
-) {
+export async function importDataset(db, input, initialPassword) {
   const data = validateDataset(input);
   if (initialPassword.length < 12)
     throw new Error("IMPORT_INITIAL_PASSWORD must be at least 12 characters");
   const passwordHash = await bcrypt.hash(initialPassword, 12);
   return db.$transaction(
-    async (tx: Prisma.TransactionClient) => {
-      const users = new Map<string, string>();
-      const courses = new Map<string, string>();
+    async (tx) => {
+      const users = new Map();
+      const courses = new Map();
       for (const u of data.users) {
         const existing = await tx.user.findUnique({
           where: { email: u.email },
@@ -139,19 +137,19 @@ export async function importDataset(
         if (
           existing &&
           (existing.examinerId !== users.get(examinerEmail) ||
-            existing.title !== c.title)
+            existing.title !== c.title || existing.attendanceThreshold !== c.attendanceThreshold)
         )
           throw new Error(`Course identity conflict: ${key}`);
         const saved =
           existing ??
           (await tx.course.create({
-            data: { ...fields, examinerId: users.get(examinerEmail)! },
+            data: { ...fields, examinerId: users.get(examinerEmail) },
           }));
         courses.set(key, saved.id);
       }
       for (const e of data.enrollments) {
-        const studentId = users.get(e.studentEmail)!;
-        const courseId = courses.get(e.courseKey)!;
+        const studentId = users.get(e.studentEmail);
+        const courseId = courses.get(e.courseKey);
         await tx.enrollment.upsert({
           where: { studentId_courseId: { studentId, courseId } },
           update: {},
@@ -160,7 +158,7 @@ export async function importDataset(
       }
       for (const s of data.sessions) {
         const { courseKey, ...fields } = s;
-        const courseId = courses.get(courseKey)!;
+        const courseId = courses.get(courseKey);
         const existing = await tx.session.findUnique({
           where: { naturalKey: s.naturalKey },
         });
@@ -186,7 +184,10 @@ export async function importDataset(
     { timeout: 60000, maxWait: 10000 },
   );
 }
-if (require.main === module) {
+if (
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   const db = new PrismaClient();
   const file = process.argv[2];
   Promise.resolve()

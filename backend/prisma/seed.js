@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-const kampalaDay = (date: Date) =>
+const kampalaDay = (date) =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: "Africa/Kampala",
     year: "numeric",
