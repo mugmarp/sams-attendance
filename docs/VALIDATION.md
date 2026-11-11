@@ -29,6 +29,6 @@ Optional: SAMS_BASE_URL and SAMS_API_URL override the frontend/API origins. Set 
 
 ## Boundaries
 
-Docker/Compose cannot be executed on this workstation because no Docker engine/CLI is installed. The GitHub workflow installs dependencies, applies migrations, runs API/browser tests and builds both container images. Its remote result must be checked after pushing; inclusion of the workflow alone is not evidence of success.
+Docker/Compose cannot be executed on this workstation because no Docker engine/CLI is installed. The GitHub workflow installs dependencies, applies migrations, runs API/browser tests and builds both container images. GitHub run 43026002654 passed the complete API/browser/build pipeline and both container image builds. The workflow also includes a Compose runtime smoke test for migration ordering, production-image demo seeding and authenticated nginx proxying, using separate loopback ports. Check the latest run for its result.
 
 No SSO, account recovery, refresh-token revocation, official Appendix D approval, retention policy certification, fee/coursework integration, real timetable reconciliation or public hosting is claimed. Those are explicitly outside the scoped classroom prototype. Offline sync requires the application to be open; rejected attempts require lecturer review, never automatic backdating.
