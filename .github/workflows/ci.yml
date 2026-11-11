@@ -8,7 +8,7 @@ permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://sams:sams-test-only@localhost:5432/sams_test
@@ -43,8 +43,17 @@ jobs:
       - run: npm run check --prefix frontend
       - run: npm test --prefix backend
       - run: npm run seed --prefix backend
-      - run: npx playwright install --with-deps chromium
+      - name: Select hosted Chromium or install a bounded fallback
+        timeout-minutes: 5
         working-directory: frontend
+        run: |
+          browser=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)
+          if [ -n "$browser" ]; then
+            echo "PLAYWRIGHT_EXECUTABLE_PATH=$browser" >> "$GITHUB_ENV"
+            "$browser" --version
+          else
+            npx playwright install --with-deps chromium
+          fi
       - name: Start the Express API and plain frontend
         run: |
           npm start --prefix backend > /tmp/sams-app.log 2>&1 &
