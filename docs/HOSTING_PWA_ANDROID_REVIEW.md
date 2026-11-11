@@ -2,6 +2,8 @@
 
 Reviewed 11 November 2026. This document distinguishes inspected repository facts, documented platform capabilities, recommendations and unverified deployment conditions. No hosting deployment, Android build or Android device test was performed.
 
+Subsequent evidence: the user supplied the VPS endpoint and a read-only Termix inspection succeeded; [SERVER_READINESS.md](SERVER_READINESS.md) records the observations. The selected SAMS origin is https://sams.tirallab.page. Android selection remains deferred. [WEB_IMPROVEMENT_PHASES.md](WEB_IMPROVEMENT_PHASES.md) records the implemented Phase 1 reliability changes and remaining work.
+
 ## 1. What SAMS is today
 
 SAMS is a client-server web application. Express serves HTML/CSS/browser JavaScript and `/api`; the API connects to PostgreSQL using Prisma. The browser never connects directly to PostgreSQL. An Android package would be another client of the same API, not another copy of the production database or Express server.

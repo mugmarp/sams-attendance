@@ -2,6 +2,8 @@
 
 Reviewed on 11 November 2026. This is an investigation and proposed implementation plan, not a claim that the proposed capabilities already exist. Application code was not changed for this review.
 
+Subsequent implementation: Phase 1 addresses the queue identity, retry, replacement, cross-tab and local acknowledgement findings below. This document preserves the inspected baseline; see [the phase status](WEB_IMPROVEMENT_PHASES.md) and [current architecture](TECH_ARCHITECTURE.md) for implemented behavior. Lecturer offline marking and server operation receipts remain proposed Phase 2 work.
+
 ## 1. Purpose and current foundation
 
 SAMS is a class attendance register for students, lecturers and the registrar. A lecturer conducts a dated class, students check in, the lecturer resolves exceptions, and the registrar obtains a traceable attendance report. Attendance qualification is only one input to examination clearance.
