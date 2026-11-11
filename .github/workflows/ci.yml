@@ -1,7 +1,7 @@
-name: Verify SAMS
+name: Verify JavaScript SAMS
 on:
   push:
-    branches: [main, 'implementation/**']
+    branches: [main, 'migration/**']
   pull_request:
     branches: [main]
 permissions:
@@ -39,36 +39,31 @@ jobs:
       - run: npm ci --prefix frontend
       - run: npm run prisma:generate --prefix backend
       - run: npm run prisma:deploy --prefix backend
-      - run: npm run build --prefix backend
+      - run: npm run check --prefix backend
+      - run: npm run check --prefix frontend
       - run: npm test --prefix backend
       - run: npm run seed --prefix backend
-      - run: npm run build --prefix frontend
-        env:
-          NODE_ENV: production
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
-      - name: Start application
+      - name: Start the Express API and plain frontend
         run: |
-          npm start --prefix backend > /tmp/sams-api.log 2>&1 &
-          npm run preview --prefix frontend -- --host 127.0.0.1 > /tmp/sams-ui.log 2>&1 &
+          npm start --prefix backend > /tmp/sams-app.log 2>&1 &
           for i in $(seq 1 30); do
-            if curl -fsS http://localhost:3000/api/health && curl -fsS http://localhost:5173/ >/dev/null; then exit 0; fi
+            if curl -fsS http://localhost:3000/api/health && curl -fsS http://localhost:3000/login >/dev/null; then exit 0; fi
             sleep 1
           done
-          cat /tmp/sams-api.log /tmp/sams-ui.log
+          cat /tmp/sams-app.log
           exit 1
+      - name: Execute the assessed Postman collection
+        run: npx --yes newman@6.2.3 run postman/SAMS.postman_collection.json --env-var baseUrl=http://localhost:3000/api --bail
       - run: npm run test:e2e --prefix frontend
-      - name: Upload browser failure evidence
+      - name: Browser failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: browser-failure-evidence
           path: frontend/test-results
-      - name: Build containers
-        run: |
-          docker build -t sams-backend ./backend
-          docker build -t sams-frontend ./frontend
-      - name: Smoke-test Compose migration, runtime seed and nginx proxy
+      - name: Smoke-test packaged Express, migrations and runtime seed
         env:
           DB_PASSWORD: ci-compose-database-only
           DB_PORT: '55433'
@@ -80,13 +75,14 @@ jobs:
           curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://localhost:5175/api/health
           python3 - <<'PYTHON'
           import json, urllib.request
+          assert b'/js/login.js' in urllib.request.urlopen('http://localhost:5175/login').read()
           request = urllib.request.Request('http://localhost:5175/api/auth/login', data=json.dumps({'email':'student@demo.sams.test','password':'SamsDemo2026!'}).encode(), headers={'Content-Type':'application/json'})
           signed_in = json.load(urllib.request.urlopen(request))
           request = urllib.request.Request('http://localhost:5175/api/student/sessions/upcoming', headers={'Authorization':'Bearer ' + signed_in['accessToken']})
           classes = json.load(urllib.request.urlopen(request))
           assert len(classes) >= 2
           assert all('checkinSecret' not in item for item in classes)
-          print('Compose login, seeded classes and safe student proxy response verified')
+          print('Packaged plain HTML/JS, database, login and safe class responses verified')
           PYTHON
       - name: Compose diagnostics and cleanup
         if: always()

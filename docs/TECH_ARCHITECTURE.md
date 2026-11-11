@@ -1,34 +1,36 @@
-# SAMS implementation architecture
+# JavaScript SAMS architecture
 
-React/Vite serves three role-based journeys. Express exposes a single `/api` router. Prisma accesses PostgreSQL. Nginx serves the production app and proxies `/api`; PostgreSQL owns all attendance and check-in state. There is one backend process and one database, with no Redis requirement.
+Express serves both the plain frontend and `/api`. A single origin avoids an extra frontend development server and keeps the fetch calls simple. PostgreSQL is the live persistent database; Prisma's JavaScript client provides transactions, relations and migrations. No TypeScript, JSX, React, Vite, Tailwind, Redis or nginx application layer is required.
 
-## Records
+![Architecture](architecture.svg)
 
-- User: provisioned account, role and optional student registration details.
-- Course: a single offering, unique by code/academic year/semester, assigned to one examiner.
-- Enrollment: unique student/offering pair.
-- Session: a real dated class, uniquely keyed by its import source, with scheduled/completed/cancelled state.
-- Attendance: unique student/session, status, method and initial recording time.
-- AttendanceChange: immutable application-created correction entry with actor, previous/new status, reason and change time.
+## Responsibilities
 
-The schema and committed SQL migration are in `backend/prisma`. Apply them to an empty database; the earlier Hermes schema was never a verified deployed schema. Do not reset a real database to adopt this migration.
+- `frontend/public/*.html`: page structure, forms, tables, labels and accessible controls.
+- `frontend/public/css/styles.css`: authored responsive presentation.
+- `frontend/public/js/api.js`: fetch, bearer tokens, refresh and meaningful error handling.
+- `common.js`: role-aware navigation, saved-session restoration, escaping and Kampala formatting.
+- `examiner.js`, `student.js`, `admin.js`: page events, API requests and DOM updates.
+- `offline.js`, `sw.js`: separate user-scoped IndexedDB attempts/snapshots and static app-shell caching.
+- `backend/src/routes`: API schemas, role/resource access, setup operations and workflow endpoints.
+- `backend/src/services`: authoritative attendance rules, transactions, reports and PDF output.
+- `backend/prisma`: schema, committed migrations and repeatable synthetic seeding.
+- `backend/scripts/import.js`: validated transactional local import.
 
-## Check-in transaction
+## Check-in and reporting
 
-Starting, stopping, completing, cancelling, correcting or checking into a class takes a PostgreSQL row lock on that Session. This serializes conflicting operations, including concurrent student retries and lecturer closure. Ownership and enrollment checks happen on the server. Existing code-based attendance is returned idempotently; manual records cannot be overwritten by student submissions.
+Opening, closing, completing, cancelling, correcting and checking into a class lock the Session row in a transaction. Enrollment and ownership are checked on the server. The unique student/session constraint prevents duplicates, while identical code-based retries return the existing record. Students cannot overwrite manual corrections.
 
-Opening check-in creates a random secret and a start/close timestamp. The six-character current code is derived using HMAC-SHA256 and the current two-minute slot. Its expiry is the earlier of slot end and window end. The server clock determines acceptance. No process timers or secondary cache need to survive a restart. Student DTOs omit code material. Examiner views poll every five seconds and hide codes after their expiry.
+A random database-held secret and two-minute slot produce the current HMAC-derived code during a ten-minute window capped at class end. There are no process timers or secondary code stores to drift after a restart. Student responses omit code material. Lecturer pages poll code/roster every five seconds and hide codes at expiry.
 
-## Reports
+Completed classes in one code/year/semester offering form the denominator; PRESENT/LATE form the numerator. The offering's configured threshold is compared against exact counts, then percentages are rounded for display. Zero completed classes returns null percentage and unassessed status. Reports include every enrolled student. Lecturer exports are ownership-scoped; administrators can report across offerings.
 
-Completed sessions only, within one course offering, form the denominator. PRESENT/LATE form the numerator. Zero completed sessions returns null percentage. The 80% comparison uses integer counts before display rounding. Reports include all enrolled students, even without attendance or sessions. PDFKit renders a paginated prototype report, not a verified official register.
+## Validation and security
 
-## Browser state
+Removing TypeScript removes development-time annotations, not runtime checks. Zod validates incoming JSON/IDs/dates/policies, Express middleware enforces JWT roles, bcrypt hashes passwords, database constraints enforce uniqueness and threshold bounds, and transactions serialize conflicting operations. Untrusted values are escaped before insertion into HTML. No password hashes or check-in secrets are returned to students. Proxy trust is disabled unless explicitly configured for one trusted proxy.
 
-Short-lived access and seven-day refresh tokens are stored locally for this classroom prototype. Concurrent refreshes share one promise. A network error does not erase an offline user's saved session. Logout clears tokens/current user. Refresh-token revocation and self-service password recovery are outside this prototype; adopt managed institutional authentication before production use.
+This remains a classroom prototype. Token revocation/recovery, institutional identity integration, approved retention and public hosting are separate operational requirements.
 
-The generated service worker caches only static app assets and the navigation shell. Student API snapshots and pending attempts are stored separately in user-keyed IndexedDB records. Snapshots expire after 24 hours. Attempts are sent while the app is open on reconnection or explicit retry. Business rejections stop automatic retry; five network failures also stop it. Pending/failed attempts never count toward attendance.
+## Offline
 
-## Data and provisioning
-
-The demo seed is repeatable and guarded against accidental production use. The local JSON importer validates all references before a transaction, preserves existing records and rejects identity/date conflicts. The original weekly timetable is reference data, not a set of completed teaching sessions. Dates and enrollments require validation before importing university data.
+The service worker caches static HTML/CSS/JS, never API responses. Safe student snapshots and attempts are stored separately, keyed by user. Snapshots expire after 24 hours. Reconnection with the application open sends pending attempts; business errors stop retries and expired codes are never accepted using a device timestamp. Logout clears tokens/current user, while user-scoped local data remains until site data is cleared. First-time offline login is not supported.

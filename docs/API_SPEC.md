@@ -1,35 +1,67 @@
-# SAMS API
+# JavaScript SAMS REST API
 
-Base URL: `/api`. JSON bodies. All protected routes require `Authorization: Bearer ACCESS_TOKEN`. Roles: STUDENT, EXAMINER, ADMIN. Errors use `{ error, message, details? }`, with 400 validation, 401 authentication, 403 ownership/role/enrollment, 404 missing record, 409 conflict, and 429 throttling.
+Base URL: `/api`. Request/response bodies are JSON except PDF exports. Protected endpoints require `Authorization: Bearer ACCESS_TOKEN`. The roles are STUDENT, EXAMINER (lecturer), ADMIN (registrar/department staff).
 
-| Method | Path | Role / effect |
+Errors: `{error,message,details?}`. Statuses: 400 invalid data/business window, 401 authentication, 403 role/ownership/enrollment, 404 missing resource, 409 resource conflict, 429 throttling. Zod performs runtime validation in JavaScript; Prisma/database constraints enforce integrity. Successful resource creation uses 201; reads/actions and idempotent check-in retries use 200.
+
+## Authentication
+
+| Method | Path | Input / response |
 |---|---|---|
-| GET | /health | Public; verifies database connectivity |
-| POST | /auth/login | Public; `{email,password}` → accessToken, refreshToken, user |
-| POST | /auth/refresh | Public; `{refreshToken}` → accessToken, refreshToken, user |
-| GET | /auth/me | Any signed-in user; safe profile |
-| GET | /examiner/sessions/today?date=YYYY-MM-DD | Examiner's classes for Kampala date; admin sees all |
-| GET | /examiner/sessions/:id | Owner examiner/admin; safe class and current activeCode |
-| POST | /examiner/sessions/:id/start-checkin | Owner/admin; current `{code,expiresAt,closesAt}` |
-| POST | /examiner/sessions/:id/stop-checkin | Owner/admin; closes window |
-| POST | /examiner/sessions/:id/complete | Owner/admin; marks completed, closes window |
-| POST | /examiner/sessions/:id/cancel | Owner/admin; excludes class, closes window |
-| GET | /examiner/sessions/:id/attendance | Owner/admin; roster including unrecorded students and correction history |
-| POST | /examiner/sessions/:id/attendance | Owner/admin; `{studentId,status,reason}`; audited manual correction |
-| GET | /student/sessions/upcoming | Own enrolled, scheduled classes in progress or starting within 14 days; never returns code/secret |
-| POST | /student/checkin | Student; `{sessionId,code}`; valid current code and enrollment required |
-| GET | /student/attendance/summary | Student; own offering summaries |
-| GET | /admin/courses | Admin; offerings with examiner and enrollment/session counts |
-| GET | /admin/students | Admin; safe student list |
-| GET | /admin/eligibility/:courseId | Admin; `{course,students,rules}` attendance qualification |
-| GET | /admin/eligibility/:courseId/pdf | Admin; application/pdf prototype attendance report |
+| GET | /health | Public; checks PostgreSQL connectivity |
+| POST | /auth/login | `{email,password}` → accessToken, refreshToken, safe user |
+| POST | /auth/refresh | `{refreshToken}` → accessToken, refreshToken, safe user |
+| GET | /auth/me | Signed-in user's safe profile |
 
-## Attendance responses
+## Administrator setup
 
-Summary fields: presentCount, totalSessions, attendancePct (number or null), eligible (boolean). The legacy `eligible` API name means **attendance requirement met**, not final exam clearance. Only completed sessions count; PRESENT/LATE count as attended. Zero sessions returns null percentage/false qualification.
+| Method | Path | Input / response |
+|---|---|---|
+| GET | /admin/users?role=STUDENT | Safe users; optional STUDENT/EXAMINER/ADMIN role filter |
+| POST | /admin/users | `{email,name,password,role,regNo?,program?,year?}`; student requires regNo; password 12–72 characters; returns 201 without password/hash |
+| GET | /admin/students | Safe student list |
+| GET | /admin/courses | Offerings with examiner and enrollment/session counts |
+| POST | /admin/courses | `{code,title,program,year,semester,academicYear,examinerId,attendanceThreshold?}`; threshold integer 1–100/default 80; returns 201 |
+| POST | /admin/courses/:courseId/enroll | `{studentId}`; existing STUDENT and offering required; 201 or duplicate 409 |
 
-Check-in returns `{success:true,duplicate:boolean,attendance,session:{courseCode}}`. Retries of existing code-based attendance return that record. Student retries cannot overwrite manual corrections. Corrections accept PRESENT, LATE, ABSENT or EXCUSED and a reason of 5–500 characters. Their change history records who changed what and when.
+A course offering is unique by code/academicYear/semester. The assigned examiner must exist and have the EXAMINER role. Policy is chosen at offering creation; existing attendance history is not silently reinterpreted by a settings edit. Initial passwords must be shared privately. Self-service recovery/revocation is outside this prototype.
 
-Session responses include flattened courseCode/courseTitle and a course object. Lecturer responses include `activeCode` or null. The current code changes every two minutes during the ten-minute window (capped at class end). The previous code is rejected immediately after rotation. Client timestamps are not accepted to backdate offline requests.
+## Lecturer workflow (owner or administrator)
 
-Account provisioning and dated class import are operator CLI functions, not unauthenticated web endpoints. See IMPORT_GUIDE.md. A Postman collection with demo variables is in `postman/SAMS.postman_collection.json`.
+| Method | Path | Input / effect |
+|---|---|---|
+| GET | /examiner/courses | Own offerings; admin sees all |
+| POST | /examiner/courses/:courseId/sessions | `{startTime,endTime,room,sessionType?,naturalKey?}` → new SCHEDULED class/201 |
+| GET | /examiner/sessions/today?date=YYYY-MM-DD | Own classes on the chosen Kampala date; admin sees all |
+| GET | /examiner/sessions/:id | Class plus current activeCode or null |
+| POST | /examiner/sessions/:id/start-checkin | Open/retrieve current `{code,expiresAt,closesAt}` during class |
+| POST | /examiner/sessions/:id/stop-checkin | Close the code window |
+| POST | /examiner/sessions/:id/complete | Count the class in reporting and close check-in |
+| POST | /examiner/sessions/:id/cancel | Exclude class from reporting and close check-in |
+| GET | /examiner/sessions/:id/attendance | Enrolled roster, including unrecorded students and correction history |
+| POST | /examiner/sessions/:id/attendance | `{studentId,status,reason}`; reason 5–500 characters; audited correction |
+| GET | /examiner/courses/:courseId/attendance-summary | Own offering report |
+| GET | /examiner/courses/:courseId/attendance-summary/pdf | Own offering PDF |
+
+Timestamps must be ISO strings with an explicit UTC offset; end must be after start. Type defaults to LECTURE and accepts TUTORIAL/PRACTICAL/LAB/CLINICAL. Session IDs are generated CUIDs; naturalKey identifies an imported or manually created class. Start-check-in requires a class currently in progress; its window lasts at most ten minutes, capped at class end, and current codes change every two minutes. Complete/cancel cannot reopen a finalized class. Future/cancelled classes cannot receive manual attendance.
+
+## Student workflow
+
+| Method | Path | Input / response |
+|---|---|---|
+| GET | /student/sessions/upcoming | Own enrolled scheduled classes in progress or starting within 14 days; no code/secret material |
+| POST | /student/checkin | `{sessionId,code}` → `{success,duplicate,attendance,session:{courseCode}}` |
+| GET | /student/attendance/summary | Own offering summaries |
+
+Student identity comes from the token, not a studentId supplied in the body. Enrollment, timing and current code are checked on the server. The first accepted request creates one attendance record; retries return the same code-based record/200 with duplicate=true. Student requests never overwrite lecturer manual corrections.
+
+## Registrar reports
+
+| Method | Path | Response |
+|---|---|---|
+| GET | /admin/eligibility/:courseId | `{course,students,rules}` |
+| GET | /admin/eligibility/:courseId/pdf | Paginated prototype attendance PDF |
+
+The inherited API field `eligible` means **attendance requirement met**, not final examination clearance. Report fields: presentCount, totalSessions, attendancePct (number or null), eligible. Course and student-summary objects include attendanceThreshold. Only COMPLETED classes count; PRESENT/LATE count as attended. Zero completed classes returns null percentage and false qualification. Cancelled/future classes do not reduce the result.
+
+Examples and executable assertions are in `postman/SAMS.postman_collection.json`; use `SAMS.local.postman_environment.json`. See POSTMAN_DEMO.md for the ordered live presentation and explanation of safe retries versus creation conflicts.

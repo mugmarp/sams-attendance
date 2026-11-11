@@ -1,3 +1,5 @@
+> Historical plan for the previous TypeScript/React branch. The current plan is JAVASCRIPT_MIGRATION_PLAN.md and the assessed proposal is PROPOSAL.md.
+
 # SAMS completion plan
 
 Goal: deliver a small, reliable attendance prototype using React, Express and PostgreSQL. Attendance qualification is separate from fees/coursework approval. No university system integration or claim of an official regulatory document.

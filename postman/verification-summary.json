@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-11",
+  "branch": "migration/javascript-assignment",
+  "requests": 52,
+  "assertions": 172,
+  "failures": 0,
+  "database": "isolated PostgreSQL, synthetic records only"
+}

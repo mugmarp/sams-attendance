@@ -1,34 +1,48 @@
-# Verification record
+# JavaScript migration verification
 
-Executed on 11 November 2026 against the implementation branch. Test data is synthetic. No real university deployment or student record migration was performed.
+Current branch: `migration/javascript-assignment`. Verification uses synthetic records and isolated PostgreSQL; no university records were migrated and no public institutional deployment is claimed.
 
-## Executed successfully
+## Local checks
 
-- Backend strict TypeScript checks, including seed, importer and tests; production compilation.
-- Frontend strict TypeScript checks and production Vite build; clean lockfile-based installation.
-- SQL migration applied to separate local PostgreSQL databases. PostgreSQL 18.6 was run as an isolated user-owned local process because Docker is absent on this workstation; CI targets PostgreSQL 16.
-- **15 backend tests:** authentication and role/ownership boundaries; validation; completed/future/zero-session reporting; active-class selection and code-secret omission; enrolled versus unenrolled check-in; six concurrent submissions creating one attendance record; authoritative rotation/stop; correction reasons/history/late counting; completion/cancellation; refresh-token type/profile; empty/multi-page PDF output; import validation, repeatability and transactional rollback; stale/offline code rejection; exact 80% and expiry boundaries; Kampala dates.
-- **3 browser journeys** using Playwright and local Brave/Chromium: lecturer opens a class, mobile student checks in, lecturer completes it, student sees the updated summary, registrar filters and downloads PDF; offline app reload with cached user-scoped classes, expired attempt rejection and account isolation; valid pending submission accepted after reconnection.
-- A populated 46-student report rendered into three A4 PNG pages. All pages inspected: repeated headers, bounded columns, readable rows and page numbering; no clipping observed.
-- Demo seed repeatability: counts unchanged after a repeated run (7 users, 2 offerings, 14 classes, 10 enrollments, 50 attendance records).
-- Import CLI smoke test against the isolated test database.
-- npm dependency audits: zero reported vulnerabilities in both applications at verification time.
+- Application backend, seed/import tools, tests, browser modules and browser tests are plain JavaScript. No authored `.ts`/`.tsx` files or direct TypeScript/React/Vite/Tailwind application dependencies remain.
+- JavaScript syntax checks pass in backend and frontend. The application runs directly with Node and serves HTML/CSS/JS without compilation.
+- **17 Node/Supertest/rule/import tests** pass against PostgreSQL: preserved attendance/auth/concurrency/correction/reporting behavior plus administrator provisioning, duplicate creation, enrollment, owned class creation and configurable thresholds.
+- **4 browser journeys** pass: lecturer → mobile student → registrar report/PDF; offline reload and stale-code rejection with account isolation; valid pending acceptance after reconnection; and plain-form account/course/enrollment/class setup with the lecturer's own report.
+- The documented Postman collection is executed with Newman, including success/invalid requests, captured IDs/tokens, example response shapes and error assertions. The final local run passed **52 requests and 172 assertions with zero failures**; `postman/verification-summary.json` records the sanitized totals. Saved response examples are taken from that run with synthetic IDs/tokens redacted.
+- Additive database migration supplies a per-offering threshold with 1–100 bounds, retaining existing records and their 80% demo default.
+- The earlier repeatable demo dataset and transactional local importer are retained as JavaScript commands.
 
-## Reproduce browser tests
+The local database is PostgreSQL 18.6 running as a user-owned temporary cluster because this workstation has no Docker engine. Hosted CI uses PostgreSQL 16 and additionally checks packaged Compose startup, migrations, runtime seeding, served HTML/JS and authenticated API/database access.
 
-Use a separate database named `sams_test`. API tests deliberately clear it. E2E setup resets only `demo:*:live:*` fixture classes, so **never point these commands at real records**. Apply migrations, run backend tests, and then run the demo seed against that database.
+## Reproduce
 
-Start the backend with DATABASE_URL pointing to that database, NODE_ENV=test, and distinct JWT secrets of 32+ characters. Build the frontend with NODE_ENV=production (so offline support is included), then start Vite preview. Defaults are API port 3000 and frontend port 5173. Install browser support from frontend with `npx playwright install chromium`, then:
+```bash
+npm ci --prefix backend
+npm ci --prefix frontend
+npm run check --prefix backend
+npm run check --prefix frontend
+# API tests clear the isolated sams_test database; never use real records.
+DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/sams_test npm run prisma:deploy --prefix backend
+DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/sams_test npm test --prefix backend
+DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/sams_test npm run seed --prefix backend
+```
+
+Start the backend against that test database with NODE_ENV=test and distinct JWT secrets, then run the collection:
+
+```bash
+npx --yes newman@6.2.3 run postman/SAMS.postman_collection.json \
+  --env-var baseUrl=http://localhost:3000/api --bail
+```
+
+Install browser support from frontend using `npx playwright install chromium`. With the same test application running:
 
 ```bash
 SAMS_E2E_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/sams_test \
   npm run test:e2e --prefix frontend
 ```
 
-Optional: SAMS_BASE_URL and SAMS_API_URL override the frontend/API origins. Set API_PROXY_TARGET when Vite preview should proxy to a different API port. PLAYWRIGHT_EXECUTABLE_PATH can select an installed Chromium-compatible browser. The E2E guard rejects database names not ending in `_test`.
+Defaults: one Express application on localhost:3000 for both frontend and API. SAMS_BASE_URL and SAMS_API_URL can override those origins. PLAYWRIGHT_EXECUTABLE_PATH can select an installed Chromium-compatible browser. E2E setup resets only synthetic demo live classes and refuses database names not ending `_test`.
 
 ## Boundaries
 
-Docker/Compose cannot be executed on this workstation because no Docker engine/CLI is installed. The GitHub workflow installs dependencies, applies migrations, runs API/browser tests and builds both container images. GitHub run 43026002654 passed the complete API/browser/build pipeline and both container image builds. The workflow also includes a Compose runtime smoke test for migration ordering, production-image demo seeding and authenticated nginx proxying, using separate loopback ports. Check the latest run for its result.
-
-No SSO, account recovery, refresh-token revocation, official Appendix D approval, retention policy certification, fee/coursework integration, real timetable reconciliation or public hosting is claimed. Those are explicitly outside the scoped classroom prototype. Offline sync requires the application to be open; rejected attempts require lecturer review, never automatic backdating.
+The collection creates test accounts/offerings/classes; run it only against a disposable database. Postman and browser test accounts are synthetic. Node syntax checks do not replace runtime validation/tests. Individual member contributions are excluded as requested. HoD excuse approval, bulk marking, verified institutional policy, public hosting, production identity recovery/revocation and official report approval remain outside this scoped delivery.

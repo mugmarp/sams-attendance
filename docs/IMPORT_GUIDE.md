@@ -1,6 +1,6 @@
 # Local data import
 
-SAMS imports a normalized local JSON dataset. It does not guess dated classes from weekly timetable slots, scrape university systems or silently skip enrollments. Resolve dates, course offerings and enrollment mismatches first.
+SAMS imports a normalized local JSON dataset through a plain JavaScript command. Routine account/course/enrollment setup and class creation are also available in the browser. It does not guess dated classes from weekly timetable slots, scrape university systems or silently skip enrollments. Resolve dates, course offerings and enrollment mismatches first.
 
 From backend, with DATABASE_URL set (or in backend/.env):
 
@@ -28,8 +28,8 @@ Example structure (all examples below are synthetic; choose real dated sessions 
 }
 ```
 
-Declare every referenced user and course in the file. Student users require unique registration numbers. Examiners must have the EXAMINER role. Course offering identity is code/academicYear/semester. Course keys link this import's enrollments and sessions. Session natural keys must remain stable across repeated imports. Timestamps must include an explicit UTC offset; end must be after start. New sessions start SCHEDULED and become counted only when an examiner completes them.
+Declare every referenced user and course in the file. Student users require unique registration numbers. Examiners must have the EXAMINER role. Course offering identity is code/academicYear/semester. Course keys link this import's enrollments and sessions. Session natural keys must remain stable across repeated imports. Timestamps must include an explicit UTC offset; end must be after start. Course objects may include attendanceThreshold (integer 1–100, default 80); this is configured policy, not verified university regulation. New sessions start SCHEDULED and become counted only when an examiner completes them.
 
-The importer checks schema, duplicates and references before writing, then applies everything in one transaction. Re-importing the same dataset does not duplicate sessions/enrollments or reset attendance/passwords. Existing user role/registration, course examiner/title and session course/dates must agree; conflicts roll back the import. Changes to established identities/schedules require deliberate operator review rather than silently rewriting attendance history.
+The importer checks schema, duplicates and references before writing, then applies everything in one transaction. Re-importing the same dataset does not duplicate sessions/enrollments or reset attendance/passwords. Existing user role/registration, course examiner/title/threshold and session course/dates must agree; conflicts roll back the import. Changes to established identities/schedules require deliberate operator review rather than silently rewriting attendance history.
 
 The original reference dataset has 52 student rows, 260 enrollment rows and 1,304 weekly slots. Only 129 enrollment rows match its timetable course codes. It needs reconciliation, actual semester dates and review of shared/multiple-examiner classes before conversion. This prototype assigns one examiner per offering; split independently taught offerings deliberately if necessary. Do not turn weekly slots into attendance records for classes that have not actually been held.

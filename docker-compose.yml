@@ -16,7 +16,9 @@ services:
       retries: 10
     restart: unless-stopped
   migrate:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     command: ["npm", "run", "prisma:deploy"]
     environment:
       DATABASE_URL: postgresql://sams:${DB_PASSWORD}@postgres:5432/sams?schema=public
@@ -24,24 +26,22 @@ services:
       postgres:
         condition: service_healthy
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:3000"
     environment:
       DATABASE_URL: postgresql://sams:${DB_PASSWORD}@postgres:5432/sams?schema=public
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      TRUST_PROXY: ${TRUST_PROXY:-0}
       NODE_ENV: production
       PORT: 3000
     depends_on:
       migrate:
         condition: service_completed_successfully
-    restart: unless-stopped
-  frontend:
-    build: ./frontend
-    ports:
-      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
-    depends_on:
-      - backend
     restart: unless-stopped
 volumes:
   postgres_data:

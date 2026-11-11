@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "SAMS Attendance Prototype",
-    "description": "Use the disposable demo seed. Run role logins first, then choose a scheduled class. Complete and cancel are alternative actions; do not run blindly against real records. Attendance qualification is not final examination clearance.",
+    "name": "SAMS \u2014 Assignment demonstration and validation",
+    "description": "Run in order against a disposable seeded database. Creates synthetic accounts, an offering, enrollments and dated classes. Includes success/invalid requests, assertions and saved sample responses. Duplicate attendance retries are deliberately idempotent (200); duplicate account/offering/enrollment creation returns 409. Do not run on real university records.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -16,6 +16,16 @@
       "type": "string"
     },
     {
+      "key": "invalidToken",
+      "value": "not-a-valid-jwt",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "examinerToken",
       "value": "",
       "type": "string"
@@ -26,7 +36,7 @@
       "type": "string"
     },
     {
-      "key": "adminToken",
+      "key": "otherStudentToken",
       "value": "",
       "type": "string"
     },
@@ -36,12 +46,7 @@
       "type": "string"
     },
     {
-      "key": "sessionId",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "courseId",
+      "key": "examinerId",
       "value": "",
       "type": "string"
     },
@@ -51,83 +56,124 @@
       "type": "string"
     },
     {
+      "key": "otherStudentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "courseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pastSessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "attendanceId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "runId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "courseCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionStart",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionEnd",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pastStart",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pastEnd",
       "value": "",
       "type": "string"
     }
   ],
   "item": [
     {
-      "name": "Database health",
+      "name": "Health and initialize this run",
       "request": {
         "method": "GET",
+        "url": "{{baseUrl}}/health",
         "header": [],
-        "url": "{{baseUrl}}/health"
-      }
-    },
-    {
-      "name": "Sign in as examiner",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "{{baseUrl}}/auth/login",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"examiner@demo.sams.test\",\n  \"password\": \"{{password}}\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
+        "description": "Health and initialize this run. Expected HTTP 200. Use the disposable seeded demonstration database."
       },
       "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const runId = Date.now().toString(36) + Math.random().toString(36).slice(2,6);",
+              "pm.collectionVariables.set('runId',runId);",
+              "pm.collectionVariables.set('courseCode','PM'+runId.toUpperCase());",
+              "pm.collectionVariables.set('sessionStart',new Date(Date.now()-60000).toISOString());",
+              "pm.collectionVariables.set('sessionEnd',new Date(Date.now()+1800000).toISOString());",
+              "pm.collectionVariables.set('pastStart',new Date(Date.now()-7200000).toISOString());",
+              "pm.collectionVariables.set('pastEnd',new Date(Date.now()-3600000).toISOString());"
+            ]
+          }
+        },
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "if (pm.response.code === 200) { const data = pm.response.json(); pm.collectionVariables.set('examinerToken', data.accessToken); pm.collectionVariables.set('refreshToken', data.refreshToken); }"
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Database reachable\", () => pm.expect(samsResponse.status).to.eql(\"ok\"));",
+              "})();"
             ]
           }
         }
-      ]
-    },
-    {
-      "name": "Sign in as student",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "{{baseUrl}}/auth/login",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"student@demo.sams.test\",\n  \"password\": \"{{password}}\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      },
-      "event": [
+      ],
+      "response": [
         {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "if (pm.response.code === 200) { const data = pm.response.json(); pm.collectionVariables.set('studentToken', data.accessToken); pm.collectionVariables.set('refreshToken', data.refreshToken); pm.collectionVariables.set('studentId', data.user.id); }"
-            ]
-          }
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health",
+            "header": [],
+            "description": "Health and initialize this run. Expected HTTP 200. Use the disposable seeded demonstration database."
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"status\": \"ok\"\n}"
         }
       ]
     },
@@ -135,13 +181,14 @@
       "name": "Sign in as admin",
       "request": {
         "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
           }
         ],
-        "url": "{{baseUrl}}/auth/login",
+        "description": "Sign in as admin. Expected HTTP 200. Use the disposable seeded demonstration database.",
         "body": {
           "mode": "raw",
           "raw": "{\n  \"email\": \"admin@demo.sams.test\",\n  \"password\": \"{{password}}\"\n}",
@@ -158,23 +205,535 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "if (pm.response.code === 200) { const data = pm.response.json(); pm.collectionVariables.set('adminToken', data.accessToken); pm.collectionVariables.set('refreshToken', data.refreshToken); }"
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Token and safe profile\", () => { pm.expect(samsResponse.accessToken).to.be.a(\"string\"); pm.expect(samsResponse.user).not.to.have.property(\"passwordHash\"); });pm.collectionVariables.set(\"adminToken\", samsResponse.accessToken);",
+              "})();"
             ]
           }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Sign in as admin. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@demo.sams.test\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"accessToken\": \"<accessToken>\",\n  \"refreshToken\": \"<refreshToken>\",\n  \"user\": {\n    \"id\": \"<id>\",\n    \"email\": \"admin@demo.sams.test\",\n    \"name\": \"Demo Registrar\",\n    \"role\": \"ADMIN\",\n    \"regNo\": null,\n    \"program\": null,\n    \"year\": null\n  }\n}"
         }
       ]
     },
     {
-      "name": "Refresh current token",
+      "name": "Sign in as examiner",
       "request": {
         "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
           }
         ],
+        "description": "Sign in as examiner. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"examiner@demo.sams.test\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Token and safe profile\", () => { pm.expect(samsResponse.accessToken).to.be.a(\"string\"); pm.expect(samsResponse.user).not.to.have.property(\"passwordHash\"); });pm.collectionVariables.set(\"examinerToken\", samsResponse.accessToken);pm.collectionVariables.set(\"examinerId\",samsResponse.user.id);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Sign in as examiner. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"examiner@demo.sams.test\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"accessToken\": \"<accessToken>\",\n  \"refreshToken\": \"<refreshToken>\",\n  \"user\": {\n    \"id\": \"<id>\",\n    \"email\": \"examiner@demo.sams.test\",\n    \"name\": \"Demo Examiner\",\n    \"role\": \"EXAMINER\",\n    \"regNo\": null,\n    \"program\": null,\n    \"year\": null\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Sign in as student",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Sign in as student. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"student@demo.sams.test\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Token and safe profile\", () => { pm.expect(samsResponse.accessToken).to.be.a(\"string\"); pm.expect(samsResponse.user).not.to.have.property(\"passwordHash\"); });pm.collectionVariables.set(\"studentToken\", samsResponse.accessToken);pm.collectionVariables.set(\"studentId\",samsResponse.user.id);pm.collectionVariables.set(\"refreshToken\",samsResponse.refreshToken);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Sign in as student. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student@demo.sams.test\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"accessToken\": \"<accessToken>\",\n  \"refreshToken\": \"<refreshToken>\",\n  \"user\": {\n    \"id\": \"<id>\",\n    \"email\": \"student@demo.sams.test\",\n    \"name\": \"Alice Nakato\",\n    \"role\": \"STUDENT\",\n    \"regNo\": \"DEMO/BSE/001\",\n    \"program\": \"BSE\",\n    \"year\": 2\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Wrong password",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Wrong password. Expected HTTP 401. Use the disposable seeded demonstration database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"student@demo.sams.test\",\n  \"password\": \"incorrect-password\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"UNAUTHORIZED\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Wrong password. Expected HTTP 401. Use the disposable seeded demonstration database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student@demo.sams.test\",\n  \"password\": \"incorrect-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"UNAUTHORIZED\",\n  \"message\": \"Invalid email or password\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Missing email",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Missing email. Expected HTTP 400. Use the disposable seeded demonstration database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Missing email. Expected HTTP 400. Use the disposable seeded demonstration database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed\",\n  \"details\": [\n    {\n      \"field\": \"email\",\n      \"message\": \"Invalid input: expected string, received undefined\"\n    }\n  ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Missing authentication token",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/student/attendance/summary",
+        "header": [],
+        "description": "Missing authentication token. Expected HTTP 401. Use the disposable seeded demonstration database."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"UNAUTHORIZED\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/student/attendance/summary",
+            "header": [],
+            "description": "Missing authentication token. Expected HTTP 401. Use the disposable seeded demonstration database."
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"UNAUTHORIZED\",\n  \"message\": \"Missing or invalid authorization header\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Malformed authentication token",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/student/attendance/summary",
+        "header": [],
+        "description": "Malformed authentication token. Expected HTTP 401. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{invalidToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"UNAUTHORIZED\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/student/attendance/summary",
+            "header": [],
+            "description": "Malformed authentication token. Expected HTTP 401. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{invalidToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"UNAUTHORIZED\",\n  \"message\": \"Invalid or expired token\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Student cannot read registrar reports",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/courses",
+        "header": [],
+        "description": "Student cannot read registrar reports. Expected HTTP 403. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"FORBIDDEN\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/courses",
+            "header": [],
+            "description": "Student cannot read registrar reports. Expected HTTP 403. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "Forbidden",
+          "code": 403,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"FORBIDDEN\",\n  \"message\": \"Insufficient permissions\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Refresh student session",
+      "request": {
+        "method": "POST",
         "url": "{{baseUrl}}/auth/refresh",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Refresh student session. Expected HTTP 200. Use the disposable seeded demonstration database.",
         "body": {
           "mode": "raw",
           "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
@@ -184,42 +743,6 @@
             }
           }
         }
-      }
-    },
-    {
-      "name": "Current student profile",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/auth/me",
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{studentToken}}",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "Today\u2019s examiner classes",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/examiner/sessions/today",
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{examinerToken}}",
-              "type": "string"
-            }
-          ]
-        }
       },
       "event": [
         {
@@ -227,88 +750,1371 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "if (pm.response.code === 200) { const item = pm.response.json().find(s => s.status === 'SCHEDULED'); if (item) { pm.collectionVariables.set('sessionId', item.id); pm.collectionVariables.set('courseId', item.courseId); } }"
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Refresh includes profile\",()=>pm.expect(samsResponse.user.id).to.eql(pm.collectionVariables.get(\"studentId\")));pm.collectionVariables.set(\"studentToken\",samsResponse.accessToken);",
+              "})();"
             ]
           }
         }
-      ]
-    },
-    {
-      "name": "Class details and current code",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}",
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{examinerToken}}",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "Open check-in window",
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/start-checkin",
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{examinerToken}}",
-              "type": "string"
-            }
-          ]
-        }
-      },
-      "event": [
+      ],
+      "response": [
         {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "if (pm.response.code === 200) pm.collectionVariables.set('code', pm.response.json().code);"
-            ]
-          }
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Refresh student session. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"accessToken\": \"<accessToken>\",\n  \"refreshToken\": \"<refreshToken>\",\n  \"user\": {\n    \"id\": \"<id>\",\n    \"email\": \"student@demo.sams.test\",\n    \"name\": \"Alice Nakato\",\n    \"role\": \"STUDENT\",\n    \"regNo\": \"DEMO/BSE/001\",\n    \"program\": \"BSE\",\n    \"year\": 2\n  }\n}"
         }
       ]
     },
     {
-      "name": "Student\u2019s available classes",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/student/sessions/upcoming",
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{studentToken}}",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "Record student check-in",
+      "name": "Invalid refresh token",
       "request": {
         "method": "POST",
+        "url": "{{baseUrl}}/auth/refresh",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
           }
         ],
+        "description": "Invalid refresh token. Expected HTTP 401. Use the disposable seeded demonstration database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"not-a-token\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"UNAUTHORIZED\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Invalid refresh token. Expected HTTP 401. Use the disposable seeded demonstration database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"not-a-token\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"UNAUTHORIZED\",\n  \"message\": \"Invalid refresh token\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Create student account",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/users",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Create student account. Expected HTTP 201. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"postman-{{runId}}@demo.sams.test\",\n  \"name\": \"Postman Test Student\",\n  \"role\": \"STUDENT\",\n  \"regNo\": \"PM/{{runId}}\",\n  \"password\": \"SamsPostman2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Account has no password fields\",()=>{pm.expect(samsResponse).not.to.have.property(\"passwordHash\");pm.expect(samsResponse).not.to.have.property(\"password\");});pm.collectionVariables.set(\"otherStudentId\",samsResponse.id);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/users",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Create student account. Expected HTTP 201. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"postman-{{runId}}@demo.sams.test\",\n  \"name\": \"Postman Test Student\",\n  \"role\": \"STUDENT\",\n  \"regNo\": \"PM/{{runId}}\",\n  \"password\": \"SamsPostman2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": \"<id>\",\n  \"email\": \"postman-{{runId}}@demo.sams.test\",\n  \"name\": \"Postman Test Student\",\n  \"role\": \"STUDENT\",\n  \"regNo\": \"PM/mwc6don17rdh\",\n  \"program\": null,\n  \"year\": null\n}"
+        }
+      ]
+    },
+    {
+      "name": "Duplicate account is a conflict",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/users",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Duplicate account is a conflict. Expected HTTP 409. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"postman-{{runId}}@demo.sams.test\",\n  \"name\": \"Postman Test Student\",\n  \"role\": \"STUDENT\",\n  \"regNo\": \"PM/{{runId}}\",\n  \"password\": \"SamsPostman2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"CONFLICT\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/users",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Duplicate account is a conflict. Expected HTTP 409. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"postman-{{runId}}@demo.sams.test\",\n  \"name\": \"Postman Test Student\",\n  \"role\": \"STUDENT\",\n  \"regNo\": \"PM/{{runId}}\",\n  \"password\": \"SamsPostman2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Conflict",
+          "code": 409,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"CONFLICT\",\n  \"message\": \"Duplicate value for email\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Student account requires registration number",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/users",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Student account requires registration number. Expected HTTP 400. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"invalid-{{runId}}@demo.sams.test\",\n  \"name\": \"Invalid Student\",\n  \"role\": \"STUDENT\",\n  \"password\": \"SamsPostman2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/users",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Student account requires registration number. Expected HTTP 400. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"invalid-{{runId}}@demo.sams.test\",\n  \"name\": \"Invalid Student\",\n  \"role\": \"STUDENT\",\n  \"password\": \"SamsPostman2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed\",\n  \"details\": [\n    {\n      \"field\": \"regNo\",\n      \"message\": \"Students require a registration number\"\n    }\n  ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Student cannot provision accounts",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/users",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Student cannot provision accounts. Expected HTTP 403. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"postman-{{runId}}@demo.sams.test\",\n  \"name\": \"Postman Test Student\",\n  \"role\": \"STUDENT\",\n  \"regNo\": \"PM/{{runId}}\",\n  \"password\": \"SamsPostman2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"FORBIDDEN\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/users",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Student cannot provision accounts. Expected HTTP 403. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"postman-{{runId}}@demo.sams.test\",\n  \"name\": \"Postman Test Student\",\n  \"role\": \"STUDENT\",\n  \"regNo\": \"PM/{{runId}}\",\n  \"password\": \"SamsPostman2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Forbidden",
+          "code": 403,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"FORBIDDEN\",\n  \"message\": \"Insufficient permissions\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Sign in as unregistered-course student",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Sign in as unregistered-course student. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"postman-{{runId}}@demo.sams.test\",\n  \"password\": \"SamsPostman2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.collectionVariables.set(\"otherStudentToken\",samsResponse.accessToken);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Sign in as unregistered-course student. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"postman-{{runId}}@demo.sams.test\",\n  \"password\": \"SamsPostman2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"accessToken\": \"<accessToken>\",\n  \"refreshToken\": \"<refreshToken>\",\n  \"user\": {\n    \"id\": \"<id>\",\n    \"email\": \"postman-{{runId}}@demo.sams.test\",\n    \"name\": \"Postman Test Student\",\n    \"role\": \"STUDENT\",\n    \"regNo\": \"PM/mwc6don17rdh\",\n    \"program\": null,\n    \"year\": null\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Create course offering with 75 percent policy",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/courses",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Create course offering with 75 percent policy. Expected HTTP 201. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"{{courseCode}}\",\n  \"title\": \"Postman Attendance Demonstration\",\n  \"program\": \"BSE\",\n  \"year\": 2,\n  \"semester\": 1,\n  \"academicYear\": \"2026/2027\",\n  \"examinerId\": \"{{examinerId}}\",\n  \"attendanceThreshold\": 75\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Configured policy\",()=>pm.expect(samsResponse.attendanceThreshold).to.eql(75));pm.collectionVariables.set(\"courseId\",samsResponse.id);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/courses",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Create course offering with 75 percent policy. Expected HTTP 201. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{courseCode}}\",\n  \"title\": \"Postman Attendance Demonstration\",\n  \"program\": \"BSE\",\n  \"year\": 2,\n  \"semester\": 1,\n  \"academicYear\": \"2026/2027\",\n  \"examinerId\": \"{{examinerId}}\",\n  \"attendanceThreshold\": 75\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": \"<id>\",\n  \"code\": \"PMMWC6DON17RDH\",\n  \"title\": \"Postman Attendance Demonstration\",\n  \"creditUnits\": 3,\n  \"program\": \"BSE\",\n  \"year\": 2,\n  \"semester\": 1,\n  \"attendanceThreshold\": 75,\n  \"academicYear\": \"2026/2027\",\n  \"examinerId\": \"<examinerId>\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Duplicate offering is a conflict",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/courses",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Duplicate offering is a conflict. Expected HTTP 409. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"{{courseCode}}\",\n  \"title\": \"Postman Attendance Demonstration\",\n  \"program\": \"BSE\",\n  \"year\": 2,\n  \"semester\": 1,\n  \"academicYear\": \"2026/2027\",\n  \"examinerId\": \"{{examinerId}}\",\n  \"attendanceThreshold\": 75\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"CONFLICT\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/courses",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Duplicate offering is a conflict. Expected HTTP 409. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{courseCode}}\",\n  \"title\": \"Postman Attendance Demonstration\",\n  \"program\": \"BSE\",\n  \"year\": 2,\n  \"semester\": 1,\n  \"academicYear\": \"2026/2027\",\n  \"examinerId\": \"{{examinerId}}\",\n  \"attendanceThreshold\": 75\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Conflict",
+          "code": 409,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"CONFLICT\",\n  \"message\": \"Duplicate value for code, academicYear, semester\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid threshold",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/courses",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Reject invalid threshold. Expected HTTP 400. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"{{courseCode}}\",\n  \"title\": \"Postman Attendance Demonstration\",\n  \"program\": \"BSE\",\n  \"year\": 2,\n  \"semester\": 1,\n  \"academicYear\": \"2026/2027\",\n  \"examinerId\": \"{{examinerId}}\",\n  \"attendanceThreshold\": 101\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/courses",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Reject invalid threshold. Expected HTTP 400. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{courseCode}}\",\n  \"title\": \"Postman Attendance Demonstration\",\n  \"program\": \"BSE\",\n  \"year\": 2,\n  \"semester\": 1,\n  \"academicYear\": \"2026/2027\",\n  \"examinerId\": \"{{examinerId}}\",\n  \"attendanceThreshold\": 101\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed\",\n  \"details\": [\n    {\n      \"field\": \"attendanceThreshold\",\n      \"message\": \"Too big: expected number to be <=100\"\n    }\n  ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "List assigned examiner courses",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/examiner/courses",
+        "header": [],
+        "description": "List assigned examiner courses. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Assigned course is available\",()=>pm.expect(samsResponse.some(c=>c.id===pm.collectionVariables.get(\"courseId\"))).to.eql(true));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/examiner/courses",
+            "header": [],
+            "description": "List assigned examiner courses. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "[\n  {\n    \"id\": \"<id>\",\n    \"code\": \"PMMWC6DON17RDH\",\n    \"title\": \"Postman Attendance Demonstration\",\n    \"creditUnits\": 3,\n    \"program\": \"BSE\",\n    \"year\": 2,\n    \"semester\": 1,\n    \"attendanceThreshold\": 75,\n    \"academicYear\": \"2026/2027\",\n    \"examinerId\": \"<examinerId>\"\n  },\n  {\n    \"id\": \"<id>\",\n    \"code\": \"SWE2103\",\n    \"title\": \"Database Systems\",\n    \"creditUnits\": 3,\n    \"program\": \"BSE\",\n    \"year\": 2,\n    \"semester\": 1,\n    \"attendanceThreshold\": 80,\n    \"academicYear\": \"2026/2027\",\n    \"examinerId\": \"<examinerId>\"\n  },\n  {\n    \"id\": \"<id>\",\n    \"code\": \"SWE2106\",\n    \"title\": \"Internet Technologies and Web Design\",\n    \"creditUnits\": 3,\n    \"program\": \"BSE\",\n    \"year\": 2,\n    \"semester\": 1,\n    \"attendanceThreshold\": 80,\n    \"academicYear\": \"2026/2027\",\n    \"examinerId\": \"<examinerId>\"\n  }\n]"
+        }
+      ]
+    },
+    {
+      "name": "Create current class",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/courses/{{courseId}}/sessions",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Create current class. Expected HTTP 201. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"startTime\": \"{{sessionStart}}\",\n  \"endTime\": \"{{sessionEnd}}\",\n  \"room\": \"Postman Demo Lab\",\n  \"naturalKey\": \"postman:{{runId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.collectionVariables.set(\"sessionId\",samsResponse.id);pm.test(\"Scheduled class\",()=>pm.expect(samsResponse.status).to.eql(\"SCHEDULED\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/courses/{{courseId}}/sessions",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Create current class. Expected HTTP 201. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{sessionStart}}\",\n  \"endTime\": \"{{sessionEnd}}\",\n  \"room\": \"Postman Demo Lab\",\n  \"naturalKey\": \"postman:{{runId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": \"<id>\",\n  \"naturalKey\": \"postman:mwc6don17rdh\",\n  \"courseId\": \"<courseId>\",\n  \"startTime\": \"2026-11-11T13:48:15.134Z\",\n  \"endTime\": \"2026-11-11T14:19:15.134Z\",\n  \"room\": \"Postman Demo Lab\",\n  \"sessionType\": \"LECTURE\",\n  \"status\": \"SCHEDULED\",\n  \"checkinSecret\": null,\n  \"checkinStartedAt\": null,\n  \"checkinClosesAt\": null\n}"
+        }
+      ]
+    },
+    {
+      "name": "Reject class ending before it starts",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/courses/{{courseId}}/sessions",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Reject class ending before it starts. Expected HTTP 400. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"startTime\": \"{{sessionEnd}}\",\n  \"endTime\": \"{{sessionStart}}\",\n  \"room\": \"Postman Demo Lab\",\n  \"naturalKey\": \"postman:{{runId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/courses/{{courseId}}/sessions",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Reject class ending before it starts. Expected HTTP 400. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{sessionEnd}}\",\n  \"endTime\": \"{{sessionStart}}\",\n  \"room\": \"Postman Demo Lab\",\n  \"naturalKey\": \"postman:{{runId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed\",\n  \"details\": [\n    {\n      \"field\": \"endTime\",\n      \"message\": \"Class end must be after its start\"\n    }\n  ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Student cannot create a class",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/courses/{{courseId}}/sessions",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Student cannot create a class. Expected HTTP 403. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"startTime\": \"{{sessionStart}}\",\n  \"endTime\": \"{{sessionEnd}}\",\n  \"room\": \"Postman Demo Lab\",\n  \"naturalKey\": \"postman:{{runId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"FORBIDDEN\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/courses/{{courseId}}/sessions",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Student cannot create a class. Expected HTTP 403. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{sessionStart}}\",\n  \"endTime\": \"{{sessionEnd}}\",\n  \"room\": \"Postman Demo Lab\",\n  \"naturalKey\": \"postman:{{runId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Forbidden",
+          "code": 403,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"FORBIDDEN\",\n  \"message\": \"Insufficient permissions\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Missing course",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/courses/c000000000000000000000000/sessions",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Missing course. Expected HTTP 404. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"startTime\": \"{{sessionStart}}\",\n  \"endTime\": \"{{sessionEnd}}\",\n  \"room\": \"Postman Demo Lab\",\n  \"naturalKey\": \"postman:{{runId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"NOT_FOUND\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/courses/c000000000000000000000000/sessions",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Missing course. Expected HTTP 404. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{sessionStart}}\",\n  \"endTime\": \"{{sessionEnd}}\",\n  \"room\": \"Postman Demo Lab\",\n  \"naturalKey\": \"postman:{{runId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"NOT_FOUND\",\n  \"message\": \"Course not found\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Open current class check-in",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/start-checkin",
+        "header": [],
+        "description": "Open current class check-in. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Six-character current code\",()=>pm.expect(samsResponse.code).to.match(/^[A-HJ-NP-Z2-9]{6}$/));pm.collectionVariables.set(\"code\",samsResponse.code);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/start-checkin",
+            "header": [],
+            "description": "Open current class check-in. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"code\": \"7K9M2P\",\n  \"expiresAt\": \"2026-11-11T13:51:18.743Z\",\n  \"closesAt\": \"2026-11-11T13:59:18.743Z\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Unenrolled student is rejected",
+      "request": {
+        "method": "POST",
         "url": "{{baseUrl}}/student/checkin",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Unenrolled student is rejected. Expected HTTP 403. Use the disposable seeded demonstration database.",
         "auth": {
           "type": "bearer",
           "bearer": [
@@ -328,14 +2134,887 @@
             }
           }
         }
-      }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"FORBIDDEN\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/student/checkin",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Unenrolled student is rejected. Expected HTTP 403. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"code\": \"{{code}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Forbidden",
+          "code": 403,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"FORBIDDEN\",\n  \"message\": \"You are not enrolled in this course\"\n}"
+        }
+      ]
     },
     {
-      "name": "Class roster and correction history",
+      "name": "Enroll the demonstration student",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/courses/{{courseId}}/enroll",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Enroll the demonstration student. Expected HTTP 201. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"{{studentId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/courses/{{courseId}}/enroll",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Enroll the demonstration student. Expected HTTP 201. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": \"<id>\",\n  \"studentId\": \"<studentId>\",\n  \"courseId\": \"<courseId>\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Duplicate enrollment is a conflict",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/courses/{{courseId}}/enroll",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Duplicate enrollment is a conflict. Expected HTTP 409. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"{{studentId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"CONFLICT\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/courses/{{courseId}}/enroll",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Duplicate enrollment is a conflict. Expected HTTP 409. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Conflict",
+          "code": 409,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"CONFLICT\",\n  \"message\": \"Duplicate value for studentId, courseId\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Wrong check-in code",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/student/checkin",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Wrong check-in code. Expected HTTP 400. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"code\": \"AAAAAA\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/student/checkin",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Wrong check-in code. Expected HTTP 400. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"code\": \"AAAAAA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Invalid, closed or expired code. Ask your examiner for help.\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Malformed code",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/student/checkin",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Malformed code. Expected HTTP 400. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"code\": \"123\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/student/checkin",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Malformed code. Expected HTTP 400. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"code\": \"123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed\",\n  \"details\": [\n    {\n      \"field\": \"code\",\n      \"message\": \"Invalid string: must match pattern /^[A-HJ-NP-Z2-9]{6}$/\"\n    }\n  ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Malformed session identifier",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/student/checkin",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Malformed session identifier. Expected HTTP 400. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"not-an-id\",\n  \"code\": \"{{code}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/student/checkin",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Malformed session identifier. Expected HTTP 400. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"not-an-id\",\n  \"code\": \"{{code}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed\",\n  \"details\": [\n    {\n      \"field\": \"sessionId\",\n      \"message\": \"Invalid cuid\"\n    }\n  ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Record attendance successfully",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/student/checkin",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Record attendance successfully. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"code\": \"{{code}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"New attendance recorded\",()=>{pm.expect(samsResponse.success).to.eql(true);pm.expect(samsResponse.duplicate).to.eql(false);pm.expect(samsResponse.attendance.status).to.eql(\"PRESENT\");});pm.collectionVariables.set(\"attendanceId\",samsResponse.attendance.id);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/student/checkin",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Record attendance successfully. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"code\": \"{{code}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"duplicate\": false,\n  \"attendance\": {\n    \"id\": \"<id>\",\n    \"studentId\": \"<studentId>\",\n    \"sessionId\": \"<sessionId>\",\n    \"status\": \"PRESENT\",\n    \"method\": \"CODE\",\n    \"recordedAt\": \"2026-11-11T13:49:18.961Z\"\n  },\n  \"session\": {\n    \"courseCode\": \"PMMWC6DON17RDH\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Retry returns the same attendance record",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/student/checkin",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Retry returns the same attendance record. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"code\": \"{{code}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Idempotent retry\",()=>{pm.expect(samsResponse.duplicate).to.eql(true);pm.expect(samsResponse.attendance.id).to.eql(pm.collectionVariables.get(\"attendanceId\"));});",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/student/checkin",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Retry returns the same attendance record. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"code\": \"{{code}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"duplicate\": true,\n  \"attendance\": {\n    \"id\": \"<id>\",\n    \"studentId\": \"<studentId>\",\n    \"sessionId\": \"<sessionId>\",\n    \"status\": \"PRESENT\",\n    \"method\": \"CODE\",\n    \"recordedAt\": \"2026-11-11T13:49:18.961Z\"\n  },\n  \"session\": {\n    \"courseCode\": \"PMMWC6DON17RDH\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Student list never exposes check-in secrets",
       "request": {
         "method": "GET",
+        "url": "{{baseUrl}}/student/sessions/upcoming",
         "header": [],
-        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/attendance",
+        "description": "Student list never exposes check-in secrets. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"No code material exposed\",()=>samsResponse.forEach(s=>{for(const key of [\"checkinSecret\",\"checkinStartedAt\",\"checkinClosesAt\",\"activeCode\"])pm.expect(s).not.to.have.property(key);}));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/student/sessions/upcoming",
+            "header": [],
+            "description": "Student list never exposes check-in secrets. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "[\n  {\n    \"id\": \"<id>\",\n    \"naturalKey\": \"demo:SWE2103:live:2026-11-11\",\n    \"courseId\": \"<courseId>\",\n    \"startTime\": \"2026-11-11T13:34:18.002Z\",\n    \"endTime\": \"2026-11-11T15:49:18.002Z\",\n    \"room\": \"Demo Lab\",\n    \"sessionType\": \"LECTURE\",\n    \"status\": \"SCHEDULED\",\n    \"course\": {\n      \"id\": \"<id>\",\n      \"code\": \"SWE2103\",\n      \"title\": \"Database Systems\",\n      \"creditUnits\": 3,\n      \"program\": \"BSE\",\n      \"year\": 2,\n      \"semester\": 1,\n      \"attendanceThreshold\": 80,\n      \"academicYear\": \"2026/2027\",\n      \"examinerId\": \"<examinerId>\"\n    },\n    \"attendances\": [],\n    \"courseCode\": \"SWE2103\",\n    \"courseTitle\": \"Database Systems\",\n    \"date\": \"2026-11-11T13:34:18.002Z\",\n    \"hasActiveCode\": false,\n    \"checkedIn\": false\n  },\n  {\n    \"id\": \"<id>\",\n    \"naturalKey\": \"demo:SWE2106:live:2026-11-11\",\n    \"courseId\": \"<courseId>\",\n    \"startTime\": \"2026-11-11T13:34:18.002Z\",\n    \"endTime\": \"2026-11-11T15:49:18.002Z\",\n    \"room\": \"Demo Lab\",\n    \"sessionType\": \"LECTURE\",\n    \"status\": \"SCHEDULED\",\n    \"course\": {\n      \"id\": \"<id>\",\n      \"code\": \"SWE2106\",\n      \"title\": \"Internet Technologies and Web Design\",\n      \"creditUnits\": 3,\n      \"program\": \"BSE\",\n      \"year\": 2,\n      \"semester\": 1,\n      \"attendanceThreshold\": 80,\n      \"academicYear\": \"2026/2027\",\n      \"examinerId\": \"<examinerId>\"\n    },\n    \"attendances\": [],\n    \"courseCode\": \"SWE2106\",\n    \"courseTitle\": \"Internet Technologies and Web Design\",\n    \"date\": \"2026-11-11T13:34:18.002Z\",\n    \"hasActiveCode\": false,\n    \"checkedIn\": false\n  },\n  {\n    \"id\": \"<id>\",\n    \"naturalKey\": \"postman:mwc6don17rdh\",\n    \"courseId\": \"<courseId>\",\n    \"startTime\": \"2026-11-11T13:48:15.134Z\",\n    \"endTime\": \"2026-11-11T14:19:15.134Z\",\n    \"room\": \"Postman Demo Lab\",\n    \"sessionType\": \"LECTURE\",\n    \"status\": \"SCHEDULED\",\n    \"course\": {\n      \"id\": \"<id>\",\n      \"code\": \"PMMWC6DON17RDH\",\n      \"title\": \"Postman Attendance Demonstration\",\n      \"creditUnits\": 3,\n      \"program\": \"BSE\",\n      \"year\": 2,\n      \"semester\": 1,\n      \"attendanceThreshold\": 75,\n      \"academicYear\": \"2026/2027\",\n      \"examinerId\": \"<examinerId>\"\n    },\n    \"attendances\": [\n      {\n        \"id\": \"<id>\",\n        \"studentId\": \"<studentId>\",\n        \"sessionId\": \"<sessionId>\",\n        \"status\": \"PRESENT\",\n        \"method\": \"CODE\",\n        \"recordedAt\": \"2026-11-11T13:49:18.961Z\"\n      }\n    ],\n    \"courseCode\": \"PMMWC6DON17RDH\",\n    \"courseTitle\": \"Postman Attendance Demonstration\",\n    \"date\": \"2026-11-11T13:48:15.134Z\",\n    \"hasActiveCode\": true,\n    \"checkedIn\": true\n  },\n  {\n    \"id\": \"<id>\",\n    \"naturalKey\": \"demo:SWE2103:next:2026-11-11\",\n    \"courseId\": \"<courseId>\",\n    \"startTime\": \"2026-11-12T07:00:00.000Z\",\n    \"endTime\": \"2026-11-12T08:00:00.000Z\",\n    \"room\": \"Demo Lab\",\n    \"sessionType\": \"LECTURE\",\n    \"status\": \"SCHEDULED\",\n    \"course\": {\n      \"id\": \"<id>\",\n      \"code\": \"SWE2103\",\n      \"title\": \"Database Systems\",\n      \"creditUnits\": 3,\n      \"program\": \"BSE\",\n      \"year\": 2,\n      \"semester\": 1,\n      \"attendanceThreshold\": 80,\n      \"academicYear\": \"2026/2027\",\n      \"examinerId\": \"<examinerId>\"\n    },\n    \"attendances\": [],\n    \"courseCode\": \"SWE2103\",\n    \"courseTitle\": \"Database Systems\",\n    \"date\": \"2026-11-12T07:00:00.000Z\",\n    \"hasActiveCode\": false,\n    \"checkedIn\": false\n  },\n  {\n    \"id\": \"<id>\",\n    \"naturalKey\": \"demo:SWE2106:next:2026-11-11\",\n    \"courseId\": \"<courseId>\",\n    \"startTime\": \"2026-11-12T07:00:00.000Z\",\n    \"endTime\": \"2026-11-12T08:00:00.000Z\",\n    \"room\": \"Demo Lab\",\n    \"sessionType\": \"LECTURE\",\n    \"status\": \"SCHEDULED\",\n    \"course\": {\n      \"id\": \"<id>\",\n      \"code\": \"SWE2106\",\n      \"title\": \"Internet Technologies and Web Design\",\n      \"creditUnits\": 3,\n      \"program\": \"BSE\",\n      \"year\": 2,\n      \"semester\": 1,\n      \"attendanceThreshold\": 80,\n      \"academicYear\": \"2026/2027\",\n      \"examinerId\": \"<examinerId>\"\n    },\n    \"attendances\": [],\n    \"courseCode\": \"SWE2106\",\n    \"courseTitle\": \"Internet Technologies and Web Design\",\n    \"date\": \"2026-11-12T07:00:00.000Z\",\n    \"hasActiveCode\": false,\n    \"checkedIn\": false\n  }\n]"
+        }
+      ]
+    },
+    {
+      "name": "Enroll second student for closed-code case",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/courses/{{courseId}}/enroll",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Enroll second student for closed-code case. Expected HTTP 201. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"{{otherStudentId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/courses/{{courseId}}/enroll",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Enroll second student for closed-code case. Expected HTTP 201. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{otherStudentId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": \"<id>\",\n  \"studentId\": \"<studentId>\",\n  \"courseId\": \"<courseId>\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Close check-in",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/stop-checkin",
+        "header": [],
+        "description": "Close check-in. Expected HTTP 200. Use the disposable seeded demonstration database.",
         "auth": {
           "type": "bearer",
           "bearer": [
@@ -346,19 +3025,159 @@
             }
           ]
         }
-      }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/stop-checkin",
+            "header": [],
+            "description": "Close check-in. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": \"<id>\",\n  \"naturalKey\": \"postman:mwc6don17rdh\",\n  \"courseId\": \"<courseId>\",\n  \"startTime\": \"2026-11-11T13:48:15.134Z\",\n  \"endTime\": \"2026-11-11T14:19:15.134Z\",\n  \"room\": \"Postman Demo Lab\",\n  \"sessionType\": \"LECTURE\",\n  \"status\": \"SCHEDULED\",\n  \"course\": {\n    \"id\": \"<id>\",\n    \"code\": \"PMMWC6DON17RDH\",\n    \"title\": \"Postman Attendance Demonstration\",\n    \"creditUnits\": 3,\n    \"program\": \"BSE\",\n    \"year\": 2,\n    \"semester\": 1,\n    \"attendanceThreshold\": 75,\n    \"academicYear\": \"2026/2027\",\n    \"examinerId\": \"<examinerId>\"\n  },\n  \"courseCode\": \"PMMWC6DON17RDH\",\n  \"courseTitle\": \"Postman Attendance Demonstration\",\n  \"date\": \"2026-11-11T13:48:15.134Z\",\n  \"hasActiveCode\": false,\n  \"activeCode\": null\n}"
+        }
+      ]
     },
     {
-      "name": "Correct attendance (requires reason)",
+      "name": "A previously valid but closed code is rejected",
       "request": {
         "method": "POST",
+        "url": "{{baseUrl}}/student/checkin",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
           }
         ],
+        "description": "A previously valid but closed code is rejected. Expected HTTP 400. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{otherStudentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"code\": \"{{code}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/student/checkin",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "A previously valid but closed code is rejected. Expected HTTP 400. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{otherStudentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"code\": \"{{code}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Invalid, closed or expired code. Ask your examiner for help.\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Correction requires a reason",
+      "request": {
+        "method": "POST",
         "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/attendance",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Correction requires a reason. Expected HTTP 400. Use the disposable seeded demonstration database.",
         "auth": {
           "type": "bearer",
           "bearer": [
@@ -371,21 +3190,436 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"status\": \"LATE\",\n  \"reason\": \"Verified against the classroom register\"\n}",
+          "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"status\": \"LATE\",\n  \"reason\": \"x\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
         }
-      }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/attendance",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Correction requires a reason. Expected HTTP 400. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"status\": \"LATE\",\n  \"reason\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed\",\n  \"details\": [\n    {\n      \"field\": \"reason\",\n      \"message\": \"Too small: expected string to have >=5 characters\"\n    }\n  ]\n}"
+        }
+      ]
     },
     {
-      "name": "Student\u2019s course summaries",
+      "name": "Correct attendance with audit reason",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/attendance",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Correct attendance with audit reason. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"status\": \"LATE\",\n  \"reason\": \"Verified in person against the class register\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/attendance",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Correct attendance with audit reason. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"status\": \"LATE\",\n  \"reason\": \"Verified in person against the class register\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": \"<id>\",\n  \"studentId\": \"<studentId>\",\n  \"sessionId\": \"<sessionId>\",\n  \"status\": \"LATE\",\n  \"method\": \"MANUAL\",\n  \"recordedAt\": \"2026-11-11T13:49:18.961Z\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Roster includes correction history",
       "request": {
         "method": "GET",
+        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/attendance",
         "header": [],
+        "description": "Roster includes correction history. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Correction recorded\",()=>{const r=samsResponse.find(r=>r.student.id===pm.collectionVariables.get(\"studentId\"));pm.expect(r.attendance.changes).to.have.lengthOf(1);pm.expect(r.attendance.changes[0].reason).to.include(\"Verified\");});",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/attendance",
+            "header": [],
+            "description": "Roster includes correction history. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "[\n  {\n    \"student\": {\n      \"id\": \"<id>\",\n      \"name\": \"Alice Nakato\",\n      \"regNo\": \"DEMO/BSE/001\"\n    },\n    \"attendance\": {\n      \"id\": \"<id>\",\n      \"studentId\": \"<studentId>\",\n      \"sessionId\": \"<sessionId>\",\n      \"status\": \"LATE\",\n      \"method\": \"MANUAL\",\n      \"recordedAt\": \"2026-11-11T13:49:18.961Z\",\n      \"changes\": [\n        {\n          \"id\": \"<id>\",\n          \"attendanceId\": \"<attendanceId>\",\n          \"actorId\": \"<actorId>\",\n          \"previousStatus\": \"PRESENT\",\n          \"status\": \"LATE\",\n          \"reason\": \"Verified in person against the class register\",\n          \"recordedAt\": \"2026-11-11T13:49:19.234Z\",\n          \"actor\": {\n            \"name\": \"Demo Examiner\"\n          }\n        }\n      ]\n    }\n  },\n  {\n    \"student\": {\n      \"id\": \"<id>\",\n      \"name\": \"Postman Test Student\",\n      \"regNo\": \"PM/mwc6don17rdh\"\n    },\n    \"attendance\": null\n  }\n]"
+        }
+      ]
+    },
+    {
+      "name": "Complete class",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/complete",
+        "header": [],
+        "description": "Complete class. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Class completed\",()=>pm.expect(samsResponse.status).to.eql(\"COMPLETED\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/complete",
+            "header": [],
+            "description": "Complete class. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": \"<id>\",\n  \"naturalKey\": \"postman:mwc6don17rdh\",\n  \"courseId\": \"<courseId>\",\n  \"startTime\": \"2026-11-11T13:48:15.134Z\",\n  \"endTime\": \"2026-11-11T14:19:15.134Z\",\n  \"room\": \"Postman Demo Lab\",\n  \"sessionType\": \"LECTURE\",\n  \"status\": \"COMPLETED\",\n  \"course\": {\n    \"id\": \"<id>\",\n    \"code\": \"PMMWC6DON17RDH\",\n    \"title\": \"Postman Attendance Demonstration\",\n    \"creditUnits\": 3,\n    \"program\": \"BSE\",\n    \"year\": 2,\n    \"semester\": 1,\n    \"attendanceThreshold\": 75,\n    \"academicYear\": \"2026/2027\",\n    \"examinerId\": \"<examinerId>\"\n  },\n  \"courseCode\": \"PMMWC6DON17RDH\",\n  \"courseTitle\": \"Postman Attendance Demonstration\",\n  \"date\": \"2026-11-11T13:48:15.134Z\",\n  \"hasActiveCode\": false,\n  \"activeCode\": null\n}"
+        }
+      ]
+    },
+    {
+      "name": "Completed class cannot reopen",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/start-checkin",
+        "header": [],
+        "description": "Completed class cannot reopen. Expected HTTP 400. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/start-checkin",
+            "header": [],
+            "description": "Completed class cannot reopen. Expected HTTP 400. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Check-in can only open during a scheduled class\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Report counts completed class and configured policy",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/eligibility/{{courseId}}",
+        "header": [],
+        "description": "Report counts completed class and configured policy. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Correct denominator and policy\",()=>{const s=samsResponse.students.find(s=>s.studentId===pm.collectionVariables.get(\"studentId\"));pm.expect(s.totalSessions).to.eql(1);pm.expect(s.attendancePct).to.eql(100);pm.expect(s.eligible).to.eql(true);pm.expect(samsResponse.course.attendanceThreshold).to.eql(75);});",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/eligibility/{{courseId}}",
+            "header": [],
+            "description": "Report counts completed class and configured policy. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"course\": {\n    \"id\": \"<id>\",\n    \"code\": \"PMMWC6DON17RDH\",\n    \"title\": \"Postman Attendance Demonstration\",\n    \"program\": \"BSE\",\n    \"year\": 2,\n    \"semester\": 1,\n    \"attendanceThreshold\": 75,\n    \"academicYear\": \"2026/2027\"\n  },\n  \"students\": [\n    {\n      \"studentId\": \"<studentId>\",\n      \"regNo\": \"DEMO/BSE/001\",\n      \"name\": \"Alice Nakato\",\n      \"presentCount\": 1,\n      \"totalSessions\": 1,\n      \"attendancePct\": 100,\n      \"eligible\": true\n    },\n    {\n      \"studentId\": \"<studentId>\",\n      \"regNo\": \"PM/mwc6don17rdh\",\n      \"name\": \"Postman Test Student\",\n      \"presentCount\": 0,\n      \"totalSessions\": 1,\n      \"attendancePct\": 0,\n      \"eligible\": false\n    }\n  ],\n  \"rules\": \"Completed classes only. PRESENT and LATE count. Configured attendance threshold: 75%. Attendance qualification only; fees and coursework are not assessed.\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Student sees own summaries",
+      "request": {
+        "method": "GET",
         "url": "{{baseUrl}}/student/attendance/summary",
+        "header": [],
+        "description": "Student sees own summaries. Expected HTTP 200. Use the disposable seeded demonstration database.",
         "auth": {
           "type": "bearer",
           "bearer": [
@@ -396,68 +3630,61 @@
             }
           ]
         }
-      }
-    },
-    {
-      "name": "Admin course offerings",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/admin/courses",
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
-            }
-          ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Own course summary\",()=>pm.expect(samsResponse.some(c=>c.courseId===pm.collectionVariables.get(\"courseId\"))).to.eql(true));",
+              "})();"
+            ]
+          }
         }
-      }
-    },
-    {
-      "name": "Admin student list",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/admin/students",
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/student/attendance/summary",
+            "header": [],
+            "description": "Student sees own summaries. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
             }
-          ]
-        }
-      }
-    },
-    {
-      "name": "Course attendance qualification",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/admin/eligibility/{{courseId}}",
-        "auth": {
-          "type": "bearer",
-          "bearer": [
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
             {
-              "key": "token",
-              "value": "{{adminToken}}",
-              "type": "string"
+              "key": "Content-Type",
+              "value": "application/json"
             }
-          ]
+          ],
+          "body": "[\n  {\n    \"courseId\": \"<courseId>\",\n    \"courseCode\": \"PMMWC6DON17RDH\",\n    \"courseTitle\": \"Postman Attendance Demonstration\",\n    \"academicYear\": \"2026/2027\",\n    \"semester\": 1,\n    \"attendanceThreshold\": 75,\n    \"presentCount\": 1,\n    \"totalSessions\": 1,\n    \"attendancePct\": 100,\n    \"eligible\": true\n  },\n  {\n    \"courseId\": \"<courseId>\",\n    \"courseCode\": \"SWE2103\",\n    \"courseTitle\": \"Database Systems\",\n    \"academicYear\": \"2026/2027\",\n    \"semester\": 1,\n    \"attendanceThreshold\": 80,\n    \"presentCount\": 4,\n    \"totalSessions\": 5,\n    \"attendancePct\": 80,\n    \"eligible\": true\n  },\n  {\n    \"courseId\": \"<courseId>\",\n    \"courseCode\": \"SWE2106\",\n    \"courseTitle\": \"Internet Technologies and Web Design\",\n    \"academicYear\": \"2026/2027\",\n    \"semester\": 1,\n    \"attendanceThreshold\": 80,\n    \"presentCount\": 4,\n    \"totalSessions\": 5,\n    \"attendancePct\": 80,\n    \"eligible\": true\n  }\n]"
         }
-      }
+      ]
     },
     {
-      "name": "Download prototype attendance PDF",
+      "name": "Download PDF report",
       "request": {
         "method": "GET",
-        "header": [],
         "url": "{{baseUrl}}/admin/eligibility/{{courseId}}/pdf",
+        "header": [],
+        "description": "Download PDF report. Expected HTTP 200. Use the disposable seeded demonstration database.",
         "auth": {
           "type": "bearer",
           "bearer": [
@@ -468,14 +3695,152 @@
             }
           ]
         }
-      }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"PDF response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/pdf\"); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Example HTTP 200",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/eligibility/{{courseId}}/pdf",
+            "header": [],
+            "description": "Download PDF report. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/pdf"
+            }
+          ],
+          "body": "PDF binary download"
+        }
+      ]
     },
     {
-      "name": "Close check-in window",
+      "name": "Create historical class for time-window validation",
       "request": {
         "method": "POST",
+        "url": "{{baseUrl}}/examiner/courses/{{courseId}}/sessions",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Create historical class for time-window validation. Expected HTTP 201. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"startTime\": \"{{pastStart}}\",\n  \"endTime\": \"{{pastEnd}}\",\n  \"room\": \"Postman Demo Lab\",\n  \"naturalKey\": \"postman:past:{{runId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.collectionVariables.set(\"pastSessionId\",samsResponse.id);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/courses/{{courseId}}/sessions",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Create historical class for time-window validation. Expected HTTP 201. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"{{pastStart}}\",\n  \"endTime\": \"{{pastEnd}}\",\n  \"room\": \"Postman Demo Lab\",\n  \"naturalKey\": \"postman:past:{{runId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": \"<id>\",\n  \"naturalKey\": \"postman:past:mwc6don17rdh\",\n  \"courseId\": \"<courseId>\",\n  \"startTime\": \"2026-11-11T11:49:15.134Z\",\n  \"endTime\": \"2026-11-11T12:49:15.134Z\",\n  \"room\": \"Postman Demo Lab\",\n  \"sessionType\": \"LECTURE\",\n  \"status\": \"SCHEDULED\",\n  \"checkinSecret\": null,\n  \"checkinStartedAt\": null,\n  \"checkinClosesAt\": null\n}"
+        }
+      ]
+    },
+    {
+      "name": "Cannot open check-in after class end",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/sessions/{{pastSessionId}}/start-checkin",
         "header": [],
-        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/stop-checkin",
+        "description": "Cannot open check-in after class end. Expected HTTP 400. Use the disposable seeded demonstration database.",
         "auth": {
           "type": "bearer",
           "bearer": [
@@ -486,14 +3851,62 @@
             }
           ]
         }
-      }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/sessions/{{pastSessionId}}/start-checkin",
+            "header": [],
+            "description": "Cannot open check-in after class end. Expected HTTP 400. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Check-in can only open during a scheduled class\"\n}"
+        }
+      ]
     },
     {
-      "name": "Complete class (irreversible state transition)",
+      "name": "Cancel historical unheld class",
       "request": {
         "method": "POST",
+        "url": "{{baseUrl}}/examiner/sessions/{{pastSessionId}}/cancel",
         "header": [],
-        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/complete",
+        "description": "Cancel historical unheld class. Expected HTTP 200. Use the disposable seeded demonstration database.",
         "auth": {
           "type": "bearer",
           "bearer": [
@@ -504,14 +3917,126 @@
             }
           ]
         }
-      }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Cancelled class\",()=>pm.expect(samsResponse.status).to.eql(\"CANCELLED\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/examiner/sessions/{{pastSessionId}}/cancel",
+            "header": [],
+            "description": "Cancel historical unheld class. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": \"<id>\",\n  \"naturalKey\": \"postman:past:mwc6don17rdh\",\n  \"courseId\": \"<courseId>\",\n  \"startTime\": \"2026-11-11T11:49:15.134Z\",\n  \"endTime\": \"2026-11-11T12:49:15.134Z\",\n  \"room\": \"Postman Demo Lab\",\n  \"sessionType\": \"LECTURE\",\n  \"status\": \"CANCELLED\",\n  \"course\": {\n    \"id\": \"<id>\",\n    \"code\": \"PMMWC6DON17RDH\",\n    \"title\": \"Postman Attendance Demonstration\",\n    \"creditUnits\": 3,\n    \"program\": \"BSE\",\n    \"year\": 2,\n    \"semester\": 1,\n    \"attendanceThreshold\": 75,\n    \"academicYear\": \"2026/2027\",\n    \"examinerId\": \"<examinerId>\"\n  },\n  \"courseCode\": \"PMMWC6DON17RDH\",\n  \"courseTitle\": \"Postman Attendance Demonstration\",\n  \"date\": \"2026-11-11T11:49:15.134Z\",\n  \"hasActiveCode\": false,\n  \"activeCode\": null\n}"
+        }
+      ]
     },
     {
-      "name": "Cancel a scheduled class (alternative to completion)",
+      "name": "Cancelled class does not change report denominator",
       "request": {
-        "method": "POST",
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/eligibility/{{courseId}}",
         "header": [],
-        "url": "{{baseUrl}}/examiner/sessions/{{sessionId}}/cancel",
+        "description": "Cancelled class does not change report denominator. Expected HTTP 200. Use the disposable seeded demonstration database.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Cancelled class excluded\",()=>samsResponse.students.forEach(s=>pm.expect(s.totalSessions).to.eql(1)));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/eligibility/{{courseId}}",
+            "header": [],
+            "description": "Cancelled class does not change report denominator. Expected HTTP 200. Use the disposable seeded demonstration database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"course\": {\n    \"id\": \"<id>\",\n    \"code\": \"PMMWC6DON17RDH\",\n    \"title\": \"Postman Attendance Demonstration\",\n    \"program\": \"BSE\",\n    \"year\": 2,\n    \"semester\": 1,\n    \"attendanceThreshold\": 75,\n    \"academicYear\": \"2026/2027\"\n  },\n  \"students\": [\n    {\n      \"studentId\": \"<studentId>\",\n      \"regNo\": \"DEMO/BSE/001\",\n      \"name\": \"Alice Nakato\",\n      \"presentCount\": 1,\n      \"totalSessions\": 1,\n      \"attendancePct\": 100,\n      \"eligible\": true\n    },\n    {\n      \"studentId\": \"<studentId>\",\n      \"regNo\": \"PM/mwc6don17rdh\",\n      \"name\": \"Postman Test Student\",\n      \"presentCount\": 0,\n      \"totalSessions\": 1,\n      \"attendancePct\": 0,\n      \"eligible\": false\n    }\n  ],\n  \"rules\": \"Completed classes only. PRESENT and LATE count. Configured attendance threshold: 75%. Attendance qualification only; fees and coursework are not assessed.\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Lecturer reads own course report",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/examiner/courses/{{courseId}}/attendance-summary",
+        "header": [],
+        "description": "Assigned lecturer can view the completed-class attendance report. Expected HTTP 200.",
         "auth": {
           "type": "bearer",
           "bearer": [
@@ -522,7 +4047,182 @@
             }
           ]
         }
-      }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Correct denominator and policy\",()=>{const s=samsResponse.students.find(s=>s.studentId===pm.collectionVariables.get(\"studentId\"));pm.expect(s.totalSessions).to.eql(1);pm.expect(s.attendancePct).to.eql(100);pm.expect(s.eligible).to.eql(true);pm.expect(samsResponse.course.attendanceThreshold).to.eql(75);});",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/examiner/courses/{{courseId}}/attendance-summary",
+            "header": [],
+            "description": "Assigned lecturer can view the completed-class attendance report. Expected HTTP 200.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"course\": {\n    \"id\": \"<id>\",\n    \"code\": \"PMMWC6DON17RDH\",\n    \"title\": \"Postman Attendance Demonstration\",\n    \"program\": \"BSE\",\n    \"year\": 2,\n    \"semester\": 1,\n    \"attendanceThreshold\": 75,\n    \"academicYear\": \"2026/2027\"\n  },\n  \"students\": [\n    {\n      \"studentId\": \"<studentId>\",\n      \"regNo\": \"DEMO/BSE/001\",\n      \"name\": \"Alice Nakato\",\n      \"presentCount\": 1,\n      \"totalSessions\": 1,\n      \"attendancePct\": 100,\n      \"eligible\": true\n    },\n    {\n      \"studentId\": \"<studentId>\",\n      \"regNo\": \"PM/mwc6don17rdh\",\n      \"name\": \"Postman Test Student\",\n      \"presentCount\": 0,\n      \"totalSessions\": 1,\n      \"attendancePct\": 0,\n      \"eligible\": false\n    }\n  ],\n  \"rules\": \"Completed classes only. PRESENT and LATE count. Configured attendance threshold: 75%. Attendance qualification only; fees and coursework are not assessed.\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Lecturer downloads own course PDF",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/examiner/courses/{{courseId}}/attendance-summary/pdf",
+        "header": [],
+        "description": "Assigned lecturer can export their own course attendance report. Expected HTTP 200.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"PDF response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/pdf\"); });",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Example HTTP 200",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/examiner/courses/{{courseId}}/attendance-summary/pdf",
+            "header": [],
+            "description": "Assigned lecturer can export their own course attendance report. Expected HTTP 200.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/pdf"
+            }
+          ],
+          "body": "PDF binary download"
+        }
+      ]
+    },
+    {
+      "name": "Student cannot access lecturer course report",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/examiner/courses/{{courseId}}/attendance-summary",
+        "header": [],
+        "description": "Student token cannot access the examiner reporting endpoint. Expected HTTP 403.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+              "pm.test(\"JSON response\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+              "const samsResponse = pm.response.json();",
+              "pm.test(\"Meaningful error\", function () { pm.expect(samsResponse.error).to.be.a(\"string\"); pm.expect(samsResponse.message).to.be.a(\"string\").and.not.empty; });",
+              "pm.test(\"Correct error classification\", () => pm.expect(samsResponse.error).to.eql(\"FORBIDDEN\"));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified example (synthetic IDs/tokens redacted)",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/examiner/courses/{{courseId}}/attendance-summary",
+            "header": [],
+            "description": "Student token cannot access the examiner reporting endpoint. Expected HTTP 403.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "status": "Forbidden",
+          "code": 403,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"error\": \"FORBIDDEN\",\n  \"message\": \"Insufficient permissions\"\n}"
+        }
+      ]
     }
   ]
 }

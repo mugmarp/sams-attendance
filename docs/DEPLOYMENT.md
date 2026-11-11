@@ -1,31 +1,31 @@
-# Deployment and operations
+# Deployment and operation — JavaScript branch
 
-## Local Compose deployment
+## One server locally
 
-Copy root `.env.example` to `.env`, replace every placeholder with separate random values (`openssl rand -hex 32`), then run `docker compose up --build -d`. The migration job must succeed before the backend starts. The frontend listens on localhost:5173; PostgreSQL is available on localhost:5432 for local tools. The API is internal to the Compose network. Compose does not create demo users automatically.
+Node.js 22, PostgreSQL 15+ and the backend dependencies are sufficient. Express serves both HTML/CSS/JavaScript and `/api` on port 3000. Run from backend so `.env` is loaded: `npm ci`, `npm run prisma:generate`, `npm run prisma:deploy`, optionally `npm run seed`, then `npm start`. `npm run dev` uses Node's watch mode. Frontend npm installation is only needed for browser tests, not for serving pages.
 
-For a disposable classroom demonstration: `docker compose exec -e ALLOW_DEMO_SEED=true backend npm run seed`. The production seed guard deliberately requires this opt-in. Never use demo credentials for real student records.
+## Compose
 
-Check health with `curl -f http://localhost:5173/api/health`. Inspect logs with `docker compose logs backend migrate`. Shut down with `docker compose down`; the named database volume persists. Do not use `down -v` against records that need to be retained.
+Copy root `.env.example` to `.env`, replace all placeholders with separate URL-safe random values (`openssl rand -hex 32`), then `docker compose up --build -d`. The build context is the repository root; `backend/Dockerfile` copies the plain frontend and JavaScript backend into one application image. PostgreSQL must be healthy and the one-shot migration service successful before the app starts.
 
-## Remote hosting
+Open localhost:5173 by default. FRONTEND_PORT/DB_PORT can change the loopback host ports. The application container listens on 3000, and PostgreSQL on 5432 internally. There is no separate frontend/nginx/Redis service.
 
-Place an HTTPS reverse proxy in front of the loopback-bound frontend and set FRONTEND_URL to its exact public origin. The static app uses same-origin `/api`, so no browser localhost API URL is embedded. Do not publish PostgreSQL or the API directly. Configure trusted proxy topology deliberately: Express trusts the single supplied nginx hop. Keep backups before applying schema updates and test restoration. Hosting is not automatically performed by this repository.
+For disposable demonstration data only: `docker compose exec -e ALLOW_DEMO_SEED=true backend npm run seed`. Production mode otherwise refuses demo seeding. Health: `curl -f http://localhost:5173/api/health`. Logs: `docker compose logs backend migrate`. `docker compose down` retains the named database volume; do not remove that volume when records must be preserved.
 
-The runtime backend image contains Prisma/tsx tooling to support migration, seeding and local imports. It runs as the unprivileged node user. A separately minimized production image is an optional later optimization.
+## Real hosting considerations
 
-## Database updates
+A running local/Compose PostgreSQL instance is a live database, not a mock. This repository does not claim that a public persistent university deployment exists. For remote hosting, put an HTTPS reverse proxy in front of the loopback application port, set FRONTEND_URL to the exact origin, and set TRUST_PROXY=1 only for one trusted proxy hop. Direct access keeps TRUST_PROXY=0. Do not expose PostgreSQL publicly. Same-origin fetch calls need no browser localhost API URL.
 
-Commit migrations to Git. Generate new migrations in a development database with `npm run prisma:migrate -- --name description` from backend; deploy with `npm run prisma:deploy`. The initial migration is for a new database. An existing database with the abandoned Hermes schema requires a separately reviewed data migration; never run a destructive reset on it.
+Keep environment secrets outside Git. Plan backups and restore drills, monitoring, approved retention, institutional identity/account recovery and token revocation before real use. Operator-created accounts use an initial password; this prototype does not provide self-service recovery.
 
-## Imports and accounts
+## Schema/data
 
-See IMPORT_GUIDE.md. The operator provisions users and distributes initial passwords securely. Password recovery, account lifecycle management and token revocation need an institutional solution before real deployment. Attendance reports cannot establish fee/coursework clearance.
+Apply committed migrations with `npm run prisma:deploy`. The additive threshold migration preserves existing offerings with an 80% demonstration default. Confirm actual policy and select an appropriate threshold on newly created offerings. No migration resets existing attendance. Adoption of a database with the abandoned Hermes schema needs a separately reviewed migration, never a destructive reset.
 
-## Offline and caching
+The import CLI is documented in IMPORT_GUIDE.md. It preserves existing passwords/records and rejects identity/date/policy conflicts transactionally. Course completion/cancellation are explicit lecturer decisions and cannot be reversed through the prototype UI; corrections on completed classes retain history.
 
-Offline mode requires HTTPS or localhost and a prior online visit/sign-in. After a new release, close existing app tabs and reopen to activate the new service worker. Never cache `/api` at an external proxy. On shared computers clear the site's local data after use, because user-scoped snapshots/attempts are retained on the device.
+## Offline
 
-## Verification boundary
+HTTPS or localhost and a prior online visit/sign-in are required. Static files are cached by `sw.js`; `/api` is never cached there. User-specific snapshots/attempts remain on the device until site data is cleared. On a major update, close existing app tabs and reopen so the new service worker activates. The JavaScript migration uses a new app/IndexedDB cache namespace; it does not automatically submit an older prototype's queued attempts. Reconcile any real pending attempts before changing clients; current migration/demo data is synthetic.
 
-See VALIDATION.md for executed checks. Container definitions are included and CI builds them; if Docker is unavailable locally, no local container-runtime result is claimed. Institutional approval, official report layout, records-retention policy and a production security review are outside the classroom prototype.
+Executed checks and hosted Compose results are recorded in VALIDATION.md. Docker is unavailable on the local workstation, so packaged startup is verified on the hosted CI runner.
