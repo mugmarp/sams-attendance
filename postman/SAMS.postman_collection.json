@@ -137,7 +137,15 @@
               "pm.collectionVariables.set('sessionStart',new Date(Date.now()-60000).toISOString());",
               "pm.collectionVariables.set('sessionEnd',new Date(Date.now()+1800000).toISOString());",
               "pm.collectionVariables.set('pastStart',new Date(Date.now()-7200000).toISOString());",
-              "pm.collectionVariables.set('pastEnd',new Date(Date.now()-3600000).toISOString());"
+              "pm.collectionVariables.set('pastEnd',new Date(Date.now()-3600000).toISOString());",
+              "pm.collectionVariables.set(\"offlineOperationId\",pm.variables.replaceIn(\"{{$guid}}\"));",
+              "pm.collectionVariables.set(\"conflictOperationId\",pm.variables.replaceIn(\"{{$guid}}\"));",
+              "pm.collectionVariables.set(\"reviewOperationId\",pm.variables.replaceIn(\"{{$guid}}\"));",
+              "pm.collectionVariables.set(\"claimOperationId\",pm.variables.replaceIn(\"{{$guid}}\"));",
+              "pm.collectionVariables.set(\"decisionOperationId\",pm.variables.replaceIn(\"{{$guid}}\"));",
+              "pm.collectionVariables.set(\"staleDecisionId\",pm.variables.replaceIn(\"{{$guid}}\"));",
+              "pm.collectionVariables.set(\"studentDecisionId\",pm.variables.replaceIn(\"{{$guid}}\"));",
+              "pm.collectionVariables.set(\"operationObservedAt\",new Date().toISOString());"
             ]
           }
         },
@@ -4272,6 +4280,1057 @@
             }
           ],
           "body": "{\n  \"error\": \"FORBIDDEN\",\n  \"message\": \"Insufficient permissions\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Create class for offline synchronization",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/courses/{{courseId}}/sessions",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Create class for offline synchronization. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"startTime\": \"{{sessionStart}}\",\n  \"endTime\": \"{{sessionEnd}}\",\n  \"room\": \"Teaching Room\",\n  \"naturalKey\": \"postman:offline:{{runId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set(\"offlineSessionId\",data.id);pm.test(\"Open class\",()=>pm.expect(data.version).to.eql(1));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Prepare owned roster for offline marking",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/preparations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Prepare owned roster for offline marking. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{offlineSessionId}}\",\n  \"purpose\": \"MARK\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set(\"offlinePreparationId\",data.id);pm.test(\"Safe prepared roster\",()=>{pm.expect(data.roster.length).to.be.above(0);pm.expect(data.session).not.to.have.property(\"checkinSecret\");pm.expect(data.session).not.to.have.property(\"activeCode\");});",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject wrong originating sync actor",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Reject wrong originating sync actor. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{studentId}}\",\n  \"operations\": [\n    {\n      \"operationId\": \"{{offlineOperationId}}\",\n      \"type\": \"MARK\",\n      \"sessionId\": \"{{offlineSessionId}}\",\n      \"preparationId\": \"{{offlinePreparationId}}\",\n      \"studentId\": \"{{studentId}}\",\n      \"baseSessionVersion\": 1,\n      \"baseAttendanceVersion\": 0,\n      \"status\": \"PRESENT\",\n      \"reason\": \"Observed this student during class\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 403\",()=>pm.response.to.have.status(403));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Forbidden\",()=>pm.expect(data.error).to.eql(\"FORBIDDEN\"));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Accept one prepared offline mark",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Accept one prepared offline mark. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{examinerId}}\",\n  \"operations\": [\n    {\n      \"operationId\": \"{{offlineOperationId}}\",\n      \"type\": \"MARK\",\n      \"sessionId\": \"{{offlineSessionId}}\",\n      \"preparationId\": \"{{offlinePreparationId}}\",\n      \"studentId\": \"{{studentId}}\",\n      \"baseSessionVersion\": 1,\n      \"baseAttendanceVersion\": 0,\n      \"status\": \"PRESENT\",\n      \"reason\": \"Observed this student during class\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Accepted\",()=>pm.expect(data.results[0].outcome).to.eql(\"ACCEPTED\"));pm.collectionVariables.set(\"offlineAttendanceId\",data.results[0].attendance.id);",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Replay returns the saved server receipt",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Replay returns the saved server receipt. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{examinerId}}\",\n  \"operations\": [\n    {\n      \"operationId\": \"{{offlineOperationId}}\",\n      \"type\": \"MARK\",\n      \"sessionId\": \"{{offlineSessionId}}\",\n      \"preparationId\": \"{{offlinePreparationId}}\",\n      \"studentId\": \"{{studentId}}\",\n      \"baseSessionVersion\": 1,\n      \"baseAttendanceVersion\": 0,\n      \"status\": \"PRESENT\",\n      \"reason\": \"Observed this student during class\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Replayed without another mark\",()=>{pm.expect(data.results[0].replayed).to.eql(true);pm.expect(data.results[0].attendance.id).to.eql(pm.collectionVariables.get(\"offlineAttendanceId\"));});",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reusing an operation ID with changed content conflicts",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Reusing an operation ID with changed content conflicts. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{examinerId}}\",\n  \"operations\": [\n    {\n      \"operationId\": \"{{offlineOperationId}}\",\n      \"type\": \"MARK\",\n      \"sessionId\": \"{{offlineSessionId}}\",\n      \"preparationId\": \"{{offlinePreparationId}}\",\n      \"studentId\": \"{{studentId}}\",\n      \"baseSessionVersion\": 1,\n      \"baseAttendanceVersion\": 0,\n      \"status\": \"ABSENT\",\n      \"reason\": \"Observed this student during class\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Immutable operation\",()=>pm.expect(data.results[0].code).to.eql(\"OPERATION_ID_REUSED\"));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Prepare next roster version",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/preparations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Prepare next roster version. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{offlineSessionId}}\",\n  \"purpose\": \"MARK\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set(\"offlinePreparationId\",data.id);pm.test(\"Attendance has a version\",()=>pm.expect(data.roster.find(r=>r.student.id===pm.collectionVariables.get(\"studentId\")).attendance.version).to.eql(1));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Concurrent lecturer correction changes the record",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/sessions/{{offlineSessionId}}/attendance",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Concurrent lecturer correction changes the record. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"status\": \"ABSENT\",\n  \"reason\": \"Verified current register before reconnection\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Version incremented\",()=>pm.expect(data.version).to.eql(2));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stale prepared mark requires explicit review",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Stale prepared mark requires explicit review. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{examinerId}}\",\n  \"operations\": [\n    {\n      \"operationId\": \"{{conflictOperationId}}\",\n      \"type\": \"MARK\",\n      \"sessionId\": \"{{offlineSessionId}}\",\n      \"preparationId\": \"{{offlinePreparationId}}\",\n      \"studentId\": \"{{studentId}}\",\n      \"baseSessionVersion\": 1,\n      \"baseAttendanceVersion\": 1,\n      \"status\": \"PRESENT\",\n      \"reason\": \"Observed this student during class\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Conflict preserved\",()=>{pm.expect(data.results[0].code).to.eql(\"ATTENDANCE_CHANGED\");pm.expect(data.results[0].current.attendance.status).to.eql(\"ABSENT\");});",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Prepare current state for deliberate review",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/preparations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Prepare current state for deliberate review. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{offlineSessionId}}\",\n  \"purpose\": \"REVIEW\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set(\"reviewPreparationId\",data.id);pm.test(\"Current version inspected\",()=>pm.expect(data.roster.find(r=>r.student.id===pm.collectionVariables.get(\"studentId\")).attendance.version).to.eql(2));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Apply a reviewed proposal against current versions",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Apply a reviewed proposal against current versions. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{examinerId}}\",\n  \"operations\": [\n    {\n      \"operationId\": \"{{reviewOperationId}}\",\n      \"type\": \"REVIEW_MARK\",\n      \"sessionId\": \"{{offlineSessionId}}\",\n      \"preparationId\": \"{{reviewPreparationId}}\",\n      \"studentId\": \"{{studentId}}\",\n      \"baseSessionVersion\": 1,\n      \"baseAttendanceVersion\": 2,\n      \"status\": \"LATE\",\n      \"reason\": \"Reviewed both observations and verified late arrival\",\n      \"observedAt\": \"{{operationObservedAt}}\",\n      \"reviewOf\": \"{{conflictOperationId}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Reviewed mark accepted\",()=>{pm.expect(data.results[0].outcome).to.eql(\"ACCEPTED\");pm.expect(data.results[0].attendance.status).to.eql(\"LATE\");pm.expect(data.results[0].attendance.version).to.eql(3);});",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create class for attendance review requests",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/examiner/courses/{{courseId}}/sessions",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Create class for attendance review requests. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"startTime\": \"{{sessionStart}}\",\n  \"endTime\": \"{{sessionEnd}}\",\n  \"room\": \"Teaching Room\",\n  \"naturalKey\": \"postman:claim:{{runId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set(\"claimSessionId\",data.id);",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Submit an uncounted student review request",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Submit an uncounted student review request. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{studentId}}\",\n  \"operations\": [\n    {\n      \"type\": \"STUDENT_CLAIM\",\n      \"operationId\": \"{{claimOperationId}}\",\n      \"sessionId\": \"{{claimSessionId}}\",\n      \"reason\": \"I attended but my check-in could not reach the server\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Awaiting lecturer\",()=>{pm.expect(data.results[0].outcome).to.eql(\"ACCEPTED\");pm.expect(data.results[0].claim.status).to.eql(\"PENDING\");});pm.collectionVariables.set(\"claimId\",data.results[0].claim.id);",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student review submission is idempotent",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Student review submission is idempotent. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{studentId}}\",\n  \"operations\": [\n    {\n      \"type\": \"STUDENT_CLAIM\",\n      \"operationId\": \"{{claimOperationId}}\",\n      \"sessionId\": \"{{claimSessionId}}\",\n      \"reason\": \"I attended but my check-in could not reach the server\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Same claim receipt\",()=>{pm.expect(data.results[0].replayed).to.eql(true);pm.expect(data.results[0].claim.id).to.eql(pm.collectionVariables.get(\"claimId\"));});",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student reads their own review requests",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/student/attendance-claims",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Student reads their own review requests. Run in the documented order against an isolated synthetic database."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Own pending request\",()=>pm.expect(data.some(c=>c.id===pm.collectionVariables.get(\"claimId\")&&c.status===\"PENDING\")).to.eql(true));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lecturer reads assigned class review requests",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/examiner/sessions/{{claimSessionId}}/claims",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Lecturer reads assigned class review requests. Run in the documented order against an isolated synthetic database."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"One pending request\",()=>{pm.expect(data.length).to.eql(1);pm.expect(data[0].status).to.eql(\"PENDING\");});",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student cannot approve a review request",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Student cannot approve a review request. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{studentId}}\",\n  \"operations\": [\n    {\n      \"type\": \"CLAIM_DECISION\",\n      \"operationId\": \"{{studentDecisionId}}\",\n      \"sessionId\": \"{{claimSessionId}}\",\n      \"studentId\": \"{{studentId}}\",\n      \"claimId\": \"{{claimId}}\",\n      \"baseClaimVersion\": 1,\n      \"baseSessionVersion\": 1,\n      \"baseAttendanceVersion\": 0,\n      \"decision\": \"APPROVE\",\n      \"status\": \"PRESENT\",\n      \"reason\": \"Lecturer verified the observation and the request\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Role enforced\",()=>pm.expect(data.results[0].code).to.eql(\"ROLE_CHANGED\"));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lecturer approves and records attendance atomically",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Lecturer approves and records attendance atomically. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{examinerId}}\",\n  \"operations\": [\n    {\n      \"type\": \"CLAIM_DECISION\",\n      \"operationId\": \"{{decisionOperationId}}\",\n      \"sessionId\": \"{{claimSessionId}}\",\n      \"studentId\": \"{{studentId}}\",\n      \"claimId\": \"{{claimId}}\",\n      \"baseClaimVersion\": 1,\n      \"baseSessionVersion\": 1,\n      \"baseAttendanceVersion\": 0,\n      \"decision\": \"APPROVE\",\n      \"status\": \"PRESENT\",\n      \"reason\": \"Lecturer verified the observation and the request\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Approved with attendance\",()=>{pm.expect(data.results[0].claim.status).to.eql(\"APPROVED\");pm.expect(data.results[0].attendance.status).to.eql(\"PRESENT\");});",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Approval retry returns its original receipt",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Approval retry returns its original receipt. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{examinerId}}\",\n  \"operations\": [\n    {\n      \"type\": \"CLAIM_DECISION\",\n      \"operationId\": \"{{decisionOperationId}}\",\n      \"sessionId\": \"{{claimSessionId}}\",\n      \"studentId\": \"{{studentId}}\",\n      \"claimId\": \"{{claimId}}\",\n      \"baseClaimVersion\": 1,\n      \"baseSessionVersion\": 1,\n      \"baseAttendanceVersion\": 0,\n      \"decision\": \"APPROVE\",\n      \"status\": \"PRESENT\",\n      \"reason\": \"Lecturer verified the observation and the request\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Idempotent decision\",()=>pm.expect(data.results[0].replayed).to.eql(true));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A stale second decision conflicts",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "A stale second decision conflicts. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{examinerId}}\",\n  \"operations\": [\n    {\n      \"type\": \"CLAIM_DECISION\",\n      \"operationId\": \"{{staleDecisionId}}\",\n      \"sessionId\": \"{{claimSessionId}}\",\n      \"studentId\": \"{{studentId}}\",\n      \"claimId\": \"{{claimId}}\",\n      \"baseClaimVersion\": 1,\n      \"baseSessionVersion\": 1,\n      \"baseAttendanceVersion\": 0,\n      \"decision\": \"REJECT\",\n      \"status\": \"PRESENT\",\n      \"reason\": \"Lecturer verified the observation and the request\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Decision conflict\",()=>pm.expect(data.results[0].code).to.eql(\"CLAIM_CHANGED\"));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verify one audit event for an approved request",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/examiner/sessions/{{claimSessionId}}/attendance",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Verify one audit event for an approved request. Run in the documented order against an isolated synthetic database."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"One attributable decision\",()=>{const row=data.find(r=>r.student.id===pm.collectionVariables.get(\"studentId\"));pm.expect(row.attendance.changes.length).to.eql(1);pm.expect(row.attendance.changes[0].operationId).to.eql(pm.collectionVariables.get(\"decisionOperationId\"));});",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject malformed sync operation UUID",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/sync/operations",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{examinerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Reject malformed sync operation UUID. Run in the documented order against an isolated synthetic database.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actorId\": \"{{examinerId}}\",\n  \"operations\": [\n    {\n      \"operationId\": \"invalid-uuid\",\n      \"type\": \"MARK\",\n      \"sessionId\": \"{{offlineSessionId}}\",\n      \"preparationId\": \"{{offlinePreparationId}}\",\n      \"studentId\": \"{{studentId}}\",\n      \"baseSessionVersion\": 1,\n      \"baseAttendanceVersion\": 0,\n      \"status\": \"PRESENT\",\n      \"reason\": \"Observed this student during class\",\n      \"observedAt\": \"{{operationObservedAt}}\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function () {",
+              "pm.test(\"HTTP 400\",()=>pm.response.to.have.status(400));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "const data=pm.response.json();",
+              "pm.test(\"Validated operation\",()=>pm.expect(data.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
         }
       ]
     }

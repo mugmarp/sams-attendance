@@ -2,7 +2,7 @@
 
 Reviewed on 11 November 2026. This is an investigation and proposed implementation plan, not a claim that the proposed capabilities already exist. Application code was not changed for this review.
 
-Subsequent implementation: Phase 1 addresses the queue identity, retry, replacement, cross-tab and local acknowledgement findings below. This document preserves the inspected baseline; see [the phase status](WEB_IMPROVEMENT_PHASES.md) and [current architecture](TECH_ARCHITECTURE.md) for implemented behavior. Lecturer offline marking and server operation receipts remain proposed Phase 2 work.
+Subsequent implementation: Phase 1 addresses the queue identity, retry, replacement, cross-tab and local acknowledgement findings below. This document preserves the inspected baseline; see [the phase status](WEB_IMPROVEMENT_PHASES.md) and [current architecture](TECH_ARCHITECTURE.md) for implemented behavior. Phase 2 subsequently implements lecturer offline marking, server receipts and claim/conflict review; see [OFFLINE_REGISTER.md](OFFLINE_REGISTER.md).
 
 ## 1. Purpose and current foundation
 

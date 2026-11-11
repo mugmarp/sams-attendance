@@ -67,6 +67,26 @@
           </details>
         </section>
       </section>
+      <section class="card" id="review-section" hidden>
+        <h2>Attendance review requests</h2>
+        <p class="small muted">
+          A request does not count as attendance. Your lecturer must approve it.
+        </p>
+        <div id="review-uploads"></div>
+        <div id="review-requests"></div>
+        <form id="request-review" hidden>
+          <h3 id="review-title">Request attendance review</h3>
+          <label for="review-reason">Explain your request</label
+          ><textarea
+            id="review-reason"
+            minlength="5"
+            maxlength="500"
+            required
+          ></textarea>
+          <button class="primary">Send review request</button
+          ><button id="cancel-review" type="button">Cancel</button>
+        </form>
+      </section>
       <section id="summary-view" class="stack" hidden>
         <div>
           <h1>My attendance</h1>

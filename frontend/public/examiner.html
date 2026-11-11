@@ -12,10 +12,12 @@
   <body>
     <header id="site-header" hidden></header>
     <div class="header-inner" id="offline" role="status" hidden>
-      You’re offline. Saved check-ins are pending until the server accepts them.
+      You’re offline. Prepared registers are available; saved marks await server
+      acceptance.
     </div>
     <main class="stack">
       <p id="error" class="alert" role="alert" hidden></p>
+      <p id="notice" role="status" class="alert" hidden></p>
       <section id="dashboard" class="stack" hidden>
         <div class="heading">
           <div>
@@ -33,6 +35,10 @@
         <div id="classes" class="grid">
           <p role="status">Loading classes…</p>
         </div>
+        <section class="card">
+          <h2>Prepared classes on this device</h2>
+          <div id="saved-classes"></div>
+        </section>
         <details class="card">
           <summary>Create class session</summary>
           <form id="create-session">
@@ -96,7 +102,21 @@
           </div>
         </section>
         <section class="card">
+          <h2>Offline register</h2>
+          <p id="prepared-state">Prepare this class online before an outage.</p>
+          <p class="small muted">
+            Saved marks remain provisional until accepted by the server.
+            Preparation lasts 72 hours. Keep this device private.
+          </p>
+          <div class="actions">
+            <button id="prepare-register">Prepare for offline use</button
+            ><button id="sync-register">Sync saved work</button>
+          </div>
+          <div id="register-outbox" aria-live="polite"></div>
+        </section>
+        <section class="card">
           <h2>Class register</h2>
+          <p id="register-source" class="small muted"></p>
           <p class="small muted">
             Updates every five seconds. Corrections require a reason and are
             recorded in the change history.
@@ -115,6 +135,10 @@
             </table>
           </div>
         </section>
+        <section class="card">
+          <h2>Student review requests</h2>
+          <div id="claims"></div>
+        </section>
         <section
           class="card"
           id="correction"
@@ -122,7 +146,19 @@
           hidden
         >
           <h2 id="correction-title"></h2>
+          <p id="comparison" class="small"></p>
           <form id="correction-form">
+            <div id="claim-decision-field" hidden>
+              <label for="claim-decision">Decision</label
+              ><select id="claim-decision">
+                <option value="APPROVE">
+                  Approve with attendance status below
+                </option>
+                <option value="REJECT">
+                  Reject; leave attendance unchanged
+                </option>
+              </select>
+            </div>
             <div>
               <label for="attendance-status">Attendance status</label
               ><select id="attendance-status">
@@ -142,7 +178,8 @@
               ></textarea>
             </div>
             <div class="actions">
-              <button class="primary">Save correction</button
+              <button id="save-correction" class="primary">
+                Save correction</button
               ><button id="close-correction" type="button">Close</button>
             </div>
           </form>

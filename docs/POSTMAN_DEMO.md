@@ -1,6 +1,6 @@
 # Live Postman presentation
 
-The collection is an assessed deliverable: it contains 52 documented requests, saved sample responses and executable success/failure assertions. Run it in order against a **disposable, seeded** database. It creates synthetic accounts, course offerings, enrollments and dated classes; it does not erase them. Every run uses unique identifiers so the collection can be repeated.
+The collection is an assessed deliverable: it contains 75 documented requests, saved sample responses and executable success/failure assertions. Run it in order against a **disposable, seeded** database. It creates synthetic accounts, course offerings, enrollments and dated classes; it does not erase them. Every run uses unique identifiers so the collection can be repeated.
 
 ## Setup
 
@@ -64,3 +64,10 @@ For repeatable assessment testing, use an isolated database named `sams_test`, s
 - Why is attendance qualification different from overall examination clearance?
 - Why is a saved offline attempt pending rather than proof of attendance?
 - What limitations remain: shared codes, institutional approval, account recovery/revocation and public hosting?
+
+
+## Optional offline/reconciliation presentation
+
+The final 22 requests exercise the Phase 2 API after the original core workflow: prepare a roster, accept/replay a saved mark, reject changed content under one operation ID, generate a stale-version conflict, inspect a current REVIEW preparation and apply a deliberate linked correction. A separate class demonstrates an uncounted student claim, ownership/role restrictions, atomic lecturer approval, duplicate decision replay and stale-decision rejection.
+
+Explain that a 200 response from /sync/operations means the batch was processed; each result has its own outcome. Demonstrate actual disconnected use in the browser: prepare, disconnect, save locally, reload, reconnect. Postman verifies the server contract but does not itself establish offline browser usability. The full collection currently passes 75 requests and 241 assertions on isolated synthetic data.

@@ -1,6 +1,6 @@
 # SAMS web improvement and deployment phases
 
-Plan agreed in scope on 11 November 2026: improve the web application first; defer Android packaging and the Capacitor/TWA decision. The application will use **https://sams.tirallab.page**. This document proposes implementation order and acceptance criteria; it does not claim that improvements or deployment are completed.
+Plan agreed in scope on 11 November 2026: improve the web application first; defer Android packaging and the Capacitor/TWA decision. The application will use **https://sams.tirallab.page**. This document records implementation order, completed increments and remaining acceptance work. Public deployment and Android packaging are not completed.
 
 ## Deployment facts supplied by the user
 
@@ -12,7 +12,7 @@ Target: one reverse proxy serving the SAMS HTTPS domain, one Express application
 
 ## Phase 1 — Make existing behavior dependable
 
-Implemented and locally verified on 11 November 2026: immutable saved attempts, identity-bound API/refresh handling, originating-user server validation, cross-tab replay leases, persisted transient retries and local acknowledgement history. Verification: 19 backend tests, 16 browser tests, and 53 Postman requests/176 assertions. Full lecturer-offline marking and server operation receipts remain Phase 2.
+Implemented and locally verified on 11 November 2026: immutable saved attempts, identity-bound API/refresh handling, originating-user server validation, cross-tab replay leases, persisted transient retries and local acknowledgement history. Verification: 19 backend tests, 16 browser tests, and 53 Postman requests/176 assertions. Phase 2 below adds lecturer-offline marking and server operation receipts.
 
 Keep the current working online attendance flow. Fix the queued student-attempt foundation before adding offline lecturer writes:
 
@@ -25,6 +25,8 @@ Keep the current working online attendance flow. Fix the queued student-attempt 
 Acceptance: tests cover account switching, a lost response, simultaneous tabs, a replaced attempt, 429/5xx responses and repeated connection failures. Existing check-in, manual correction, reporting and Postman requests still pass. No expired code is accepted using a device timestamp.
 
 ## Phase 2 — Deliver a small complete offline lecturer register
+
+Implemented and locally verified on 11 November 2026: prepared rosters, durable lecturer marks, versioned server receipts, explicit conflict review, student claims and lecturer decisions. Accounts are checked against current roles/active status. Verification: 28 backend tests, 22 browser tests, 75 Postman requests/241 assertions, plus a successful server restart/replay check preserving a later correction. See [OFFLINE_REGISTER.md](OFFLINE_REGISTER.md). Physical-device field testing remains a pilot requirement.
 
 Implement the synchronization protocol and client together, initially for already-created dated sessions:
 

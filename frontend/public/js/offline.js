@@ -4,9 +4,9 @@ function database() {
   if (!connection)
     connection = new Promise((resolve, reject) => {
       let blocked = false;
-      const request = indexedDB.open("sams-plain-js-v1", 2);
+      const request = indexedDB.open("sams-plain-js-v1", 3);
       request.onupgradeneeded = () => {
-        for (const name of ["attempts", "leases"])
+        for (const name of ["attempts", "leases", "registers", "operations"])
           if (!request.result.objectStoreNames.contains(name))
             request.result.createObjectStore(name, { keyPath: "id" });
         if (!request.result.objectStoreNames.contains("snapshots"))
@@ -38,7 +38,7 @@ function database() {
     });
   return connection;
 }
-async function operation(store, mode, perform) {
+export async function operation(store, mode, perform) {
   const db = await database();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(store, mode);
@@ -53,7 +53,7 @@ async function operation(store, mode, perform) {
   });
 }
 // Read/modify/write within one transaction: never resurrect an explicitly removed operation.
-async function modify(store, id, transform) {
+export async function modify(store, id, transform) {
   const db = await database();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(store, "readwrite");
@@ -228,5 +228,39 @@ export async function sync(userId) {
         lease?.owner === owner ? null : undefined,
       );
     changed();
+  }
+}
+
+// Shared renewable lease for the versioned register outbox. Server receipts remain
+// the final duplicate protection if a suspended tab loses its local lease.
+export async function withLease(id, perform) {
+  const owner = crypto.randomUUID();
+  const renew = async (initial = false) => {
+    const result = await modify("leases", id, (saved) =>
+      saved?.owner === owner ||
+      (initial && (!saved || saved.expiresAt <= Date.now()))
+        ? { id, owner, expiresAt: Date.now() + LEASE_MS }
+        : undefined,
+    );
+    return result?.owner === owner;
+  };
+  if (!(await renew(true))) return;
+  let lost = false;
+  const heartbeat = setInterval(() => {
+    void renew()
+      .then((ok) => {
+        if (!ok) lost = true;
+      })
+      .catch(() => {
+        lost = true;
+      });
+  }, 5000);
+  try {
+    return await perform(async () => !lost && (await renew()));
+  } finally {
+    clearInterval(heartbeat);
+    await modify("leases", id, (saved) =>
+      saved?.owner === owner ? null : undefined,
+    );
   }
 }

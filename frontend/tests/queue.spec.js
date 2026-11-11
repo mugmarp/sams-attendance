@@ -9,12 +9,17 @@ async function boot(page, legacy = false) {
   );
   await page.goto("/queue-test");
   if (legacy)
-    await page.evaluate(async () => {
+    await page.evaluate(async (legacy) => {
       await new Promise((resolve, reject) => {
-        const request = indexedDB.open("sams-plain-js-v1", 1);
+        const request = indexedDB.open(
+          "sams-plain-js-v1",
+          typeof legacy === "number" ? legacy : 1,
+        );
         request.onupgradeneeded = () => {
           request.result.createObjectStore("attempts", { keyPath: "id" });
           request.result.createObjectStore("snapshots");
+          if (legacy === 2)
+            request.result.createObjectStore("leases", { keyPath: "id" });
         };
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {
@@ -36,7 +41,7 @@ async function boot(page, legacy = false) {
           };
         };
       });
-    });
+    }, legacy);
   await page.evaluate(async () => {
     window.auth = await import("/js/api.js");
     window.queue = await import("/js/offline.js");
@@ -68,7 +73,7 @@ const flush = (page) => page.evaluate(() => queue.sync("A"));
 async function due(page) {
   await page.evaluate(async () => {
     await new Promise((resolve, reject) => {
-      const request = indexedDB.open("sams-plain-js-v1", 2);
+      const request = indexedDB.open("sams-plain-js-v1", 3);
       request.onsuccess = () => {
         const db = request.result,
           tx = db.transaction("attempts", "readwrite"),
@@ -316,7 +321,7 @@ test("legacy pending work survives the storage upgrade and an expired lease reco
   expect(await list(page)).toHaveLength(1);
   await page.evaluate(async () => {
     await new Promise((resolve) => {
-      const request = indexedDB.open("sams-plain-js-v1", 2);
+      const request = indexedDB.open("sams-plain-js-v1", 3);
       request.onsuccess = () => {
         const db = request.result,
           tx = db.transaction("leases", "readwrite");
@@ -391,4 +396,18 @@ test("legacy sign-in credentials migrate without discarding pending work", async
   await page.route("**/api/student/checkin", (route) => acknowledge(route));
   await flush(page);
   expect((await list(page))[0].state).toBe("SYNCED");
+});
+
+test("phase-one version-two pending attempts survive the register storage upgrade", async ({
+  page,
+}) => {
+  await boot(page, 2);
+  await signIn(page);
+  expect(await list(page)).toHaveLength(1);
+  await page.route("**/api/student/checkin", (route) => acknowledge(route));
+  await flush(page);
+  expect((await list(page))[0]).toMatchObject({
+    id: "A:class",
+    state: "SYNCED",
+  });
 });

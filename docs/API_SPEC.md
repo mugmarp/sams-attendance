@@ -65,3 +65,17 @@ Student identity comes from the token, not a studentId supplied in the body. The
 The inherited API field `eligible` means **attendance requirement met**, not final examination clearance. Report fields: presentCount, totalSessions, attendancePct (number or null), eligible. Course and student-summary objects include attendanceThreshold. Only COMPLETED classes count; PRESENT/LATE count as attended. Zero completed classes returns null percentage and false qualification. Cancelled/future classes do not reduce the result.
 
 Examples and executable assertions are in `postman/SAMS.postman_collection.json`; use `SAMS.local.postman_environment.json`. See POSTMAN_DEMO.md for the ordered live presentation and explanation of safe retries versus creation conflicts.
+
+
+## Prepared registers, sync and review requests
+
+| Method | Path | Behavior |
+|---|---|---|
+| POST | /sync/preparations | Lecturer/admin-owned class; `{sessionId,purpose}` → 201 with preparation, roster and versions |
+| POST | /sync/operations | `{actorId,operations}` → 200 with per-operation outcomes and durable receipts; actor must match token |
+| GET | /student/attendance-claims | Current student's requests and decisions |
+| GET | /examiner/sessions/:id/claims | Requests for an owned class |
+
+Typed operations are MARK, REVIEW_MARK, STUDENT_CLAIM and CLAIM_DECISION. Strict schemas reject malformed/extra fields; maximum 20 operations and the existing 16 KiB request-body limit apply. An HTTP 200 batch may include CONFLICT, NEEDS_REVIEW or DENIED outcomes. Replays of identical actor/UUID content return the original receipt with replayed=true. Reusing an ID for changed content conflicts. No device timestamp establishes attendance. See [OFFLINE_REGISTER.md](OFFLINE_REGISTER.md) for complete field definitions and executable Postman examples.
+
+Protected requests recheck the current database role and isActive flag rather than relying on an old JWT role claim. Disabled accounts cannot sign in or refresh. This does not provide a full account recovery or session revocation interface.

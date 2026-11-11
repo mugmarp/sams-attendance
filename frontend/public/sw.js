@@ -1,4 +1,4 @@
-const CACHE = "sams-workspace-v3";
+const CACHE = "sams-workspace-v4";
 const FILES = [
   "/login",
   "/login.html",
@@ -8,9 +8,16 @@ const FILES = [
   "/css/styles.css",
   "/icon.svg",
   "/manifest.webmanifest",
-  ...["api", "common", "login", "offline", "examiner", "student", "admin"].map(
-    (name) => "/js/" + name + ".js",
-  ),
+  ...[
+    "api",
+    "common",
+    "login",
+    "offline",
+    "register-offline",
+    "examiner",
+    "student",
+    "admin",
+  ].map((name) => "/js/" + name + ".js"),
 ];
 self.addEventListener("install", (event) =>
   event.waitUntil(

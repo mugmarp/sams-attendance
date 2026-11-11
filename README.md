@@ -8,7 +8,7 @@ SAMS replaces a paper class register with lecturer-controlled code check-in. An 
 
 This branch follows the assignment and the useful parts of the two original proposals. It uses **plain HTML pages, authored CSS and browser JavaScript**, served by a **JavaScript Express server** connected to **PostgreSQL**. There is no TypeScript compilation, React, JSX, Vite or Tailwind application. Prisma's JavaScript client is retained for database transactions and migrations.
 
-[Current proposal](docs/PROPOSAL.md) · [Proposal decisions](docs/PROPOSAL_ALIGNMENT.md) · [API reference](docs/API_SPEC.md) · [Postman demonstration](docs/POSTMAN_DEMO.md) · [Verification](docs/VALIDATION.md)
+[Current proposal](docs/PROPOSAL.md) · [Proposal decisions](docs/PROPOSAL_ALIGNMENT.md) · [API reference](docs/API_SPEC.md) · [Postman demonstration](docs/POSTMAN_DEMO.md) · [Verification](docs/VALIDATION.md) · [Offline registers and review](docs/OFFLINE_REGISTER.md)
 
 ![SAMS architecture](docs/architecture.svg)
 
@@ -65,7 +65,9 @@ Additional students: student2 through student5 at demo.sams.test, with the same 
 
 ## Offline behavior
 
-A prior online visit/sign-in on HTTPS or localhost caches the plain app shell. User-scoped student snapshots last 24 hours. Pending attempts are stored in IndexedDB and sent when reconnecting with the app open or by pressing **Send pending attempts**. Pending does not mean present. An expired/closed code becomes failed and requires lecturer review; client clocks cannot backdate attendance. Transient network failures, 408/429 responses and server errors remain pending with persisted backoff; Retry-After is honored. Replay is bound to the originating sign-in and coordinated across tabs. Confirmed attempts retain local server acknowledgements without their codes. First-time offline login is not supported. Clear site data on shared devices because local snapshots/attempts remain on that browser.
+Lecturers can prepare an existing class online, save reasoned marks against its roster offline, reload without losing them, and synchronize on reconnection. Preparations last 72 hours. Pending marks do not count until the server accepts them. Changed records require an explicit review against current versions; cancelled classes cannot receive marks. Students can request review of failed attempts, and lecturers approve or reject with a recorded reason. See [the workflow and API contract](docs/OFFLINE_REGISTER.md).
+
+A prior online visit/sign-in on HTTPS or localhost caches the plain app shell. User-scoped student snapshots last 24 hours. Pending attempts are stored in IndexedDB and sent when reconnecting with the app open or by pressing **Send pending attempts**. Pending does not mean present. An expired/closed code becomes failed and offers a lecturer-review request; client clocks cannot backdate attendance. Transient network failures, 408/429 responses and server errors remain pending with persisted backoff; Retry-After is honored. Replay is bound to the originating sign-in and coordinated across tabs. Confirmed attempts retain local server acknowledgements without their codes. First-time offline login is not supported. Saved rosters, marks, requests and student snapshots remain on that browser after logout. Reconcile pending work before clearing site data on shared devices.
 
 ## Postman and tests
 

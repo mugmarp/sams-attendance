@@ -11,7 +11,7 @@ Express serves both the plain frontend and `/api`. A single origin avoids an ext
 - `frontend/public/js/api.js`: fetch, bearer tokens, refresh and meaningful error handling.
 - `common.js`: role-aware navigation, saved-session restoration, escaping and Kampala formatting.
 - `examiner.js`, `student.js`, `admin.js`: page events, API requests and DOM updates.
-- `offline.js`, `sw.js`: separate user-scoped IndexedDB attempts/snapshots and static app-shell caching.
+- `offline.js`, `register-offline.js`, `sw.js`: user-scoped student retries, prepared rosters, durable operation outbox, renewable leases and static app-shell caching.
 - `backend/src/routes`: API schemas, role/resource access, setup operations and workflow endpoints.
 - `backend/src/services`: authoritative attendance rules, transactions, reports and PDF output.
 - `backend/prisma`: schema, committed migrations and repeatable synthetic seeding.
@@ -27,10 +27,19 @@ Completed classes in one code/year/semester offering form the denominator; PRESE
 
 ## Validation and security
 
-Removing TypeScript removes development-time annotations, not runtime checks. Zod validates incoming JSON/IDs/dates/policies, Express middleware enforces JWT roles, bcrypt hashes passwords, database constraints enforce uniqueness and threshold bounds, and transactions serialize conflicting operations. Untrusted values are escaped before insertion into HTML. No password hashes or check-in secrets are returned to students. Proxy trust is disabled unless explicitly configured for one trusted proxy.
+Removing TypeScript removes development-time annotations, not runtime checks. Zod validates incoming JSON/IDs/dates/policies, Express middleware verifies JWTs and rechecks current database account status/roles, bcrypt hashes passwords, database constraints enforce uniqueness and threshold bounds, and transactions serialize conflicting operations. Untrusted values are escaped before insertion into HTML. No password hashes or check-in secrets are returned to students. Proxy trust is disabled unless explicitly configured for one trusted proxy.
 
 This remains a classroom prototype. Token revocation/recovery, institutional identity integration, approved retention and public hosting are separate operational requirements.
 
 ## Offline
 
-The service worker caches static HTML/CSS/JS, never API responses. Safe student snapshots and attempts are stored separately, keyed by user. Snapshots expire after 24 hours. Each new attempt is saved before sending with an immutable local ID; a transactionally renewed IndexedDB lease coordinates replay across tabs. Temporary failures retain their next retry time with exponential backoff/jitter and Retry-After handling, while invalid/denied attempts require action. Successful attempts retain a local acknowledgement and discard the code. This is not yet the server operation-receipt protocol proposed for Phase 2. Expired codes are never accepted using a device timestamp. Authentication uses a per-sign-in record and active identity pointer. Logout leaves a terminal marker so a late refresh cannot reactivate that sign-in; refresh writes cannot replace another account’s active pointer. Requests capture their original credentials, and queued uploads send an originating-user consistency check enforced by the server. Logout clears active credentials, while user-scoped local data remains until site data is cleared. First-time offline login is not supported.
+The service worker caches static HTML/CSS/JS, never API responses. Safe student snapshots and attempts are stored separately, keyed by user. Snapshots expire after 24 hours. Each new attempt is saved before sending with an immutable local ID; a transactionally renewed IndexedDB lease coordinates replay across tabs. Temporary failures retain their next retry time with exponential backoff/jitter and Retry-After handling, while invalid/denied attempts require action. Successful attempts retain a local acknowledgement and discard the code. The student-code path retains its original attendance uniqueness semantics. Prepared lecturer marks and review requests use the separate server operation-receipt protocol described below. Expired codes are never accepted using a device timestamp. Authentication uses a per-sign-in record and active identity pointer. Logout leaves a terminal marker so a late refresh cannot reactivate that sign-in; refresh writes cannot replace another account’s active pointer. Requests capture their original credentials, and queued uploads send an originating-user consistency check enforced by the server. Logout clears active credentials, while user-scoped local data remains until site data is cleared. First-time offline login is not supported.
+
+
+## Prepared registers and versioned synchronization
+
+Phase 2 adds additive session/attendance versions, OfflinePreparation, SyncReceipt and AttendanceClaim tables. A server-stored preparation binds an authorized actor to class/policy context, enrolled IDs and attendance versions for 72 hours. The local draft is the immutable IndexedDB outbox row, so saving cannot split between draft and queue. UI counts use confirmed attendance and keep pending proposals separate.
+
+The sync API validates bounded typed operations and their originating actor, rechecks current authorization, locks operation identity and the session, and compares preparation/current versions. It atomically writes attendance, correction history and a persistent canonical-hash receipt; claim approvals include the decision in that transaction. Identical retries return the original result; different content under the same actor/UUID conflicts. Batches commit per operation, not as one all-or-nothing unit.
+
+Conflict review reads fresh server state and creates a new linked operation with an explicit reason. Keeping the server record dismisses the local proposal; it never changes the old receipt. Student claims alone do not create attendance. Server receipt time is authoritative; client observation time is retained only as an untrusted declaration. See [OFFLINE_REGISTER.md](OFFLINE_REGISTER.md) for exact routes, types, limitations and test evidence.

@@ -1,7 +1,13 @@
 import { $, escape, time, init, showError, notice } from "./common.js";
 import { studentData, attempts, queue, remove, sync } from "./offline.js";
+import {
+  operations,
+  enqueueOperation,
+  syncOperations,
+} from "./register-offline.js";
 const user = await init(["STUDENT"]);
-let classes = [];
+let classes = [],
+  reviewAttempt = null;
 const summaryView = location.pathname.endsWith("/summary");
 async function loadClasses() {
   try {
@@ -39,6 +45,7 @@ async function loadClasses() {
 async function renderQueue() {
   try {
     const all = await attempts(user.id);
+    const reviews = await operations(user.id);
     const list = all.filter((a) => a.state !== "SYNCED");
     const receipts = all.filter((a) => a.state === "SYNCED").reverse();
     $("#receipts").innerHTML = receipts.length
@@ -53,10 +60,19 @@ async function renderQueue() {
       ? list
           .map(
             (a) =>
-              `<div class="queue-item"><strong>${escape(a.courseCode)} · ${a.state.toLowerCase()}</strong><p class="small">Saved ${time(a.createdAt)}. ${escape(a.error || "")}${a.state === "PENDING" && a.nextAttemptAt ? " Next retry " + time(a.nextAttemptAt) + "." : ""}</p>${a.state === "FAILED" ? '<p class="small">Ask your examiner to review this attempt. It has not been counted.</p>' : ""}<button class="text-button" data-remove="${escape(a.id)}">Remove saved attempt</button></div>`,
+              `<div class="queue-item"><strong>${escape(a.courseCode)} · ${a.state.toLowerCase()}</strong><p class="small">Saved ${time(a.createdAt)}. ${escape(a.error || "")}${a.state === "PENDING" && a.nextAttemptAt ? " Next retry " + time(a.nextAttemptAt) + "." : ""}</p>${a.state === "FAILED" ? '<p class="small">Ask your examiner to review this attempt. It has not been counted.</p>' : ""}${a.state === "FAILED" && !reviews.some((op) => op.payload.type === "STUDENT_CLAIM" && op.payload.sessionId === a.sessionId) ? `<button data-request-review="${escape(a.id)}">Request lecturer review</button>` : ""}<button class="text-button" data-remove="${escape(a.id)}">Remove saved attempt</button></div>`,
           )
           .join("")
       : "<p>No saved attempts.</p>";
+    for (const button of $("#queue").querySelectorAll("[data-request-review]"))
+      button.onclick = () => {
+        reviewAttempt = all.find((a) => a.id === button.dataset.requestReview);
+        $("#review-title").textContent =
+          "Request attendance review · " + reviewAttempt.courseCode;
+        $("#review-reason").value = "";
+        $("#request-review").hidden = false;
+        $("#review-reason").focus();
+      };
     $("#send-pending").hidden = !list.some((a) => a.state === "PENDING");
     $("#queue")
       .querySelectorAll("[data-remove]")
@@ -72,6 +88,8 @@ async function renderQueue() {
 async function flush() {
   try {
     await sync(user.id);
+    await syncOperations(user.id);
+    await loadReviewRequests();
     await loadClasses();
     await renderQueue();
   } catch (error) {
@@ -98,7 +116,73 @@ async function loadSummary() {
     showError(error);
   }
 }
+async function loadReviewRequests() {
+  try {
+    const pending = (await operations(user.id)).filter(
+      (op) => op.payload.type === "STUDENT_CLAIM",
+    );
+    $("#review-uploads").innerHTML = pending
+      .map(
+        (op) =>
+          `<p><strong>${escape(op.labels.courseCode)} · ${escape(op.state.toLowerCase().replaceAll("_", " "))}</strong><br>${escape(op.state === "SYNCED" ? "Request delivered. See the current lecturer decision below." : op.result?.message || op.error || "Saved on this device; waiting to send.")}</p>`,
+      )
+      .join("");
+    const { data, cached } = await studentData(
+      user.id,
+      "/student/attendance-claims",
+    );
+    $("#review-requests").innerHTML = data.length
+      ? (cached ? "<p>Showing saved review decisions.</p>" : "") +
+        data
+          .map(
+            (claim) =>
+              `<div class="queue-item"><strong>${escape(claim.session.course.code)} · ${claim.status.toLowerCase()}</strong><p>${escape(claim.reason)}</p>${claim.decisionReason ? `<p>Lecturer decision: ${escape(claim.decisionReason)}</p>` : "<p>Waiting for your lecturer; not counted.</p>"}</div>`,
+          )
+          .join("")
+      : "<p>No review requests.</p>";
+  } catch (error) {
+    $("#review-requests").textContent = "Reconnect to load review decisions.";
+  }
+}
 if (user) {
+  $("#review-section").hidden = false;
+  await loadReviewRequests();
+  setInterval(loadReviewRequests, 15000);
+  addEventListener("sams:operations", () => {
+    void loadReviewRequests();
+    if (!summaryView) void renderQueue();
+  });
+  setInterval(() => {
+    void syncOperations(user.id).catch(showError);
+  }, 3000);
+  $("#cancel-review").onclick = () => {
+    $("#request-review").hidden = true;
+  };
+  $("#request-review").onsubmit = async (event) => {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector("button");
+    button.disabled = true;
+    try {
+      await enqueueOperation(
+        user.id,
+        {
+          type: "STUDENT_CLAIM",
+          sessionId: reviewAttempt.sessionId,
+          reason: $("#review-reason").value,
+        },
+        { courseCode: reviewAttempt.courseCode },
+      );
+      $("#request-review").hidden = true;
+      notice("Review request saved. It does not count as attendance.");
+      await syncOperations(user.id);
+      await loadReviewRequests();
+      await renderQueue();
+    } catch (error) {
+      showError(error);
+    } finally {
+      button.disabled = false;
+    }
+  };
   if (summaryView) {
     $("#summary-view").hidden = false;
     await loadSummary();
