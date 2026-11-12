@@ -5,7 +5,7 @@ import { prisma } from "./config/db.js";
 async function main() {
   await prisma.$connect();
   const stopTimetableRefresh = startTimetableRefresh();
-  const server = app.listen(env.PORT, "0.0.0.0", () =>
+  const server = app.listen(env.PORT, env.HOST, () =>
     process.stdout.write(`SAMS listening on port ${env.PORT}\n`),
   );
   const shutdown = () => {

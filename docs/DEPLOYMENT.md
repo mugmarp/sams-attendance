@@ -40,3 +40,7 @@ Apply additive migrations `202611110004_timetable_and_records` and `202611110005
 The application image includes `data/timetable_export.json`, `data/timetable_metadata.json` and `data/academic_calendar_reference.json`; it does not bundle the student CSV for public use. Keep these alongside the backend when deploying outside Docker. Source retrieval is bounded and failed refreshes retain previous publications. Repository checks run every 30 minutes only for activated providers and never publish class changes automatically. Outbound anonymous GitHub limits still apply.
 
 Shell cache v5 adds the timetable page/module and retains IndexedDB v3. Updates do not reset pending work. Actual teaching dates/exceptions and source mappings must be reviewed before applying future classes. The official calendar reference alone is not institutional teaching approval.
+
+## Preferred small-VPS deployment
+
+For the supplied 897 MiB host, use the [native systemd/PostgreSQL/Nginx procedure](NATIVE_DEPLOYMENT.md). Docker is optional and remains useful for CI. The application supports HOST=127.0.0.1 for private native binding while retaining 0.0.0.0 as its container-compatible default.

@@ -25,6 +25,7 @@ export const env = {
   TRUST_PROXY: process.env.TRUST_PROXY === "1",
   NODE_ENV: process.env.NODE_ENV ?? "development",
   PORT: Number(process.env.PORT ?? 3000),
+  HOST: process.env.HOST ?? "0.0.0.0",
   FRONTEND_URL: process.env.FRONTEND_URL ?? "http://localhost:5173",
   DATABASE_URL: required("DATABASE_URL"),
   JWT_SECRET: accessSecret,

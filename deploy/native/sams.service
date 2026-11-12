@@ -1,0 +1,39 @@
+[Unit]
+Description=SAMS attendance web application
+After=network.target postgresql.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=exec
+User=sams
+Group=sams
+WorkingDirectory=/opt/sams/current/backend
+EnvironmentFile=/etc/sams/sams.env
+Environment=NODE_OPTIONS=--max-old-space-size=160
+ExecStart=/usr/local/lib/sams-node/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+UMask=0077
+MemoryHigh=256M
+MemoryMax=320M
+TasksMax=64
+LimitNOFILE=4096
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sams
+LogRateLimitIntervalSec=30s
+LogRateLimitBurst=100
+
+[Install]
+WantedBy=multi-user.target
