@@ -49,7 +49,7 @@ Defaults: one Express application on localhost:3000 for both frontend and API. S
 
 ## Boundaries
 
-The collection creates test accounts/offerings/classes; run it only against a disposable database. Postman and browser test accounts are synthetic. Node syntax checks do not replace runtime validation/tests. Individual member contributions are excluded as requested. HoD excuse approval, bulk marking, verified institutional policy, public hosting, production identity recovery/revocation and official report approval remain outside this scoped delivery.
+The collection creates test accounts/offerings/classes; run it only against a disposable database. Postman and browser test accounts are synthetic. Node syntax checks do not replace runtime validation/tests. HoD excuse approval, bulk marking, verified institutional policy and official report approval remain outside this scoped delivery. Later sections record native HTTPS hosting and account-management verification; those capabilities are no longer pending implementation.
 
 ## Timetable and report verification (Phase 3, completed 12 November 2026)
 
@@ -70,3 +70,9 @@ The latest suite passes **44 backend tests, 29 browser tests, and 106 Postman re
 ## Account lifecycle verification
 
 The complete suite now passes **51 backend tests, 33 browser tests and 129 Postman requests/337 assertions**. Password changes, restricted temporary-password sign-ins, registrar reauthentication/reasons, persistent token revocation, disable/reactivate safety and simultaneous password changes are covered. Browser checks include a mobile recovery journey, administrator status changes, end-all-sign-ins and pending-work preservation. The original 29 browser cases still pass. Account API examples contain redacted tokens. See [ACCOUNT_MANAGEMENT.md](ACCOUNT_MANAGEMENT.md).
+
+## Live account release and controlled practice walkthrough
+
+Native code `18849ce` is live with eight additive migrations. Both hosted checks passed: https://github.com/mugmarp/sams-attendance/actions/runs/43242093316 . Three HTTPS role sign-ins/scoped reads and ten bounded health requests passed. A controlled two-student BSE practice offering verified registration sign-in, personalized dated classes, invalid-code rejection, duplicate check-in identity, prepared-roster submission/replay and completed-class reports. These were HTTPS API checks; a physical offline phone exercise is not claimed. The live PDF was downloaded and visually inspected. Only two synthetic practice records were marked; supplied group members have no enrollment or attendance.
+
+After the exercise, the full dump restored to a separate disposable database with core counts User 56, Course 2, Enrollment 4, Session 3, Attendance 2 and AttendanceChange 1. A new 102,966-byte private off-VPS copy matched SHA-256. Daily local backups are automated; recurring external storage and physical-device acceptance remain pending.

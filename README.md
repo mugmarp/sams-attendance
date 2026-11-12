@@ -98,7 +98,7 @@ For Compose, copy root `.env.example` to `.env`, replace the secrets, then run `
 
 The validated local JSON importer is available with `IMPORT_INITIAL_PASSWORD=... npm run import -- /private/path/dataset.json` from backend. See [IMPORT_GUIDE.md](docs/IMPORT_GUIDE.md). The original weekly timetable/CSV files remain reference material and are not silently loaded as dated semester records.
 
-See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for HTTPS, proxy settings, backup and operational limits. Public hosting, institutional approval, SSO, account recovery/revocation, fee/coursework integration, HoD excuse approval and bulk marking are not claimed. Individual-member contribution work is excluded from this task as requested.
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for HTTPS, proxy settings, backup and operational limits. Native HTTPS pilot hosting and audited account management are implemented. Institutional approval, SSO, automatic email recovery, fee/coursework integration, HoD excuse approval and bulk marking remain outside this scope.
 
 The interface uses server-synchronized Kampala dates and normal attendance terminology. Account fixtures and historical records above are for local testing; live class records retain the dates entered by the lecturer.
 

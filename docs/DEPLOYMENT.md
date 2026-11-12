@@ -26,12 +26,12 @@ The import CLI is documented in IMPORT_GUIDE.md. It preserves existing passwords
 
 ## Offline
 
-HTTPS or localhost and a prior online visit/sign-in are required. Static files are cached by `sw.js`; `/api` is never cached there. User-specific snapshots, attempts, prepared rosters and operations remain on the device until site data is cleared. On a major update, close existing app tabs and reopen so the new service worker activates. Phase 1 added leases in IndexedDB version 2. Phase 2 upgrades additively to version 3 with registers/operations and shell cache v4, retaining older pending data. Close old tabs if a storage upgrade is blocked; do not clear site data containing pending work. The earlier JavaScript migration used a new app/IndexedDB cache namespace; it does not automatically submit an older prototype's queued attempts. Reconcile any real pending attempts before changing clients; current migration/demo data is synthetic.
+HTTPS or localhost and a prior online visit/sign-in are required. Static files are cached by `sw.js`; `/api` is never cached there. User-specific snapshots, attempts, prepared rosters and operations remain on the device until site data is cleared. On a major update, close existing app tabs and reopen so the new service worker activates. Phase 1 added leases in IndexedDB version 2. Phase 2 upgrades additively to version 3 with registers/operations and the then-current shell cache v4, retaining older pending data. Close old tabs if a storage upgrade is blocked; do not clear site data containing pending work. The earlier JavaScript migration used a new app/IndexedDB cache namespace; it does not automatically submit an older prototype's queued attempts. Reconcile any real pending attempts before changing clients; current migration/demo data is synthetic.
 
 Executed checks and hosted Compose results are recorded in VALIDATION.md. Docker is unavailable on the local workstation, so packaged startup is verified on the hosted CI runner.
 
 
-The Phase 2 database migration adds defaulted versions/isActive and preparation, receipt and claim tables without resetting attendance. Apply it before restarting the new application; take the normal database backup first for an operational database. Old clients can still use existing endpoints, but close/reopen tabs to use the prepared-register workflow. Disabling an account in the database blocks protected requests; no administrator account-lifecycle UI or recovery workflow is provided yet. See OFFLINE_REGISTER.md for limits and restart/replay verification.
+The Phase 2 database migration adds defaulted versions/isActive and preparation, receipt and claim tables without resetting attendance. Apply it before restarting the new application; take the normal database backup first for an operational database. Old clients can still use existing endpoints, but close/reopen tabs to use the prepared-register workflow. The later account-lifecycle migration and Accounts/My account screens add audited management and persistent revocation; see ACCOUNT_MANAGEMENT.md. See OFFLINE_REGISTER.md for limits and restart/replay verification.
 
 ## Timetable phase deployment
 
@@ -44,3 +44,7 @@ Shell cache v5 adds the timetable page/module and retains IndexedDB v3. Updates 
 ## Preferred small-VPS deployment
 
 For the supplied 897 MiB host, use the [native systemd/PostgreSQL/Nginx procedure](NATIVE_DEPLOYMENT.md). Docker is optional and remains useful for CI. The application supports HOST=127.0.0.1 for private native binding while retaining 0.0.0.0 as its container-compatible default.
+
+## Current native release
+
+Apply all eight committed migrations before restarting the account-management release. Shell cache v7 includes My account and registrar Accounts, while IndexedDB remains v3 so pending work survives. Existing account passwords are preserved by migration. The running native code, controlled practice data and latest restore verification are recorded in SERVER_READINESS.md. Do not seed the operational database or copy public test passwords into it.

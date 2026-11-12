@@ -52,7 +52,7 @@ Acceptance: an administrator can configure one real offering, enrolled students 
 
 ## Phase 4 — Verify PWA and deploy a controlled pilot
 
-Native hosting is now deployed at the intended HTTPS domain, with systemd, loopback-only Node/PostgreSQL, Nginx/TLS, private initial accounts, verified local restoration and an off-VPS recovery copy. See [measured deployment evidence](SERVER_READINESS.md#native-pilot-deployment--12-november-2026). Only the approved npm cache was cleaned. Physical-device PWA acceptance, recurring external backups, real registrar configuration and broader workload measurements remain; this phase is not claimed fully accepted.
+Native hosting is now deployed at the intended HTTPS domain, with systemd, loopback-only Node/PostgreSQL, Nginx/TLS, private initial accounts, verified local restoration and an off-VPS recovery copy. See [measured deployment evidence](SERVER_READINESS.md#native-pilot-deployment--12-november-2026). Only the approved npm cache was cleaned. Account lifecycle management is now deployed and a two-student synthetic HTTPS attendance/report walkthrough has passed. Physical-device PWA acceptance, recurring external backups, real registrar configuration and broader workload measurements remain; this phase is not claimed fully accepted.
 
 Inspect the VPS early; perform deployment after the required application checks:
 
