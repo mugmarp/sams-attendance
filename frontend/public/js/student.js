@@ -1,4 +1,14 @@
-import { $, escape, time, init, showError, notice } from "./common.js";
+import { dayModel, eventProgress } from "./day-model.js";
+import {
+  $,
+  escape,
+  time,
+  init,
+  showError,
+  notice,
+  currentDate,
+  day,
+} from "./common.js";
 import { studentData, attempts, queue, remove, sync } from "./offline.js";
 import {
   operations,
@@ -6,40 +16,106 @@ import {
   syncOperations,
 } from "./register-offline.js";
 const user = await init(["STUDENT"]);
+let dayData = null,
+  dayCached = false,
+  candidateKey = "";
 let classes = [],
   reviewAttempt = null;
 const summaryView = location.pathname.endsWith("/summary");
-async function loadClasses() {
-  try {
-    const result = await studentData(user.id, "/student/sessions/upcoming");
-    classes = result.data;
-    const selected =
-      $("#session").value ||
-      new URL(location.href).searchParams.get("sessionId");
-    $("#session").innerHTML =
-      '<option value="">Choose a class</option>' +
-      classes
+function eventCard(event, title) {
+  if (!event)
+    return `<article class="card"><p class="eyebrow">${title}</p><h2>No upcoming class</h2><p class="small muted">A lecturer must publish dated classes before attendance can open.</p></article>`;
+  const p = eventProgress(event, currentDate().getTime()),
+    reference = event.kind === "REFERENCE";
+  return `<article class="card live-class ${p.ongoing ? "is-current" : ""}"><p class="eyebrow">${escape(title)} · ${reference ? "Weekly plan" : "Enrolled class"}</p><h2>${escape(event.courseCode)} · ${escape(event.courseTitle)}</h2><p>${time(event.startTime)} – ${time(event.endTime)}</p><p>${escape(event.room || "Venue awaiting confirmation")}</p>${event.lecturer ? `<p class="small">${escape(event.lecturer)}</p>` : ""}<p class="class-countdown">${p.ongoing ? `${p.minutes} min remaining` : `Starts in ${p.minutes < 60 ? p.minutes + " min" : Math.floor(p.minutes / 60) + "h " + (p.minutes % 60) + "m"}`}</p>${p.ongoing && !event.timeReviewRequired ? `<progress max="100" value="${p.percent}" aria-label="Scheduled class progress"></progress>` : ""}<p class="small">${reference ? (event.timeReviewRequired ? "Source interval needs review; this is not an attendance class." : event.operatorReviewed ? "Class interval confirmed by the project operator; attendance still requires a dated class." : "Planned reference; attendance is not open from this entry.") : event.checkedIn ? "Attendance recorded" : event.hasActiveCode ? "Lecturer check-in is open" : "Lecturer check-in is not open"}</p></article>`;
+}
+function renderDay() {
+  if (!dayData) return;
+  const model = dayModel(
+    classes,
+    dayData.weekly.events,
+    currentDate().getTime(),
+  );
+  const profile = dayData.profile;
+  $("#academic-profile").innerHTML =
+    `<strong>${escape(profile.name)}</strong><p>${escape(profile.regNo || "Registration awaiting confirmation")}</p><p class="small">${escape(profile.programme?.faculty?.name || "Faculty awaiting assignment")} · ${escape(profile.programme?.name || user.program || "Programme awaiting assignment")} · ${escape(profile.studyGroupKey || "Year / track awaiting review")}</p>${profile.needsPlacementReview ? '<p class="small">Ask the registrar to confirm your academic placement.</p>' : ""}`;
+  $("#day-status").textContent = dayCached
+    ? "Saved timetable · time display is an estimate while offline. Pending attendance still needs server acceptance."
+    : "Live schedule · refreshes every 10 seconds while visible. Timetable progress does not prove attendance.";
+  $("#now-next").innerHTML =
+    model.current.map((e) => eventCard(e, "Happening now")).join("") +
+    (!model.current.length
+      ? '<article class="card"><p class="eyebrow">Happening now</p><h2>No class in progress</h2></article>'
+      : "") +
+    eventCard(model.next, "Next up");
+  $("#class-conflict").hidden = !model.conflict;
+  $("#class-conflict").textContent =
+    "Your enrolled classes overlap. Confirm which class you are attending; this timetable conflict needs lecturer review.";
+  $("#class-choice").hidden = !model.conflict;
+  const select = $("#session"),
+    old = select.value;
+  // Keep only current enrolled candidates. Weekly or future entries cannot target a check-in.
+  const key = JSON.stringify(model.active.map((c) => [c.id, c.checkedIn]));
+  if (key !== candidateKey) {
+    select.innerHTML =
+      '<option value="">Confirm the overlapping class</option>' +
+      model.active
         .map(
-          (s) =>
-            `<option value="${s.id}" ${s.checkedIn ? "disabled" : ""}>${escape(s.courseCode)} · ${time(s.startTime)}${s.checkedIn ? " · recorded" : s.hasActiveCode ? " · check-in open" : ""}</option>`,
+          (c) =>
+            `<option value="${c.id}" ${c.checkedIn ? "disabled" : ""}>${escape(c.courseCode)} · ${time(c.startTime)}${c.checkedIn ? " · recorded" : ""}</option>`,
         )
         .join("");
-    if (classes.some((s) => s.id === selected)) $("#session").value = selected;
-    $("#upcoming").innerHTML = classes.length
-      ? classes
-          .map(
-            (s) =>
-              `<li class="spread"><div><strong>${escape(s.courseCode)} · ${escape(s.courseTitle)}</strong><p class="small muted">${time(s.startTime)} · ${escape(s.room || "Room TBA")}</p></div><span class="small">${s.checkedIn ? "Recorded" : s.hasActiveCode ? "Check-in open" : "Not open"}</span></li>`,
-          )
-          .join("")
-      : "<li>No current or upcoming classes in the next 14 days.</li>";
-    if (result.cached)
-      showError(
-        new Error(
-          "Showing saved classes. Server confirmation is unavailable while offline.",
-        ),
+    candidateKey = key;
+  }
+  const selected =
+    model.target?.id || (model.active.some((c) => c.id === old) ? old : "");
+  select.value = selected;
+  if (old && old !== selected && $("#code").value) {
+    $("#code").value = "";
+    notice(
+      "The active class changed. Check the class above before entering a new code.",
+    );
+  }
+  const target = classes.find((c) => c.id === selected);
+  $("#checkin-form").hidden = model.active.length === 0 || !!target?.checkedIn;
+  $("#checkin-target").textContent = target
+    ? `Attendance for ${target.courseCode} · ${target.courseTitle}`
+    : "Confirm the overlapping class before entering its code.";
+  const today = classes.filter(
+    (c) =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Kampala" }).format(
+        new Date(c.startTime),
+      ) === day(),
+  );
+  const list = today.length
+    ? today
+    : dayData.weekly.events.filter(
+        (c) =>
+          new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Africa/Kampala",
+          }).format(new Date(c.startTime)) === day(),
       );
-    else showError(null);
+  $("#upcoming").innerHTML = list.length
+    ? list
+        .map(
+          (c) =>
+            `<li><strong>${escape(c.courseCode)} · ${escape(c.courseTitle)}</strong><p class="small">${time(c.startTime)} – ${time(c.endTime)} · ${escape(c.room || "Venue awaiting confirmation")}${c.kind === "REFERENCE" ? " · Weekly plan" : ""}</p></li>`,
+        )
+        .join("")
+    : "<li>No published classes for today.</li>";
+}
+async function loadClasses() {
+  try {
+    // Retain the established snapshot/queue endpoint across this additive client update.
+    const [result, context] = await Promise.all([
+      studentData(user.id, "/student/sessions/upcoming"),
+      studentData(user.id, "/student/day"),
+    ]);
+    classes = result.data;
+    dayData = context.data;
+    dayCached = result.cached || context.cached;
+    renderDay();
+    if (!dayCached) showError(null);
   } catch (error) {
     showError(error);
   }
@@ -193,7 +269,14 @@ if (user) {
     $("#checkin-view").hidden = false;
     await loadClasses();
     await renderQueue();
-    setInterval(loadClasses, 10000);
+    setInterval(() => {
+      if (!document.hidden) void loadClasses();
+    }, 10000);
+    setInterval(() => {
+      if (!document.hidden) renderDay();
+    }, 1000);
+    addEventListener("focus", () => void loadClasses());
+    addEventListener("online", () => void loadClasses());
     addEventListener("sams:queue", renderQueue);
     addEventListener("online", flush);
     addEventListener("focus", flush);

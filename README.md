@@ -36,11 +36,11 @@ The backend reads `backend/.env` when started from that directory or with `npm s
 
 These synthetic accounts exist after local seeding; they do not belong to the university. **The hosted pilot uses the same emails with private generated passwords, not the public passwords below.** The VPS operator retrieves them privately from `/etc/sams/initial-accounts.json`.
 
-| Role | Email | Password |
-|---|---|---|
+| Role                | Email                   | Password      |
+| ------------------- | ----------------------- | ------------- |
 | Lecturer / EXAMINER | examiner@demo.sams.test | SamsDemo2026! |
-| Student | student@demo.sams.test | SamsDemo2026! |
-| Registrar / ADMIN | admin@demo.sams.test | SamsDemo2026! |
+| Student             | student@demo.sams.test  | SamsDemo2026! |
+| Registrar / ADMIN   | admin@demo.sams.test    | SamsDemo2026! |
 
 Additional students: student2 through student5 at demo.sams.test, with the same password. Seeded data includes two courses, five historical completed classes each, a current class and a next-day class. Repeated seeding preserves existing data. It does not reset completed same-day classes. For another live demonstration, create a new class through the lecturer form; no database reset is necessary.
 
@@ -105,3 +105,7 @@ The interface uses server-synchronized Kampala dates and normal attendance termi
 ## Timetable and record review
 
 The timetable shows actual authorized dated classes with visible-page refresh every 15 seconds and a separate filterable weekly reference. Administrators can check the approved source repositories, review teaching dates/exclusions and preview changes before applying future classes. Source updates remain staged; completed attendance is protected. Enrollment dates, versioned counting policy and saved report snapshots preserve the context behind totals. See [the workflow and calendar evidence](docs/TIMETABLE_AND_RECORDS.md). A native pilot is now hosted at **https://sams.tirallab.page**; see [deployment evidence and limits](docs/SERVER_READINESS.md#native-pilot-deployment--12-november-2026).
+
+## Personal academic day
+
+Students see happening-now and next-up classes for their confirmed programme/year/track, with automatic targeting of a single current enrolled class. Registrar faculty/programme/year/group filters and source-backed catalogue records keep offerings and cohorts organized. Registration numbers can identify sign-in and suggest institutional emails/placement, with explicit registrar confirmation. Read [the evidence, data decisions and five-programme sample plan](docs/ACADEMIC_STRUCTURE_AND_DAY.md). SAMS remains a web application; Android packaging is deferred.

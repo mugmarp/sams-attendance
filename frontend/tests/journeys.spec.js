@@ -37,7 +37,7 @@ const password = "SamsDemo2026!";
 async function login(page, role) {
   await page.goto("/login");
   await page
-    .getByLabel("Email", { exact: true })
+    .getByLabel("Email or registration number", { exact: true })
     .fill(`${role}@demo.sams.test`);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -66,15 +66,14 @@ test("lecturer, student and registrar complete the attendance journey", async ({
   await expect(
     learner.getByRole("heading", { name: "Check in to class" }),
   ).toBeVisible();
-  await learner
-    .getByRole("combobox", { name: "Class", exact: true })
-    .selectOption(
-      await learner
-        .locator("select option")
-        .filter({ hasText: "SWE2106" })
-        .first()
-        .getAttribute("value"),
-    );
+  await chooseCurrentClass(
+    learner,
+    await learner
+      .locator("#session option")
+      .filter({ hasText: "SWE2106" })
+      .first()
+      .getAttribute("value"),
+  );
   await learner.getByLabel("Check-in code", { exact: true }).fill(code);
   await learner.getByRole("button", { name: "Record attendance" }).click();
   await expect(learner.getByRole("status")).toContainText(
@@ -135,23 +134,33 @@ test("offline shell restores user-scoped classes and rejects a stale saved code"
   const code = (await opened.json()).code;
   await login(page, "student");
   await expect(
-    page.getByRole("combobox", { name: "Class", exact: true }),
+    page.getByRole("combobox", {
+      name: "Class",
+      exact: true,
+      includeHidden: true,
+    }),
   ).toContainText("SWE2103");
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
   await page.reload();
   await expect(
-    page.getByRole("combobox", { name: "Class", exact: true }),
+    page.getByRole("combobox", {
+      name: "Class",
+      exact: true,
+      includeHidden: true,
+    }),
   ).toContainText("SWE2103");
   await page.context().setOffline(true);
   await page.reload();
   await expect(
-    page.getByRole("combobox", { name: "Class", exact: true }),
+    page.getByRole("combobox", {
+      name: "Class",
+      exact: true,
+      includeHidden: true,
+    }),
   ).toContainText("SWE2103");
-  await page
-    .getByRole("combobox", { name: "Class", exact: true })
-    .selectOption(current.id);
+  await chooseCurrentClass(page, current.id);
   await page.getByLabel("Check-in code", { exact: true }).fill(code);
   await page.getByRole("button", { name: "Record attendance" }).click();
   await expect(page.getByText("SWE2103 · pending")).toBeVisible();
@@ -162,7 +171,9 @@ test("offline shell restores user-scoped classes and rejects a stale saved code"
   await page.context().setOffline(false);
   // Reload may interrupt a tab while it owns the 30-second replay lease.
   // Reconnection must recover after lease expiry without overlapping sends.
-  await expect(page.getByText("SWE2103 · failed")).toBeVisible({ timeout: 45000 });
+  await expect(page.getByText("SWE2103 · failed")).toBeVisible({
+    timeout: 45000,
+  });
   await expect(
     page.getByText(
       "Ask your examiner to review this attempt. It has not been counted.",
@@ -192,9 +203,13 @@ test("a valid pending check-in is accepted on reconnection", async ({
   );
   const code = (await opened.json()).code;
   await login(page, "student2");
-  const classes = page.getByRole("combobox", { name: "Class", exact: true });
+  const classes = page.getByRole("combobox", {
+    name: "Class",
+    exact: true,
+    includeHidden: true,
+  });
   await expect(classes).toContainText("SWE2103");
-  await classes.selectOption(current.id);
+  await chooseCurrentClass(page, current.id);
   await page.getByLabel("Check-in code", { exact: true }).fill(code);
   await page.context().setOffline(true);
   await page.getByRole("button", { name: "Record attendance" }).click();
@@ -202,7 +217,10 @@ test("a valid pending check-in is accepted on reconnection", async ({
   await page.context().setOffline(false);
   await expect(page.getByText("No saved attempts.")).toBeVisible();
   await expect(
-    page.getByRole("option", { name: /SWE2103.*recorded/ }),
+    page.getByRole("option", {
+      name: /SWE2103.*recorded/,
+      includeHidden: true,
+    }),
   ).toHaveCount(1);
 });
 
@@ -325,13 +343,17 @@ test("a failed local save is visible and never sends an unsaved check-in", async
   page,
 }) => {
   await login(page, "student");
-  const classes = page.getByRole("combobox", { name: "Class", exact: true });
+  const classes = page.getByRole("combobox", {
+    name: "Class",
+    exact: true,
+    includeHidden: true,
+  });
   await expect(classes).toContainText("SWE2103");
   const option = classes
     .locator("option")
     .filter({ hasText: "SWE2103" })
     .first();
-  await classes.selectOption(await option.getAttribute("value"));
+  await chooseCurrentClass(page, await option.getAttribute("value"));
   let requests = 0;
   await page.route("**/api/student/checkin", (route) => {
     requests++;
@@ -354,3 +376,10 @@ test("a failed local save is visible and never sends an unsaved check-in", async
   expect(requests).toBe(0);
   await expect(page.getByText("No saved attempts.")).toBeVisible();
 });
+
+async function chooseCurrentClass(page, id) {
+  const select = page.locator("#session");
+  if (await page.locator("#class-choice").isVisible())
+    await select.selectOption(id);
+  else await expect(select).toHaveValue(id);
+}

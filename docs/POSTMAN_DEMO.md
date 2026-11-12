@@ -1,6 +1,6 @@
 # Live Postman presentation
 
-The collection is an assessed deliverable: it contains 95 documented requests, saved sample responses and executable success/failure assertions. Run it in order against a **disposable, seeded** database. It creates synthetic accounts, course offerings, enrollments and dated classes; it does not erase them. Every run uses unique identifiers so the collection can be repeated.
+The collection is an assessed deliverable: it contains 106 documented requests, saved sample responses and executable success/failure assertions. Run it in order against a **disposable, seeded** database. It creates synthetic accounts, course offerings, enrollments and dated classes; it does not erase them. Every run uses unique identifiers so the collection can be repeated.
 
 ## Setup
 
@@ -14,18 +14,18 @@ The collection uses synthetic demo credentials only. Never export real tokens or
 
 ## Short live presentation (about 8–10 minutes)
 
-| Step | Show | Explain |
-|---|---|---|
-| 1 | Health request, then the three successful logins | Express is running, PostgreSQL responds, and JWTs identify roles |
-| 2 | Wrong password, missing email, missing token and wrong-role requests | 400, 401 and 403 mean different things; the server validates all requests |
-| 3 | Create account and course; repeat creation | 201 creates resources, 409 identifies a conflict; the threshold is configurable |
-| 4 | Create a current class and open check-in | Only the assigned lecturer/admin can control a valid dated class |
-| 5 | Unenrolled check-in, then enrollment, wrong code and valid check-in | Enrollment and code validation happen on the server |
-| 6 | Repeat valid check-in | Returns the same record with 200/duplicate=true; safe network retry does not create another attendance row |
-| 7 | Close check-in and use its old code as the second enrolled student | A previously valid code no longer authorizes new attendance |
-| 8 | Correct attendance with a reason; inspect roster history | Changes retain actor, previous/new status, reason and time |
-| 9 | Complete class, view report and download PDF | Completed classes count; 75% in this test is a chosen policy example, not official exam clearance |
-| 10 | Show the browser forms and architecture diagram | HTML structure, CSS presentation, JavaScript fetch, Express rules, PostgreSQL persistence |
+| Step | Show                                                                 | Explain                                                                                                    |
+| ---- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 1    | Health request, then the three successful logins                     | Express is running, PostgreSQL responds, and JWTs identify roles                                           |
+| 2    | Wrong password, missing email, missing token and wrong-role requests | 400, 401 and 403 mean different things; the server validates all requests                                  |
+| 3    | Create account and course; repeat creation                           | 201 creates resources, 409 identifies a conflict; the threshold is configurable                            |
+| 4    | Create a current class and open check-in                             | Only the assigned lecturer/admin can control a valid dated class                                           |
+| 5    | Unenrolled check-in, then enrollment, wrong code and valid check-in  | Enrollment and code validation happen on the server                                                        |
+| 6    | Repeat valid check-in                                                | Returns the same record with 200/duplicate=true; safe network retry does not create another attendance row |
+| 7    | Close check-in and use its old code as the second enrolled student   | A previously valid code no longer authorizes new attendance                                                |
+| 8    | Correct attendance with a reason; inspect roster history             | Changes retain actor, previous/new status, reason and time                                                 |
+| 9    | Complete class, view report and download PDF                         | Completed classes count; 75% in this test is a chosen policy example, not official exam clearance          |
+| 10   | Show the browser forms and architecture diagram                      | HTML structure, CSS presentation, JavaScript fetch, Express rules, PostgreSQL persistence                  |
 
 For the live demo, a second browser profile can sign in as the student while the first remains the lecturer. The browser shows current codes and refreshes the roster. The Postman suite also checks cancelled classes and out-of-time classes. Rotation and exact expiry boundaries have automated backend tests; manually demonstrating rotation requires waiting for the two-minute slot change.
 
@@ -65,7 +65,6 @@ For repeatable assessment testing, use an isolated database named `sams_test`, s
 - Why is a saved offline attempt pending rather than proof of attendance?
 - What limitations remain: shared codes, institutional approval, account recovery/revocation and public hosting?
 
-
 ## Optional offline/reconciliation presentation
 
 The final 22 requests exercise the Phase 2 API after the original core workflow: prepare a roster, accept/replay a saved mark, reject changed content under one operation ID, generate a stale-version conflict, inspect a current REVIEW preparation and apply a deliberate linked correction. A separate class demonstrates an uncounted student claim, ownership/role restrictions, atomic lecturer approval, duplicate decision replay and stale-decision rejection.
@@ -75,3 +74,7 @@ Explain that a 200 response from /sync/operations means the batch was processed;
 ## Timetable and report extension
 
 The final 20 requests read the actual SWE2106/BSE II source, review a synthetic bounded teaching calendar in the disposable database, preview/apply/replay future classes, verify student scoping and role denial, freeze a report, change policy, verify frozen JSON/PDF stability, correct enrollment bounds and reject an impossible date. These are executable examples, not institutional teaching dates or approved policy. They intentionally modify the seeded offering/calendar in the disposable database; never run the collection against operational records. Current verified total: **95 requests, 279 assertions, zero failures**.
+
+## Academic structure extension
+
+The final eleven requests verify catalogue/registration preview, derived identity and registration sign-in, personal day scoping, protected student directory access, faculty/programme filtering, explicit repeat-year placement, identity mismatch rejection and bounded lists. Current verified total: **106 requests, 301 assertions**. Run only on the isolated seeded database.

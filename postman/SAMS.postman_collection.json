@@ -6194,6 +6194,480 @@
           }
         }
       ]
+    },
+    {
+      "name": "Read the faculty and programme catalogue",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/academic/catalog",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Read the faculty and programme catalogue. Synthetic isolated-database verification only. Generated institutional-format emails are not verified mailboxes; no email is sent."
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set(\"cohortSequence\",Date.now().toString().slice(-7));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test(\"BSE belongs to Computing\",()=>pm.expect(data.faculties.find(f=>f.code===\"computing\").programmes.some(p=>p.code===\"BSE\"&&p.durationYears===4)).to.eql(true));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Preview a registration-derived email and suggested year",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/registration/preview?regNo=2025%2FBSE%2F{{cohortSequence}}%2FPS&academicYear=2026%2F2027",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Preview a registration-derived email and suggested year. Synthetic isolated-database verification only. Generated institutional-format emails are not verified mailboxes; no email is sent."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test(\"Intake differs from study year\",()=>{pm.expect(data.admissionYear).to.eql(2025);pm.expect(data.suggestedYear).to.eql(2);pm.expect(data.emailSuggestion).to.eql(\"2025bse\"+pm.collectionVariables.get(\"cohortSequence\")+\"@sdt.must.ac.ug\");});",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create a confirmed student programme placement",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/users",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Create a confirmed student programme placement. Synthetic isolated-database verification only. Generated institutional-format emails are not verified mailboxes; no email is sent.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Cohort API Learner {{runId}}\",\n  \"regNo\": \"2025/BSE/{{cohortSequence}}/PS\",\n  \"password\": \"CohortRequest2026!\",\n  \"role\": \"STUDENT\",\n  \"programmeCode\": \"BSE\",\n  \"year\": 2,\n  \"studyGroupKey\": \"BSE II\",\n  \"studyAcademicYear\": \"2026/2027\",\n  \"studySemester\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set(\"cohortStudentId\",data.id);pm.test(\"Derived institutional email\",()=>pm.expect(data.email).to.eql(\"2025bse\"+pm.collectionVariables.get(\"cohortSequence\")+\"@sdt.must.ac.ug\"));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sign in with registration number and password",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Sign in with registration number and password. Synthetic isolated-database verification only. Generated institutional-format emails are not verified mailboxes; no email is sent.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"identifier\": \"2025/BSE/{{cohortSequence}}/PS\",\n  \"password\": \"CohortRequest2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set(\"cohortToken\",data.accessToken);pm.test(\"Confirmed group returned\",()=>pm.expect(data.user.studyGroupKey).to.eql(\"BSE II\"));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student day is personal without inventing an attendance class",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/student/day",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{cohortToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Student day is personal without inventing an attendance class. Synthetic isolated-database verification only. Generated institutional-format emails are not verified mailboxes; no email is sent."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test(\"Personal programme and no inferred enrollment\",()=>{pm.expect(data.profile.programme.code).to.eql(\"BSE\");pm.expect(data.profile.programme.faculty.code).to.eql(\"computing\");pm.expect(data.classes).to.have.lengthOf(0);pm.expect(data.weekly.events.every(e=>e.kind===\"REFERENCE\")).to.eql(true);});",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student cannot browse the registrar student directory",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/students?programme=BSE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{cohortToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Student cannot browse the registrar student directory. Synthetic isolated-database verification only. Generated institutional-format emails are not verified mailboxes; no email is sent."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test(\"HTTP 403\",()=>pm.response.to.have.status(403));",
+              "const data=pm.response.json();",
+              "pm.test(\"Directory protected\",()=>pm.expect(data.error).to.eql(\"FORBIDDEN\"));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registrar scopes students by faculty programme and registration",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/students?faculty=computing&programme=BSE&year=2&search={{cohortSequence}}",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Registrar scopes students by faculty programme and registration. Synthetic isolated-database verification only. Generated institutional-format emails are not verified mailboxes; no email is sent."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test(\"One scoped identity\",()=>{pm.expect(data).to.have.lengthOf(1);pm.expect(data[0].id).to.eql(pm.collectionVariables.get(\"cohortStudentId\"));pm.expect(data[0]).not.to.have.property(\"passwordHash\");});",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unrelated faculty does not receive that student",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/students?faculty=fast&search={{cohortSequence}}",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Unrelated faculty does not receive that student. Synthetic isolated-database verification only. Generated institutional-format emails are not verified mailboxes; no email is sent."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test(\"Faculty separation\",()=>pm.expect(data).to.have.lengthOf(0));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Confirm an exceptional repeat-year placement explicitly",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/admin/students/{{cohortStudentId}}/profile",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Confirm an exceptional repeat-year placement explicitly. Synthetic isolated-database verification only. Generated institutional-format emails are not verified mailboxes; no email is sent.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"programmeCode\": \"BSE\",\n  \"year\": 1,\n  \"studyGroupKey\": \"BSE I\",\n  \"studyAcademicYear\": \"2026/2027\",\n  \"studySemester\": 1,\n  \"reason\": \"Synthetic repeat-year placement verified by registrar\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test(\"No automatic promotion\",()=>pm.expect(data.year).to.eql(1));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registration programme cannot be silently changed",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/admin/students/{{cohortStudentId}}/profile",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Registration programme cannot be silently changed. Synthetic isolated-database verification only. Generated institutional-format emails are not verified mailboxes; no email is sent.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"programmeCode\": \"BIT\",\n  \"year\": 1,\n  \"studyGroupKey\": \"BIT I\",\n  \"studyAcademicYear\": \"2026/2027\",\n  \"studySemester\": 1,\n  \"reason\": \"Invalid mismatched programme change must be rejected\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test(\"HTTP 400\",()=>pm.response.to.have.status(400));",
+              "const data=pm.response.json();",
+              "pm.test(\"Identity mismatch rejected\",()=>pm.expect(data.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unbounded registrar lists are rejected",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/students?limit=999",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Unbounded registrar lists are rejected. Synthetic isolated-database verification only. Generated institutional-format emails are not verified mailboxes; no email is sent."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test(\"HTTP 400\",()=>pm.response.to.have.status(400));",
+              "const data=pm.response.json();",
+              "pm.test(\"Bounded result validation\",()=>pm.expect(data.error).to.eql(\"VALIDATION_ERROR\"));",
+              "})();"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

@@ -56,7 +56,7 @@ async function freshClass() {
 async function login(page, role) {
   await page.goto("/login");
   await page
-    .getByLabel("Email", { exact: true })
+    .getByLabel("Email or registration number", { exact: true })
     .fill(`${role}@demo.sams.test`);
   await page.getByLabel("Password", { exact: true }).fill("SamsDemo2026!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -249,9 +249,13 @@ test("student can request review of a failed attempt and lecturer approval recor
 }) => {
   const session = await freshClass();
   await login(page, "student");
-  const select = page.getByRole("combobox", { name: "Class", exact: true });
+  const select = page.getByRole("combobox", {
+    name: "Class",
+    exact: true,
+    includeHidden: true,
+  });
   await expect(select.locator(`option[value="${session.id}"]`)).toHaveCount(1);
-  await select.selectOption(session.id);
+  await chooseCurrentClass(page, session.id);
   await page.getByLabel("Check-in code", { exact: true }).fill("ABC234");
   await page
     .getByRole("button", { name: "Record attendance", exact: true })
@@ -352,3 +356,10 @@ test("online corrections remain usable when offline storage is unavailable", asy
     page.getByRole("button", { name: "Complete class", exact: true }),
   ).toBeDisabled();
 });
+
+async function chooseCurrentClass(page, id) {
+  const select = page.locator("#session");
+  if (await page.locator("#class-choice").isVisible())
+    await select.selectOption(id);
+  else await expect(select).toHaveValue(id);
+}

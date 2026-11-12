@@ -1,3 +1,4 @@
+import { getCatalogue, allProgrammes, filterPanel } from "./academic-ui.js";
 import { api } from "./api.js";
 import {
   $,
@@ -14,6 +15,15 @@ const courseId =
   lecturer || location.pathname.includes("/eligibility/")
     ? location.pathname.split("/").pop()
     : null;
+let scope = null,
+  studentOptions = [],
+  academicCatalogue = null;
+if (user && !courseId) {
+  academicCatalogue = await getCatalogue(user);
+  scope = filterPanel($("#academic-filters"), academicCatalogue, () => {
+    void Promise.all([loadCourses(), setupOptions()]).catch(showError);
+  });
+}
 let report = null;
 const reportPath = lecturer
   ? "/examiner/courses/" + courseId + "/attendance-summary"
@@ -90,7 +100,10 @@ async function loadReport() {
 }
 async function loadCourses() {
   try {
-    const courses = await api("/admin/courses");
+    const courses = await api("/admin/courses?" + (scope?.query() || ""));
+    if ($("#scope-count"))
+      $("#scope-count").textContent =
+        `${courses.length} offerings in this scope${courses.length === 100 ? "; refine the filters to narrow this bounded list" : ""}.`;
     $("#courses").innerHTML = courses.length
       ? courses
           .map(
@@ -199,10 +212,36 @@ if (user) {
 }
 
 async function setupOptions() {
-  const [users, courses] = await Promise.all([
-    api("/admin/users"),
-    api("/admin/courses"),
+  const [users, courses, students] = await Promise.all([
+    api("/admin/users?role=EXAMINER&limit=200"),
+    api("/admin/courses?" + (scope?.query() || "")),
+    api("/admin/students?" + (scope?.query() || "")),
   ]);
+  studentOptions = students;
+  const ps = allProgrammes(academicCatalogue).filter(
+    (p) =>
+      !scope?.values().faculty || p.faculty.code === scope.values().faculty,
+  );
+  for (const target of [
+    "new-program",
+    "student-programme",
+    "profile-programme",
+  ]) {
+    const old = $("#" + target).value;
+    $("#" + target).innerHTML = ps
+      .map(
+        (p) =>
+          `<option value="${escape(p.code)}">${escape(p.code)} · ${escape(p.name)}</option>`,
+      )
+      .join("");
+    $("#" + target).value = ps.some((p) => p.code === old)
+      ? old
+      : ps.some((p) => p.code === "BSE")
+        ? "BSE"
+        : ps[0]?.code || "";
+  }
+  fillStudentGroups("student");
+  fillCourseAudiences();
   const options = (items, label) =>
     '<option value="">Choose…</option>' +
     items
@@ -215,9 +254,15 @@ async function setupOptions() {
     (u) => u.name + " (" + u.email + ")",
   );
   $("#enroll-student").innerHTML = options(
-    users.filter((u) => u.role === "STUDENT"),
+    students,
     (u) => u.name + " · " + u.regNo,
   );
+  $("#profile-student").innerHTML = options(
+    students,
+    (u) => u.name + " · " + u.regNo,
+  );
+  $("#profile-identity").textContent =
+    `${students.length} students in the selected academic scope. Use search to narrow large cohorts.`;
   $("#enroll-course").innerHTML = options(
     courses,
     (c) => c.code + " · " + c.academicYear + " / " + c.semester,
@@ -248,7 +293,9 @@ if (user && !courseId) {
     }).format(currentDate()),
   );
   $("#new-academic-year").defaultValue =
-    calendarYear + "/" + (calendarYear + 1);
+    academicCatalogue?.academicYear || calendarYear + "/" + (calendarYear + 1);
+  $("#student-academic-year").defaultValue =
+    academicCatalogue?.academicYear || $("#new-academic-year").defaultValue;
   await setupOptions().catch(showError);
   $("#user-form").onsubmit = (event) => {
     event.preventDefault();
@@ -263,6 +310,15 @@ if (user && !courseId) {
         role,
         password: $("#new-password").value,
         ...(regNo ? { regNo } : {}),
+        ...(role === "STUDENT"
+          ? {
+              programmeCode: $("#student-programme").value,
+              year: Number($("#student-year").value),
+              studyGroupKey: $("#student-group").value,
+              studyAcademicYear: $("#student-academic-year").value,
+              studySemester: Number($("#student-semester").value),
+            }
+          : {}),
       },
       "Account created. Share its initial password privately.",
     );
@@ -281,9 +337,88 @@ if (user && !courseId) {
         semester: Number($("#new-semester").value),
         examinerId: $("#new-examiner").value,
         attendanceThreshold: Number($("#new-threshold").value),
+        audienceGroups: [
+          ...document.querySelectorAll("#audience-options input:checked"),
+        ].map((n) => n.value),
       },
       "Course offering created.",
     );
+  };
+  $("#new-program").onchange = fillCourseAudiences;
+  $("#new-year").oninput = fillCourseAudiences;
+  $("#new-role").onchange = () => {
+    for (const field of [
+      "new-reg",
+      "student-programme",
+      "student-year",
+      "student-academic-year",
+      "student-semester",
+      "student-group",
+    ])
+      $("#" + field).closest("div").hidden = $("#new-role").value !== "STUDENT";
+  };
+  $("#student-programme").onchange = () => fillStudentGroups("student");
+  $("#student-year").oninput = () => fillStudentGroups("student");
+  $("#profile-programme").onchange = () => fillStudentGroups("profile");
+  $("#profile-year").oninput = () => fillStudentGroups("profile");
+  $("#new-reg").onchange = async () => {
+    try {
+      const info = await api(
+        "/admin/registration/preview?" +
+          new URLSearchParams({
+            regNo: $("#new-reg").value,
+            academicYear: $("#student-academic-year").value,
+          }),
+      );
+      $("#registration-hint").textContent =
+        `${info.programme?.faculty?.name || "Programme needs review"} · suggested Year ${info.suggestedYear || "awaiting review"}. ${info.notice}`;
+      if (!$("#new-email").value) $("#new-email").value = info.emailSuggestion;
+      if (info.programme) {
+        $("#student-programme").value = info.programme.code;
+        if (info.suggestedYear) $("#student-year").value = info.suggestedYear;
+        fillStudentGroups("student");
+      }
+    } catch (error) {
+      $("#registration-hint").textContent = error.message;
+    }
+  };
+  $("#profile-student").onchange = () => {
+    const student = studentOptions.find(
+      (s) => s.id === $("#profile-student").value,
+    );
+    if (!student) return;
+    $("#profile-identity").textContent =
+      `${student.name} · ${student.regNo} · ${student.email} · intake ${student.admissionYear || "unreviewed"} · ${{ USER_SUPPLIED: "User-supplied record", SYNTHETIC: "Sample record", OPERATOR: "Registrar record" }[student.dataOrigin] || "Registrar record"}`;
+    $("#profile-programme").value =
+      student.programmeCode || student.program || "";
+    $("#profile-year").value = student.year || "";
+    fillStudentGroups("profile");
+    $("#profile-group").value = student.studyGroupKey || "";
+    $("#profile-academic-year").value =
+      student.studyAcademicYear || "2026/2027";
+    $("#profile-semester").value = student.studySemester || 1;
+  };
+  $("#profile-form").onsubmit = async (event) => {
+    event.preventDefault();
+    try {
+      await api(`/admin/students/${$("#profile-student").value}/profile`, {
+        method: "PATCH",
+        body: {
+          programmeCode: $("#profile-programme").value,
+          year: Number($("#profile-year").value),
+          studyGroupKey: $("#profile-group").value,
+          studyAcademicYear: $("#profile-academic-year").value,
+          studySemester: Number($("#profile-semester").value),
+          reason: $("#profile-reason").value,
+        },
+      });
+      notice(
+        "Academic placement confirmed. Historical enrollments are unchanged.",
+      );
+      await setupOptions();
+    } catch (error) {
+      showError(error);
+    }
   };
   $("#enroll-from").value = day();
   $("#enrollment-form").onsubmit = (event) => {
@@ -294,6 +429,9 @@ if (user && !courseId) {
       {
         studentId: $("#enroll-student").value,
         effectiveFrom: $("#enroll-from").value,
+        ...($("#enroll-override").value.trim()
+          ? { overrideReason: $("#enroll-override").value.trim() }
+          : {}),
       },
       "Student enrolled in the course.",
     );
@@ -328,4 +466,40 @@ async function loadSnapshots() {
         showError(error);
       }
     };
+}
+
+function fillStudentGroups(prefix) {
+  const code = $("#" + prefix + "-programme").value,
+    year = Number($("#" + prefix + "-year").value),
+    select = $("#" + prefix + "-group"),
+    old = select.value;
+  const groups =
+    allProgrammes(academicCatalogue)
+      .find((p) => p.code === code)
+      ?.groups.filter((g) => g.studyYear === year) || [];
+  select.innerHTML =
+    (groups.length !== 1
+      ? '<option value="">Choose a year / track</option>'
+      : "") + groups.map((g) => `<option>${escape(g.key)}</option>`).join("");
+  if (groups.some((g) => g.key === old)) select.value = old;
+}
+
+function fillCourseAudiences() {
+  if (!academicCatalogue) return;
+  const faculty = scope?.values().faculty,
+    year = Number($("#new-year").value),
+    primary = $("#new-program").value;
+  const selected = [
+    ...document.querySelectorAll("#audience-options input:checked"),
+  ].map((n) => n.value);
+  const groups = allProgrammes(academicCatalogue)
+    .filter((p) => !faculty || p.faculty.code === faculty)
+    .flatMap((p) => p.groups)
+    .filter((g) => g.studyYear === year);
+  $("#audience-options").innerHTML = groups
+    .map(
+      (g) =>
+        `<label><input style="width:auto" type="checkbox" value="${escape(g.key)}" ${selected.includes(g.key) || (g.programmeCode === primary && !g.track) ? "checked" : ""} /> ${escape(g.key)}</label>`,
+    )
+    .join("");
 }

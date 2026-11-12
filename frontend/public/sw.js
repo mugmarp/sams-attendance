@@ -1,4 +1,4 @@
-const CACHE = "sams-workspace-v5";
+const CACHE = "sams-workspace-v6";
 const FILES = [
   "/login",
   "/login.html",
@@ -16,6 +16,8 @@ const FILES = [
     "offline",
     "register-offline",
     "timetable",
+    "academic-ui",
+    "day-model",
     "examiner",
     "student",
     "admin",

@@ -635,3 +635,19 @@ input[type="checkbox"] {
   margin-right: 0.5rem;
   vertical-align: middle;
 }
+
+.live-class.is-current {
+  border-left: 4px solid var(--primary, #0369a1);
+}
+.live-class progress {
+  width: 100%;
+  height: 0.7rem;
+  accent-color: #0369a1;
+}
+.class-countdown {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.academic-filter-fields {
+  align-items: end;
+}

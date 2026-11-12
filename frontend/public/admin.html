@@ -25,6 +25,12 @@
             export a report.
           </p>
         </div>
+        <section
+          class="card"
+          id="academic-filters"
+          aria-label="Academic filters"
+        ></section>
+        <p id="scope-count" class="small muted"></p>
         <div id="courses" class="grid"></div>
         <section class="stack" aria-label="Administration setup">
           <details class="card">
@@ -47,9 +53,9 @@
                 <div>
                   <label for="new-role">Account role</label
                   ><select id="new-role">
-                    <option>STUDENT</option>
-                    <option>EXAMINER</option>
-                    <option>ADMIN</option>
+                    <option value="STUDENT">Student</option>
+                    <option value="EXAMINER">Lecturer</option>
+                    <option value="ADMIN">Registrar</option>
                   </select>
                 </div>
                 <div>
@@ -67,7 +73,45 @@
                   <label for="new-reg">Registration number (students)</label
                   ><input id="new-reg" maxlength="60" />
                 </div>
+                <div>
+                  <label for="student-programme">Student programme</label
+                  ><select id="student-programme"></select>
+                </div>
+                <div>
+                  <label for="student-year">Confirmed study year</label
+                  ><input
+                    id="student-year"
+                    type="number"
+                    min="1"
+                    max="5"
+                    value="2"
+                  />
+                </div>
+                <div>
+                  <label for="student-academic-year"
+                    >Placement academic year</label
+                  ><input
+                    id="student-academic-year"
+                    pattern="[0-9]{4}/[0-9]{4}"
+                    value="2026/2027"
+                  />
+                </div>
+                <div>
+                  <label for="student-semester">Placement semester</label
+                  ><select id="student-semester">
+                    <option>1</option>
+                    <option>2</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="student-group">Student timetable group</label
+                  ><select id="student-group"></select>
+                </div>
               </div>
+              <p id="registration-hint" class="small muted">
+                Enter a registration number to suggest programme, study year and
+                institutional email. Confirm placement before saving.
+              </p>
               <button class="primary">Create account</button>
             </form>
           </details>
@@ -90,12 +134,7 @@
                 </div>
                 <div>
                   <label for="new-program">Program</label
-                  ><input
-                    id="new-program"
-                    maxlength="30"
-                    value="BSE"
-                    required
-                  />
+                  ><select id="new-program" required></select>
                 </div>
                 <div>
                   <label for="new-year">Year of study</label
@@ -140,10 +179,70 @@
                   />
                 </div>
               </div>
+              <fieldset id="course-audiences">
+                <legend>Programme groups attending this offering</legend>
+                <div id="audience-options"></div>
+              </fieldset>
               <p class="small muted">
                 Set the attendance requirement agreed for this course offering.
               </p>
               <button class="primary">Create course</button>
+            </form>
+          </details>
+          <details class="card">
+            <summary>Student academic profiles</summary>
+            <form id="profile-form">
+              <label for="profile-student">Student profile</label
+              ><select id="profile-student" required></select>
+              <p id="profile-identity" class="small muted"></p>
+              <p>
+                Use the account form to establish an identity. Changes here
+                confirm placement without changing historical enrollments.
+              </p>
+              <div class="grid">
+                <div>
+                  <label for="profile-programme">Profile programme</label
+                  ><select id="profile-programme" required></select>
+                </div>
+                <div>
+                  <label for="profile-year">Profile study year</label
+                  ><input
+                    id="profile-year"
+                    type="number"
+                    min="1"
+                    max="5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="profile-group">Profile timetable group</label
+                  ><select id="profile-group" required></select>
+                </div>
+                <div>
+                  <label for="profile-academic-year"
+                    >Profile academic year</label
+                  ><input
+                    id="profile-academic-year"
+                    pattern="[0-9]{4}/[0-9]{4}"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="profile-semester">Profile semester</label
+                  ><select id="profile-semester">
+                    <option>1</option>
+                    <option>2</option>
+                  </select>
+                </div>
+              </div>
+              <label for="profile-reason">Placement change reason</label
+              ><textarea
+                id="profile-reason"
+                minlength="5"
+                maxlength="500"
+                required
+              ></textarea>
+              <button class="primary">Confirm academic placement</button>
             </form>
           </details>
           <details class="card">
@@ -162,6 +261,13 @@
                 <label for="enroll-student">Student account</label
                 ><select id="enroll-student" required></select>
               </div>
+              <label for="enroll-override"
+                >Retake or cross-programme exception reason (when needed)</label
+              ><textarea
+                id="enroll-override"
+                minlength="5"
+                maxlength="500"
+              ></textarea>
               <button class="primary">Enroll student</button>
             </form>
           </details>

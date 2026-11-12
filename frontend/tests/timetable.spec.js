@@ -44,7 +44,7 @@ test.afterAll(async () => {
 async function login(page, role) {
   await page.goto("/login");
   await page
-    .getByLabel("Email", { exact: true })
+    .getByLabel("Email or registration number", { exact: true })
     .fill(`${role}@demo.sams.test`);
   await page.getByLabel("Password", { exact: true }).fill("SamsDemo2026!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();

@@ -15,15 +15,44 @@ Example structure (all examples below are synthetic; choose real dated sessions 
 ```json
 {
   "users": [
-    {"email":"teacher@example.test","name":"Example Teacher","role":"EXAMINER"},
-    {"email":"learner@example.test","name":"Example Student","role":"STUDENT","regNo":"EXAMPLE/001","program":"BSE","year":2}
+    {
+      "email": "teacher@example.test",
+      "name": "Example Teacher",
+      "role": "EXAMINER"
+    },
+    {
+      "email": "learner@example.test",
+      "name": "Example Student",
+      "role": "STUDENT",
+      "regNo": "EXAMPLE/001",
+      "program": "BSE",
+      "year": 2
+    }
   ],
   "courses": [
-    {"key":"web-2026-1","code":"SWE2106","title":"Internet Technologies and Web Design","academicYear":"2026/2027","semester":1,"program":"BSE","year":2,"examinerEmail":"teacher@example.test"}
+    {
+      "key": "web-2026-1",
+      "code": "SWE2106",
+      "title": "Internet Technologies and Web Design",
+      "academicYear": "2026/2027",
+      "semester": 1,
+      "program": "BSE",
+      "year": 2,
+      "examinerEmail": "teacher@example.test"
+    }
   ],
-  "enrollments": [{"studentEmail":"learner@example.test","courseKey":"web-2026-1"}],
+  "enrollments": [
+    { "studentEmail": "learner@example.test", "courseKey": "web-2026-1" }
+  ],
   "sessions": [
-    {"naturalKey":"web-2026-1:2026-11-12:10:00","courseKey":"web-2026-1","startTime":"2026-11-12T10:00:00+03:00","endTime":"2026-11-12T12:00:00+03:00","room":"Demo Lab","sessionType":"LECTURE"}
+    {
+      "naturalKey": "web-2026-1:2026-11-12:10:00",
+      "courseKey": "web-2026-1",
+      "startTime": "2026-11-12T10:00:00+03:00",
+      "endTime": "2026-11-12T12:00:00+03:00",
+      "room": "Demo Lab",
+      "sessionType": "LECTURE"
+    }
   ]
 }
 ```
@@ -39,3 +68,15 @@ The original reference dataset has 52 student rows, 260 enrollment rows and 1,30
 Prefer **Timetable setup** for ongoing weekly schedule changes: review the calendar/exceptions, select a versioned source row, map an existing offering and preview before applying. This workflow can preserve stable IDs while reviewing future changes; the older normalized CLI deliberately rejects schedule conflicts. Neither path creates completed attendance from a weekly slot. See [TIMETABLE_AND_RECORDS.md](TIMETABLE_AND_RECORDS.md).
 
 Legacy normalized CLI enrollments have no explicit date fields and remain unbounded; review effective dates in the registrar report before using historical totals. New browser/API enrollments default to today's Kampala date and support deliberate date correction. Never infer enrollment start from the date a historical import happened.
+
+## Private student cohorts
+
+The operator-supplied personal roster remains outside Git. From backend:
+
+```bash
+node scripts/generate-student-cohorts.js /private/bse-roster.json /private/cohorts.json
+node scripts/import-student-cohorts.js /private/cohorts.json --preview
+node scripts/import-student-cohorts.js /private/cohorts.json --apply /private/new-credentials.json
+```
+
+The BSE roster is an array of `{name,regNo}`; the generator adds ten synthetic students each for BCS/BIT/BBA/BME. It uses the reviewed 2026/2027 sample placement, retaining all supplied BSE entries. Derived email addresses are unverified mailbox suggestions; nothing is sent. Apply creates only missing identities with individual private passwords and retains prior accounts on repetition. A conflicting identity aborts rather than overwriting it. Credential output is exclusively created mode 0600. The import creates no course, enrollment, dated class or attendance. Keep personal inputs and credentials outside Git and use normal recovery backups before operational imports.

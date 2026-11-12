@@ -1,3 +1,4 @@
+import { getCatalogue, allProgrammes } from "./academic-ui.js";
 import { api } from "./api.js";
 import {
   $,
@@ -12,6 +13,7 @@ import {
 import { studentData as cachedGet } from "./offline.js";
 const setup = location.pathname === "/admin/timetable";
 const user = await init(setup ? ["ADMIN"] : ["STUDENT", "EXAMINER", "ADMIN"]);
+let catalogue = null;
 let reference = null,
   calendar = null,
   rows = [],
@@ -79,6 +81,10 @@ async function loadDated() {
 async function loadReference() {
   try {
     const params = new URLSearchParams();
+    if ($("#reference-faculty").value)
+      params.set("faculty", $("#reference-faculty").value);
+    if ($("#reference-programme").value)
+      params.set("programme", $("#reference-programme").value);
     if ($("#program-group").value)
       params.set("group", $("#program-group").value);
     if ($("#reference-course").value.trim())
@@ -91,7 +97,11 @@ async function loadReference() {
     $("#program-group").innerHTML =
       '<option value="">All groups</option>' +
       reference.groups.map((g) => `<option>${escape(g)}</option>`).join("");
-    $("#program-group").value = selected;
+    $("#program-group").value = reference.groups.includes(selected)
+      ? selected
+      : user.role === "STUDENT"
+        ? reference.groups[0] || ""
+        : "";
     const p = reference.publication;
     $("#source-status").textContent =
       `${result.cached ? "Saved reference · " : ""}${p.source} · ${p.metadata.version_label || "Source timetable"} · checked ${time(p.checkedAt)} · ${reference.matched} matches${reference.matched > rows.length ? "; showing first 200, filter by group/course" : ""}. Source metadata: ${p.metadata.academic_year || "unspecified year"}; reported update ${p.metadata.last_updated ? new Date(p.metadata.last_updated).toISOString().slice(0, 10) : "unspecified"}.`;
@@ -153,7 +163,20 @@ function fillEntries() {
 async function loadAdmin() {
   const [publications, offerings, linked] = await Promise.all([
     api("/admin/timetable/publications"),
-    api("/admin/courses"),
+    api(
+      "/admin/courses?" +
+        new URLSearchParams({
+          ...($("#reference-faculty").value
+            ? { faculty: $("#reference-faculty").value }
+            : {}),
+          ...($("#reference-programme").value
+            ? { programme: $("#reference-programme").value }
+            : {}),
+          ...($("#program-group").value
+            ? { group: $("#program-group").value }
+            : {}),
+        }),
+    ),
     api("/admin/timetable/entries"),
   ]);
   courses = offerings;
@@ -201,10 +224,55 @@ async function loadAdmin() {
   fillEntries();
 }
 if (user) {
+  catalogue = await getCatalogue(user);
+  $("#reference-faculty").innerHTML =
+    '<option value="">All faculties</option>' +
+    catalogue.faculties
+      .map(
+        (f) => `<option value="${escape(f.code)}">${escape(f.name)}</option>`,
+      )
+      .join("");
+  const profileProgramme = allProgrammes(catalogue).find(
+    (p) => p.code === (user.programmeCode || user.program),
+  );
+  $("#reference-faculty").value = profileProgramme?.faculty.code || "computing";
+  function fillProgrammes() {
+    const faculty = $("#reference-faculty").value;
+    $("#reference-programme").innerHTML =
+      '<option value="">All programmes in faculty</option>' +
+      allProgrammes(catalogue)
+        .filter((p) => !faculty || p.faculty.code === faculty)
+        .map(
+          (p) =>
+            `<option value="${escape(p.code)}">${escape(p.code)} · ${escape(p.name)}</option>`,
+        )
+        .join("");
+  }
+  fillProgrammes();
+  if (profileProgramme) $("#reference-programme").value = profileProgramme.code;
+  const refreshScope = async () => {
+    $("#program-group").value = "";
+    await loadReference();
+    if (setup) await loadAdmin();
+  };
+  $("#reference-faculty").onchange = () => {
+    fillProgrammes();
+    void refreshScope().catch(showError);
+  };
+  $("#reference-programme").onchange = () =>
+    void refreshScope().catch(showError);
+  if (user.role === "STUDENT") {
+    $("#reference-faculty").disabled = true;
+    $("#reference-programme").disabled = true;
+    $("#program-group").disabled = true;
+  }
   $("#schedule-date").value = day();
   $("#schedule-date").onchange = loadDated;
   $("#filter-reference").onclick = loadReference;
-  $("#program-group").onchange = loadReference;
+  $("#program-group").onchange = async () => {
+    await loadReference();
+    if (setup) await loadAdmin();
+  };
   try {
     calendar = (await cachedGet(user.id, "/timetable/calendar")).data;
     renderCalendar();
@@ -257,7 +325,9 @@ if (user) {
             ":" +
             String(row.startMinute % 60).padStart(2, "0");
       $("#mapped-end").value =
-        row.issues.includes("TIME_FIELDS_DISAGREE") || row.endMinute === null
+        (row.issues.includes("TIME_FIELDS_DISAGREE") &&
+          !row.operatorReviewed) ||
+        row.endMinute === null
           ? ""
           : String(Math.floor(row.endMinute / 60)).padStart(2, "0") +
             ":" +

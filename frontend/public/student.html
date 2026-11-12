@@ -21,12 +21,21 @@
         <div>
           <h1>Check in to class</h1>
           <p class="muted">
-            Select your class and enter the six-character code displayed by your
-            examiner.
+            Your programme timetable shows what is happening now and what comes
+            next. Enter the code when your lecturer opens attendance.
           </p>
         </div>
+        <section
+          class="card"
+          id="academic-profile"
+          aria-label="My academic profile"
+        ></section>
+        <div id="day-status" class="small muted"></div>
+        <section id="now-next" class="grid" aria-label="Now and next"></section>
+        <p id="class-conflict" class="alert" hidden></p>
         <form class="card" id="checkin-form">
-          <div>
+          <p id="checkin-target" class="notice"></p>
+          <div id="class-choice" hidden>
             <label for="session">Class</label
             ><select id="session" required>
               <option value="">Choose a class</option>
@@ -49,7 +58,7 @@
           <button id="submit-checkin" class="primary">Record attendance</button>
         </form>
         <section class="card">
-          <h2>Your classes</h2>
+          <h2>Today’s timetable</h2>
           <ul class="list" id="upcoming"></ul>
         </section>
         <section class="card">

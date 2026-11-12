@@ -11,7 +11,7 @@ $("#login-form").onsubmit = async (event) => {
   try {
     const data = await api("/auth/login", {
       method: "POST",
-      body: { email: $("#email").value, password: $("#password").value },
+      body: { identifier: $("#email").value, password: $("#password").value },
     });
     saveSession(data);
     location.assign(home(data.user.role));
