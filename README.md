@@ -45,6 +45,66 @@ For a check-in, `student.js` handles the form and `api.js` sends the request. Ex
 
 JavaScript runs directly in Node and the browser. Zod performs runtime request validation; Prisma provides database access and migrations. `build` and `lint` script names are aliases for syntax checks, not TypeScript compilation.
 
+## Project structure
+
+```text
+sams-attendance/
+├── backend/
+│   ├── src/
+│   │   ├── app.js             Express setup and route mounting
+│   │   ├── server.js          Server entry point
+│   │   ├── config/            Database connection and environment settings
+│   │   ├── controllers/       Authentication handlers
+│   │   ├── middleware/        Authentication, permissions and error handling
+│   │   ├── routes/            API endpoints and request validation
+│   │   ├── services/          Attendance, academic, timetable and report logic
+│   │   └── utils/             Shared helpers and password policy
+│   ├── prisma/
+│   │   ├── schema.prisma      Database models and relationships
+│   │   ├── migrations/        Versioned database changes
+│   │   └── seed.js            Local sample records
+│   ├── scripts/               Account provisioning, imports and syntax checks
+│   └── tests/                 Backend API and service tests
+├── frontend/
+│   ├── public/
+│   │   ├── *.html             Login, student, lecturer and registrar pages
+│   │   ├── css/               Shared styles
+│   │   ├── js/                Page behavior, API calls and offline storage
+│   │   ├── sw.js              Service worker and application-shell cache
+│   │   └── manifest.webmanifest
+│   ├── scripts/               Frontend checks
+│   └── tests/                 Browser workflow tests
+├── data/                      Versioned academic reference data
+├── postman/                   API collection and local environment template
+├── deploy/native/             VPS services, Nginx and backup utilities
+├── docs/                      Proposal, API, design and operating documentation
+├── .github/workflows/         Automated verification
+├── docker-compose.yml         Optional container setup
+└── README.md                  Setup, workflows and project guide
+```
+
+Edit application code in `backend/src/` and `frontend/public/`. Dependency folders and old local build output are not source folders. Private credentials, environment secrets, student import files and database backups stay outside version control.
+
+## Group B folder allocation
+
+The following allocation gives each member a starting area for code review, improvements and explanation. It is flexible: folders are shared, members can assist one another, and an API change may need a corresponding page or test change. These are working areas, not exclusive ownership or team-lead appointments.
+
+| Member | Main folders | Starting focus |
+| --- | --- | --- |
+| Wokwaba Charles | `backend/src/controllers/`, `backend/src/middleware/` | Login, authentication and access checks; coordinate changes to frontend login behavior. |
+| Kanyesigye Brian | `data/`, `backend/prisma/` | Faculties, programmes, student placement and database relationships; coordinate catalogue-service changes. |
+| Kwesiga Lewis | `backend/src/services/`, `frontend/public/` | Timetable processing and its page, especially `timetable.js`. |
+| Akatuwijuka Annibow | `frontend/public/` | Student pages, check-in feedback and shared styling where needed. |
+| Natweta Cyril | `backend/src/services/`, `backend/src/routes/` | Attendance processing, check-in validation and attendance rules. |
+| Wawangula Generous | `frontend/public/` | Lecturer pages, class controls and register display, especially `examiner.html` and `js/examiner.js`. |
+| Mugendawala Mark Paul | `backend/src/config/`, `deploy/native/`, `.github/workflows/` | API integration, environment configuration, hosting and recovery; coordinate changes to `app.js` and `server.js`. |
+| Katto Andrew | `frontend/public/js/`, `backend/src/services/` | Offline storage and synchronization; coordinate service-worker changes. |
+| Nabaweesi Patricia Mirembe | `backend/src/services/`, `docs/` | Attendance summaries, report calculations and PDF output. |
+| Matovu Edwine Levi | `backend/src/routes/`, `frontend/public/` | Account-management endpoints and pages, including password changes and resets. |
+| Amen Joel Osuta | `postman/`, `backend/tests/`, `frontend/tests/`, `docs/` | API examples, invalid-request checks, workflow testing and documentation accuracy. |
+
+Keep one clear task in each PR and describe what changed, why and how it was checked. Before editing shared files such as `schema.prisma`, `styles.css`, route files or the main API test file, coordinate with anyone already changing them. Include related tests with the feature rather than leaving verification entirely to one member. A member's PR should record their actual changes to the shared baseline.
+
 ## Run locally
 
 Use Node.js 22+ and a running PostgreSQL database. PostgreSQL 16 is the hosted CI and VPS baseline. Create a dedicated local database/user, then run these commands from the repository root:
