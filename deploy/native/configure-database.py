@@ -14,7 +14,7 @@ password=secrets.token_hex(32)
 # Write secrets first so an interrupted provisioning can be recovered privately.
 fd=os.open(env,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
 with os.fdopen(fd,'w') as f:
-    f.write(f'DATABASE_URL=postgresql://sams:{password}@127.0.0.1:5432/sams?schema=public&connection_limit=3&pool_timeout=10\n')
+    f.write(f"DATABASE_URL='postgresql://sams:{password}@127.0.0.1:5432/sams?schema=public&connection_limit=3&pool_timeout=10'\n")
     f.write(f'JWT_SECRET={secrets.token_hex(48)}\nJWT_REFRESH_SECRET={secrets.token_hex(48)}\n')
     f.write('NODE_ENV=production\nHOST=127.0.0.1\nPORT=3100\nFRONTEND_URL=https://sams.tirallab.page\nTRUST_PROXY=1\n')
 pg(f"CREATE ROLE sams LOGIN PASSWORD '{password}' NOSUPERUSER NOCREATEDB NOCREATEROLE;\nCREATE DATABASE sams OWNER sams;")

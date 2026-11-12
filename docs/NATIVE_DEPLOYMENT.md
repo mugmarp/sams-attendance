@@ -37,3 +37,7 @@ For application rollback, stop SAMS, point `/opt/sams/current` to the previous v
 ## Scope of hosting acceptance
 
 A healthy HTTPS application is not institution-wide capacity proof. Confirm teaching dates/exceptions, actual users/enrollments, institutional counting policy, credential recovery/revocation, physical-device offline behavior and external backup restoration before operational adoption. Android remains deferred. The familiar sample email addresses are test identities, not university accounts.
+
+## Environment loading detail
+
+Quote DATABASE_URL in the private environment file. Its `&connection_limit=3&pool_timeout=10` query parameters are shell operators when left unquoted; systemd and the documented migration shell must both read the same full value. Initial provisioning exposed this quoting issue before any migration/attendance data was written; the environment was corrected and all five migrations then applied successfully.

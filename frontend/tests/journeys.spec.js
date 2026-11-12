@@ -160,7 +160,9 @@ test("offline shell restores user-scoped classes and rejects a stale saved code"
     { headers: { Authorization: `Bearer ${token}` } },
   );
   await page.context().setOffline(false);
-  await expect(page.getByText("SWE2103 · failed")).toBeVisible();
+  // Reload may interrupt a tab while it owns the 30-second replay lease.
+  // Reconnection must recover after lease expiry without overlapping sends.
+  await expect(page.getByText("SWE2103 · failed")).toBeVisible({ timeout: 45000 });
   await expect(
     page.getByText(
       "Ask your examiner to review this attempt. It has not been counted.",
