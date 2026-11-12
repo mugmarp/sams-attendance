@@ -24,6 +24,8 @@ app.use(express.static(publicDir, { etag: true, maxAge: 0 }));
 app.get("/", (_req, res) => res.redirect("/login"));
 for (const [route, page] of [
   ["/login", "login"],
+  ["/timetable", "timetable"],
+  ["/admin/timetable", "timetable"],
   ["/examiner/dashboard", "examiner"],
   ["/examiner/session/:id", "examiner"],
   ["/examiner/report/:courseId", "admin"],

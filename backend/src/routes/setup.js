@@ -1,3 +1,5 @@
+import { civilDate, audit } from "../services/academic.js";
+import { kampalaDay } from "../services/rules.js";
 import { getCourseEligibility } from "../services/eligibility.js";
 import { generateEligibilityPDF } from "../services/pdf.js";
 import { Router } from "express";
@@ -113,7 +115,7 @@ router.post(
 router.post(
   "/admin/courses/:courseId/enroll",
   requireAdmin,
-  validate(z.object({ studentId: id })),
+  validate(z.object({ studentId: id, effectiveFrom: civilDate.optional() })),
   asyncHandler(async (req, res) => {
     id.parse(req.params.courseId);
     const course = await prisma.course.findUnique({
@@ -125,13 +127,29 @@ router.post(
     });
     if (!student || student.role !== "STUDENT")
       throw new ValidationError("Choose an existing student account");
-    res
-      .status(201)
-      .json(
-        await prisma.enrollment.create({
-          data: { courseId: course.id, studentId: student.id },
-        }),
-      );
+    res.status(201).json(
+      await prisma.$transaction(async (tx) => {
+        const saved = await tx.enrollment.create({
+          data: {
+            courseId: course.id,
+            studentId: student.id,
+            effectiveFrom: new Date(
+              (req.body.effectiveFrom || kampalaDay()) + "T00:00:00Z",
+            ),
+          },
+        });
+        await audit(
+          tx,
+          req.user.userId,
+          "ENROLLMENT_CREATED",
+          "Enrollment",
+          saved.id,
+          undefined,
+          saved,
+        );
+        return saved;
+      }),
+    );
   }),
 );
 router.get(
@@ -173,10 +191,10 @@ router.post(
     if (!course) throw new NotFoundError("Course not found");
     if (req.user.role !== "ADMIN" && course.examinerId !== req.user.userId)
       throw new ForbiddenError("This course belongs to another examiner");
-    res
-      .status(201)
-      .json(
-        await prisma.session.create({
+    res.status(201).json(
+      await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "Course" WHERE id=${course.id} FOR UPDATE`;
+        const saved = await tx.session.create({
           data: {
             ...req.body,
             startTime: new Date(req.body.startTime),
@@ -184,8 +202,23 @@ router.post(
             courseId: course.id,
             naturalKey: req.body.naturalKey || "manual:" + randomUUID(),
           },
-        }),
-      );
+        });
+        await audit(
+          tx,
+          req.user.userId,
+          "SESSION_CREATED",
+          "Session",
+          saved.id,
+          undefined,
+          {
+            courseId: saved.courseId,
+            startTime: saved.startTime,
+            endTime: saved.endTime,
+          },
+        );
+        return saved;
+      }),
+    );
   }),
 );
 async function ownedCourse(req) {

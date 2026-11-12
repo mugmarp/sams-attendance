@@ -1,3 +1,5 @@
+import academicRoutes from "./academic.js";
+import { enrollmentCovers, enrollmentWhere } from "../services/academic.js";
 import syncRoutes from "./sync.js";
 import setupRoutes from "./setup.js";
 import { Router } from "express";
@@ -78,6 +80,7 @@ router.post(
 router.get("/auth/me", authenticate, me);
 router.use(authenticate);
 router.use(syncRoutes);
+router.use(academicRoutes);
 router.get(
   "/student/sessions/upcoming",
   requireStudent,
@@ -91,18 +94,22 @@ router.get(
         status: "SCHEDULED",
       },
       include: {
-        course: true,
+        course: {
+          include: { enrollments: { where: { studentId: req.user.userId } } },
+        },
         attendances: { where: { studentId: req.user.userId } },
       },
       orderBy: { startTime: "asc" },
     });
     res.json(
-      sessions.map((s) => ({
-        ...sessionDTO(s),
-        checkedIn: s.attendances.some((a) =>
-          ["PRESENT", "LATE"].includes(a.status),
-        ),
-      })),
+      sessions
+        .filter((s) => enrollmentCovers(s.course.enrollments[0], s.startTime))
+        .map((s) => ({
+          ...sessionDTO(s),
+          checkedIn: s.attendances.some((a) =>
+            ["PRESENT", "LATE"].includes(a.status),
+          ),
+        })),
     );
   }),
 );
@@ -193,7 +200,10 @@ router.get(
   asyncHandler(async (req, res) => {
     const session = await owned(req);
     const rows = await prisma.enrollment.findMany({
-      where: { courseId: session.courseId },
+      where: {
+        courseId: session.courseId,
+        ...enrollmentWhere(session.startTime),
+      },
       include: {
         student: { select: { id: true, name: true, regNo: true } },
       },

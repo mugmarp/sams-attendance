@@ -1,82 +1,77 @@
 import { prisma } from "../config/db.js";
 import { NotFoundError } from "../utils/errors.js";
 import { attendanceResult } from "./rules.js";
-export async function getCourseEligibility(courseId) {
-  const course = await prisma.course.findUnique({
+const select = {
+  id: true,
+  code: true,
+  title: true,
+  program: true,
+  year: true,
+  semester: true,
+  academicYear: true,
+  attendanceThreshold: true,
+  countLate: true,
+  countExcused: true,
+  policyVersion: true,
+};
+export async function courseReport(tx, courseId) {
+  const course = await tx.course.findUnique({
     where: { id: courseId },
-    include: {
-      sessions: {
-        where: { status: "COMPLETED" },
-        include: { attendances: true },
-      },
-      enrollments: {
-        include: { student: { select: { id: true, name: true, regNo: true } } },
-        orderBy: { student: { regNo: "asc" } },
-      },
-    },
+    select,
   });
   if (!course) throw new NotFoundError("Course not found");
-  const students = course.enrollments.map(({ student }) => {
-    const present = course.sessions.filter((s) =>
-      s.attendances.some(
-        (a) =>
-          a.studentId === student.id && ["PRESENT", "LATE"].includes(a.status),
-      ),
-    ).length;
-    return {
-      studentId: student.id,
-      regNo: student.regNo ?? "",
-      name: student.name,
-      ...attendanceResult(
-        present,
-        course.sessions.length,
-        course.attendanceThreshold,
-      ),
-    };
+  // Aggregate in PostgreSQL rather than loading every attendance row into Node.
+  const rows = await tx.$queryRaw`
+    SELECT e.id AS "enrollmentId", e."studentId", u.name, u."regNo", e."effectiveFrom", e."effectiveUntil",
+      count(s.id)::int AS "totalSessions",
+      count(a.id) FILTER (WHERE a.status = 'PRESENT' OR (a.status = 'LATE' AND c."countLate") OR (a.status = 'EXCUSED' AND c."countExcused"))::int AS "presentCount"
+    FROM "Enrollment" e JOIN "User" u ON u.id=e."studentId" JOIN "Course" c ON c.id=e."courseId"
+    LEFT JOIN "Session" s ON s."courseId"=c.id AND s.status='COMPLETED'
+      AND (e."effectiveFrom" IS NULL OR (s."startTime" AT TIME ZONE 'Africa/Kampala')::date >= e."effectiveFrom")
+      AND (e."effectiveUntil" IS NULL OR (s."startTime" AT TIME ZONE 'Africa/Kampala')::date < e."effectiveUntil")
+    LEFT JOIN "Attendance" a ON a."sessionId"=s.id AND a."studentId"=e."studentId"
+    WHERE c.id=${courseId}
+    GROUP BY e.id,u.id ORDER BY u."regNo",u.id`;
+  const students = rows.map((row) => ({
+    ...row,
+    ...attendanceResult(
+      row.presentCount,
+      row.totalSessions,
+      course.attendanceThreshold,
+    ),
+  }));
+  const pendingClaims = await tx.attendanceClaim.count({
+    where: { session: { courseId }, status: "PENDING" },
   });
   return {
-    course: {
-      id: course.id,
-      code: course.code,
-      title: course.title,
-      program: course.program,
-      year: course.year,
-      semester: course.semester,
-      attendanceThreshold: course.attendanceThreshold,
-      academicYear: course.academicYear,
-    },
+    course,
     students,
-    rules: `Completed classes only. PRESENT and LATE count. Configured attendance threshold: ${course.attendanceThreshold}%. Attendance qualification only; fees and coursework are not assessed.`,
+    pendingClaims,
+    rules: `Completed classes within each student's recorded enrollment dates only. PRESENT${course.countLate ? "/LATE" : ""}${course.countExcused ? "/EXCUSED" : ""} count. Policy v${course.policyVersion}; threshold ${course.attendanceThreshold}%. Legacy undated enrollments remain unbounded. Attendance qualification only; fees and coursework are not assessed.`,
   };
 }
-export async function getStudentAttendanceSummary(studentId) {
-  const enrollments = await prisma.enrollment.findMany({
-    where: { studentId },
-    include: {
-      course: {
-        include: {
-          sessions: {
-            where: { status: "COMPLETED" },
-            include: { attendances: { where: { studentId } } },
-          },
-        },
-      },
-    },
-    orderBy: { course: { code: "asc" } },
+export async function getCourseEligibility(courseId) {
+  return prisma.$transaction((tx) => courseReport(tx, courseId), {
+    isolationLevel: "RepeatableRead",
   });
-  return enrollments.map(({ course }) => ({
-    courseId: course.id,
-    courseCode: course.code,
-    courseTitle: course.title,
-    academicYear: course.academicYear,
-    semester: course.semester,
-    attendanceThreshold: course.attendanceThreshold,
+}
+export async function getStudentAttendanceSummary(studentId) {
+  const rows = await prisma.$queryRaw`
+    SELECT c.id AS "courseId",c.code AS "courseCode",c.title AS "courseTitle",c."academicYear",c.semester,c."attendanceThreshold",c."policyVersion",c."countLate",c."countExcused",
+      e."effectiveFrom",e."effectiveUntil",count(s.id)::int AS "totalSessions",
+      count(a.id) FILTER (WHERE a.status='PRESENT' OR (a.status='LATE' AND c."countLate") OR (a.status='EXCUSED' AND c."countExcused"))::int AS "presentCount"
+    FROM "Enrollment" e JOIN "Course" c ON c.id=e."courseId"
+    LEFT JOIN "Session" s ON s."courseId"=c.id AND s.status='COMPLETED'
+      AND (e."effectiveFrom" IS NULL OR (s."startTime" AT TIME ZONE 'Africa/Kampala')::date >= e."effectiveFrom")
+      AND (e."effectiveUntil" IS NULL OR (s."startTime" AT TIME ZONE 'Africa/Kampala')::date < e."effectiveUntil")
+    LEFT JOIN "Attendance" a ON a."sessionId"=s.id AND a."studentId"=e."studentId"
+    WHERE e."studentId"=${studentId} GROUP BY e.id,c.id ORDER BY c.code,c.id`;
+  return rows.map((row) => ({
+    ...row,
     ...attendanceResult(
-      course.sessions.filter((s) =>
-        s.attendances.some((a) => ["PRESENT", "LATE"].includes(a.status)),
-      ).length,
-      course.sessions.length,
-      course.attendanceThreshold,
+      row.presentCount,
+      row.totalSessions,
+      row.attendanceThreshold,
     ),
   }));
 }

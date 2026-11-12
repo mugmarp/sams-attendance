@@ -52,6 +52,9 @@ model User {
   receipts SyncReceipt[]
   claims AttendanceClaim[] @relation("ClaimStudent")
   decisions AttendanceClaim[] @relation("ClaimReviewer")
+  auditEvents AuditEvent[]
+  timetableReviews TimetableReview[]
+  reportSnapshots ReportSnapshot[]
 }
 model Course {
   id String @id @default(cuid())
@@ -62,15 +65,23 @@ model Course {
   year Int
   semester Int
   attendanceThreshold Int @default(80)
+  countLate Boolean @default(true)
+  countExcused Boolean @default(false)
+  policyVersion Int @default(1)
   academicYear String
   examinerId String
   examiner User @relation(fields: [examinerId], references: [id])
   sessions Session[]
   enrollments Enrollment[]
+  timetableEntries TimetableEntry[]
+  reportSnapshots ReportSnapshot[]
   @@unique([code, academicYear, semester])
 }
 model Session {
   id String @id @default(cuid())
+  timetableEntryId String?
+  timetableEntry TimetableEntry? @relation(fields: [timetableEntryId], references: [id])
+  timetableDate DateTime? @db.Date
   version Int @default(1)
   naturalKey String @unique
   courseId String
@@ -86,10 +97,13 @@ model Session {
   attendances Attendance[]
   preparations OfflinePreparation[]
   claims AttendanceClaim[]
+  @@unique([timetableEntryId, timetableDate])
   @@index([courseId, startTime])
 }
 model Enrollment {
   id String @id @default(cuid())
+  effectiveFrom DateTime? @db.Date
+  effectiveUntil DateTime? @db.Date
   studentId String
   student User @relation(fields: [studentId], references: [id])
   courseId String
@@ -166,4 +180,87 @@ model AttendanceClaim {
   decidedAt DateTime?
   @@unique([studentId, sessionId])
   @@index([sessionId, status])
+}
+
+model AcademicTerm {
+  id String @id @default(cuid())
+  academicYear String
+  semester Int
+  startsOn DateTime @db.Date
+  endsOn DateTime @db.Date
+  excludedDates Json
+  sourceUrl String
+  sourceNote String
+  version Int @default(1)
+  reviewedAt DateTime @default(now())
+  entries TimetableEntry[]
+  @@unique([academicYear, semester])
+}
+model TimetablePublication {
+  id String @id @default(cuid())
+  source String
+  sourceRevision String?
+  contentHash String
+  metadata Json
+  rows Json
+  importedAt DateTime @default(now())
+  checkedAt DateTime @default(now())
+  entries TimetableEntry[]
+  @@unique([source, contentHash])
+  @@index([source, checkedAt])
+}
+model TimetableEntry {
+  id String @id @default(cuid())
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+  termId String
+  term AcademicTerm @relation(fields: [termId], references: [id])
+  publicationId String
+  publication TimetablePublication @relation(fields: [publicationId], references: [id])
+  sourceKey String
+  weekday Int
+  startMinute Int
+  endMinute Int
+  room String?
+  sessionType SessionType
+  version Int @default(1)
+  sessions Session[]
+  @@unique([courseId, termId, sourceKey])
+  @@index([courseId, termId])
+}
+model TimetableReview {
+  id String @id @default(cuid())
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  input Json
+  baselineHash String
+  plan Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  appliedAt DateTime?
+}
+model ReportSnapshot {
+  id String @id @default(cuid())
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  data Json
+  contentHash String
+  reason String
+  createdAt DateTime @default(now())
+  @@index([courseId, createdAt])
+}
+model AuditEvent {
+  id String @id @default(cuid())
+  actorId String?
+  actor User? @relation(fields: [actorId], references: [id])
+  kind String
+  entityType String
+  entityId String
+  before Json?
+  after Json?
+  reason String?
+  recordedAt DateTime @default(now())
+  @@index([entityType, entityId, recordedAt])
 }

@@ -28,6 +28,9 @@ before(async () => {
   process.env.JWT_SECRET = "test-access-secret-at-least-32-characters";
   process.env.JWT_REFRESH_SECRET = "test-refresh-secret-at-least-32-characters";
   app = (await import("../src/app.js")).default;
+  await db.auditEvent.deleteMany();
+  await db.reportSnapshot.deleteMany();
+  await db.timetableReview.deleteMany();
   await db.syncReceipt.deleteMany();
   await db.offlinePreparation.deleteMany();
   await db.attendanceClaim.deleteMany();
@@ -35,6 +38,9 @@ before(async () => {
   await db.attendance.deleteMany();
   await db.enrollment.deleteMany();
   await db.session.deleteMany();
+  await db.timetableEntry.deleteMany();
+  await db.academicTerm.deleteMany();
+  await db.timetablePublication.deleteMany();
   await db.course.deleteMany();
   await db.user.deleteMany();
   const passwordHash = await bcrypt.hash("TestPassword2026!", 4);
@@ -1076,4 +1082,419 @@ test("claim rejection changes no attendance and stale approvals require review",
     decision(completed, pending.claim),
   ]);
   assert.equal(approved.claim.status, "APPROVED");
+});
+
+async function timetableFixture() {
+  const { kampalaDay } = await import("../src/services/rules.js");
+  const from = new Date(Date.parse(kampalaDay() + "T00:00:00Z") + 86400000)
+    .toISOString()
+    .slice(0, 10);
+  const plus = (n) =>
+    new Date(Date.parse(from) + n * 86400000).toISOString().slice(0, 10);
+  const original = await db.course.findUnique({ where: { id: courseId } });
+  const course = await db.course.create({
+    data: {
+      code: "TT" + randomUUID().slice(0, 8).toUpperCase(),
+      title: "Timetable verification",
+      program: "BSE",
+      year: 2,
+      semester: original.semester,
+      academicYear: original.academicYear,
+      examinerId: original.examinerId,
+      enrollments: { create: { studentId } },
+    },
+  });
+  let term = await db.academicTerm.findUnique({
+    where: {
+      academicYear_semester: {
+        academicYear: course.academicYear,
+        semester: course.semester,
+      },
+    },
+  });
+  if (!term)
+    term = (
+      await request(app)
+        .post("/api/admin/timetable/terms")
+        .set(auth(admin))
+        .send({
+          academicYear: course.academicYear,
+          semester: course.semester,
+          startsOn: from,
+          endsOn: plus(89),
+          excludedDates: [
+            {
+              date: plus(7),
+              reason: "Synthetic non-teaching date for verification",
+            },
+          ],
+          sourceUrl: "https://www.must.ac.ug/academic-calendar/",
+          sourceNote: "Synthetic calendar in isolated verification database",
+          reviewed: true,
+        })
+        .expect(201)
+    ).body;
+  const weekday = ((new Date(from).getUTCDay() + 6) % 7) + 1;
+  const row = {
+    natural_key: "fixture:" + course.code,
+    program_group: "BSE II",
+    course_code: course.code,
+    course_title: course.title,
+    day: [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ][weekday - 1],
+    start_time: "09:00",
+    end_time: "11:00",
+    time_slot: "09:00-10:00",
+    room: "Teaching Room",
+    lecturer: "Assigned lecturer",
+    session_type: null,
+    shared_with: [],
+  };
+  const publication = await db.timetablePublication.create({
+    data: {
+      source: "isolated-test",
+      contentHash: randomUUID(),
+      rows: [row],
+      metadata: { academic_year: course.academicYear },
+    },
+  });
+  const input = {
+    publicationId: publication.id,
+    sourceKey: row.natural_key,
+    courseId: course.id,
+    termId: term.id,
+    weekday,
+    startTime: "09:00",
+    endTime: "11:00",
+    room: "Teaching Room",
+    sessionType: "LECTURE",
+    from,
+    to: plus(13),
+    reviewed: true,
+    reason: "Verified the synthetic source disagreement and teaching dates",
+  };
+  return { course, term, publication, input, from, plus };
+}
+const previewSchedule = async (input) =>
+  (
+    await request(app)
+      .post("/api/admin/timetable/preview")
+      .set(auth(admin))
+      .send(input)
+      .expect(201)
+  ).body;
+const applySchedule = async (id) =>
+  (
+    await request(app)
+      .post(`/api/admin/timetable/reviews/${id}/apply`)
+      .set(auth(admin))
+      .expect(200)
+  ).body;
+
+test("actual weekly data and sourced calendar are available without inventing attendance classes", async () => {
+  const before = await db.session.count();
+  const ref = await request(app)
+    .get("/api/timetable/reference?group=BSE%20II")
+    .set(auth(student))
+    .expect(200);
+  assert.equal(ref.body.total, 1304);
+  assert.ok(ref.body.rows.length > 0);
+  assert.ok(
+    ref.body.rows.every(
+      (r) => r.program_group === "BSE II" || r.shared_with.includes("BSE II"),
+    ),
+  );
+  assert.ok(
+    ref.body.rows.some((r) => r.issues.includes("TIME_FIELDS_DISAGREE")),
+  );
+  assert.equal(await db.session.count(), before);
+  const calendar = await request(app)
+    .get("/api/timetable/calendar")
+    .set(auth(student))
+    .expect(200);
+  assert.equal(calendar.body.reference.lecturesBegin, "2026-08-17");
+  assert.equal(calendar.body.reference.semesterEnds, "2026-12-12");
+  assert.ok(
+    calendar.body.reference.events.some(
+      (e) => e.date === "2026-10-29" && e.teachingClosureConfirmed === false,
+    ),
+  );
+});
+
+test("timetable preview writes no classes; apply respects exclusions and replays safely", async () => {
+  const f = await timetableFixture(),
+    preview = await previewSchedule(f.input);
+  assert.equal(preview.summary.CREATE, 1);
+  assert.equal(await db.session.count({ where: { courseId: f.course.id } }), 0);
+  const applied = await applySchedule(preview.id);
+  const rows = await db.session.findMany({ where: { courseId: f.course.id } });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].status, "SCHEDULED");
+  assert.equal(rows[0].timetableDate.toISOString().slice(0, 10), f.from);
+  assert.equal((await applySchedule(preview.id)).replayed, true);
+  const repeated = await previewSchedule({
+    ...f.input,
+    entryId: applied.entryId,
+  });
+  assert.equal(repeated.summary.CREATE, 0);
+  assert.equal(repeated.summary.UNCHANGED, 1);
+  await applySchedule(repeated.id);
+  assert.equal(await db.session.count({ where: { courseId: f.course.id } }), 1);
+});
+
+test("reviewed timetable edits preserve class IDs and protect attended/finalized records", async () => {
+  const f = await timetableFixture(),
+    first = await applySchedule((await previewSchedule(f.input)).id);
+  const before = await db.session.findFirst({
+    where: { courseId: f.course.id },
+  });
+  const changed = await previewSchedule({
+    ...f.input,
+    entryId: first.entryId,
+    startTime: "10:00",
+    endTime: "12:00",
+  });
+  assert.equal(changed.summary.UPDATE, 1);
+  await applySchedule(changed.id);
+  const after = await db.session.findFirst({
+    where: { courseId: f.course.id },
+  });
+  assert.equal(after.id, before.id);
+  assert.equal(after.version, 2);
+  await db.attendance.create({
+    data: {
+      studentId,
+      sessionId: after.id,
+      status: "PRESENT",
+      method: "MANUAL",
+    },
+  });
+  const protectedPlan = await previewSchedule({
+    ...f.input,
+    entryId: first.entryId,
+    startTime: "11:00",
+    endTime: "13:00",
+  });
+  assert.equal(protectedPlan.summary.PROTECTED, 1);
+  await applySchedule(protectedPlan.id);
+  assert.equal(
+    (
+      await db.session.findUnique({ where: { id: after.id } })
+    ).startTime.toISOString(),
+    after.startTime.toISOString(),
+  );
+});
+
+test("stale timetable reviews and overlapping manual classes cannot be applied", async () => {
+  const f = await timetableFixture(),
+    preview = await previewSchedule(f.input);
+  const start = new Date(f.from + "T09:30:00+03:00"),
+    end = new Date(f.from + "T10:30:00+03:00");
+  await db.session.create({
+    data: {
+      courseId: f.course.id,
+      naturalKey: "overlap:" + randomUUID(),
+      startTime: start,
+      endTime: end,
+    },
+  });
+  await request(app)
+    .post(`/api/admin/timetable/reviews/${preview.id}/apply`)
+    .set(auth(admin))
+    .expect(409);
+  const blocked = await previewSchedule(f.input);
+  assert.ok(blocked.blockers.length);
+  await request(app)
+    .post(`/api/admin/timetable/reviews/${blocked.id}/apply`)
+    .set(auth(admin))
+    .expect(409);
+  await request(app)
+    .post("/api/admin/timetable/preview")
+    .set(auth(examiner))
+    .send(f.input)
+    .expect(403);
+  await request(app)
+    .post("/api/admin/timetable/preview")
+    .set(auth(admin))
+    .send({ ...f.input, from: "2026-02-31" })
+    .expect(400);
+});
+
+test("failed source refresh preserves the saved publication and records useful failure status", async () => {
+  const before = await db.timetablePublication.count(),
+    previous = globalThis.fetch;
+  globalThis.fetch = async () => new Response("Unavailable", { status: 503 });
+  try {
+    await request(app)
+      .post("/api/admin/timetable/refresh")
+      .set(auth(admin))
+      .send({ source: "mylectures" })
+      .expect(503);
+  } finally {
+    globalThis.fetch = previous;
+  }
+  assert.equal(await db.timetablePublication.count(), before);
+  assert.ok(
+    await db.auditEvent.count({
+      where: { kind: "TIMETABLE_SOURCE_FAILURE", entityId: "mylectures" },
+    }),
+  );
+  await request(app)
+    .post("/api/admin/timetable/refresh")
+    .set(auth(student))
+    .send({ source: "mylectures" })
+    .expect(403);
+});
+
+test("late enrollment and withdrawal change per-student denominators without deleting history", async () => {
+  const { kampalaDay } = await import("../src/services/rules.js");
+  const today = kampalaDay(),
+    date = (n) =>
+      new Date(Date.parse(today) + n * 86400000).toISOString().slice(0, 10);
+  const owner = await examinerId();
+  const course = await db.course.create({
+    data: {
+      code: "DATES" + randomUUID().slice(0, 5),
+      title: "Enrollment date verification",
+      academicYear: "2026/2027",
+      semester: 1,
+      program: "BSE",
+      year: 2,
+      examinerId: owner,
+      enrollments: { create: { studentId } },
+    },
+  });
+  const enrollment = await db.enrollment.findUnique({
+    where: { studentId_courseId: { studentId, courseId: course.id } },
+  });
+  const sessions = [];
+  for (const n of [-2, -1, 0]) {
+    const s = await db.session.create({
+      data: {
+        courseId: course.id,
+        naturalKey: "dated:" + randomUUID(),
+        startTime: new Date(date(n) + "T09:00:00+03:00"),
+        endTime: new Date(date(n) + "T11:00:00+03:00"),
+        status: "COMPLETED",
+      },
+    });
+    sessions.push(s);
+    await db.attendance.create({
+      data: { studentId, sessionId: s.id, status: "PRESENT" },
+    });
+  }
+  await request(app)
+    .patch(`/api/admin/enrollments/${enrollment.id}`)
+    .set(auth(admin))
+    .send({
+      effectiveFrom: date(-1),
+      effectiveUntil: today,
+      reason: "Verified actual enrollment and withdrawal dates",
+    })
+    .expect(200);
+  const report = await request(app)
+    .get(`/api/admin/eligibility/${course.id}`)
+    .set(auth(admin))
+    .expect(200);
+  assert.equal(report.body.students[0].totalSessions, 1);
+  assert.equal(report.body.students[0].presentCount, 1);
+  assert.equal(
+    await db.attendance.count({
+      where: { sessionId: { in: sessions.map((s) => s.id) } },
+    }),
+    3,
+  );
+  const schedule = await request(app)
+    .get(`/api/timetable/sessions?from=${date(-2)}&to=${today}`)
+    .set(auth(student))
+    .expect(200);
+  assert.equal(schedule.body.filter((s) => s.courseId === course.id).length, 1);
+  assert.ok(schedule.body.every((s) => !("enrollments" in s.course)));
+  await request(app)
+    .post(`/api/examiner/sessions/${sessions[0].id}/attendance`)
+    .set(auth(examiner))
+    .send({
+      studentId,
+      status: "PRESENT",
+      reason: "This class predates enrollment",
+    })
+    .expect(400);
+});
+
+test("saved report snapshots retain old policy and counts after audited policy changes", async () => {
+  const course = await db.course.create({
+    data: {
+      code: "POL" + randomUUID().slice(0, 6),
+      title: "Policy snapshot verification",
+      academicYear: "2026/2027",
+      semester: 1,
+      program: "BSE",
+      year: 2,
+      examinerId: await examinerId(),
+      attendanceThreshold: 60,
+      enrollments: { create: { studentId } },
+    },
+  });
+  for (const status of ["LATE", "LATE", "EXCUSED"]) {
+    await db.session.create({
+      data: {
+        courseId: course.id,
+        naturalKey: "policy:" + randomUUID(),
+        startTime: new Date(Date.now() - 3600000),
+        endTime: new Date(Date.now() - 1800000),
+        status: "COMPLETED",
+        attendances: { create: { studentId, status, method: "MANUAL" } },
+      },
+    });
+  }
+  const snapshot = await request(app)
+    .post(`/api/reports/courses/${course.id}/snapshots`)
+    .set(auth(examiner))
+    .send({
+      reason: "Issued after checking the register and device sync",
+      reviewedPendingWork: true,
+      basePolicyVersion: 1,
+    })
+    .expect(201);
+  assert.equal(snapshot.body.data.students[0].presentCount, 2);
+  assert.equal(snapshot.body.data.course.countLate, true);
+  await request(app)
+    .patch(`/api/admin/courses/${course.id}/policy`)
+    .set(auth(admin))
+    .send({
+      attendanceThreshold: 60,
+      countLate: false,
+      countExcused: true,
+      basePolicyVersion: 1,
+      reason: "Reviewed a different explicitly configured rule",
+    })
+    .expect(200);
+  const live = await request(app)
+    .get(`/api/admin/eligibility/${course.id}`)
+    .set(auth(admin))
+    .expect(200);
+  assert.equal(live.body.students[0].presentCount, 1);
+  assert.equal(live.body.course.policyVersion, 2);
+  const frozen = await request(app)
+    .get(`/api/reports/snapshots/${snapshot.body.id}`)
+    .set(auth(examiner))
+    .expect(200);
+  assert.equal(frozen.body.data.students[0].presentCount, 2);
+  assert.equal(frozen.body.contentHash, snapshot.body.contentHash);
+  await request(app)
+    .get(`/api/reports/snapshots/${snapshot.body.id}`)
+    .set(auth(other))
+    .expect(403);
+  await request(app)
+    .get(`/api/reports/snapshots/${snapshot.body.id}/pdf`)
+    .set(auth(examiner))
+    .expect(200)
+    .expect("Content-Type", /application\/pdf/);
 });

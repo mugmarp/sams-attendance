@@ -1,12 +1,15 @@
+import { startTimetableRefresh } from "./services/timetable-source.js";
 import { env } from "./config/env.js";
 import app from "./app.js";
 import { prisma } from "./config/db.js";
 async function main() {
   await prisma.$connect();
+  const stopTimetableRefresh = startTimetableRefresh();
   const server = app.listen(env.PORT, "0.0.0.0", () =>
     process.stdout.write(`SAMS listening on port ${env.PORT}\n`),
   );
   const shutdown = () => {
+    stopTimetableRefresh();
     server.close(() => {
       prisma.$disconnect().finally(() => process.exit(0));
     });

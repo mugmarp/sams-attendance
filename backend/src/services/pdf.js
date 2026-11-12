@@ -1,7 +1,8 @@
 import PDFDocument from "pdfkit";
 import { getCourseEligibility } from "./eligibility.js";
-export async function generateEligibilityPDF(courseId) {
-  const { course, students } = await getCourseEligibility(courseId);
+export async function generateEligibilityPDF(courseId, frozenReport) {
+  const { course, students } =
+    frozenReport ?? (await getCourseEligibility(courseId));
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 40, bufferPages: true });
     const chunks = [];
@@ -31,10 +32,15 @@ export async function generateEligibilityPDF(courseId) {
         .fontSize(10)
         .text(`${course.code}: ${course.title}`)
         .text(
-          `${course.academicYear} / Semester ${course.semester} | ${course.program} | Threshold: ${course.attendanceThreshold}%`,
+          `${course.academicYear} / Semester ${course.semester} | ${course.program} | Policy v${course.policyVersion || 1} | Threshold: ${course.attendanceThreshold}%`,
         )
         .text(
-          `Generated: ${new Date().toLocaleString("en-GB", { timeZone: "Africa/Kampala" })} EAT`,
+          `${frozenReport ? "Saved snapshot" : "Live report"}: ${new Date(frozenReport?.generatedAt || Date.now()).toLocaleString("en-GB", { timeZone: "Africa/Kampala" })} EAT`,
+        );
+      doc
+        .fontSize(8)
+        .text(
+          `Counts: PRESENT${course.countLate !== false ? "/LATE" : ""}${course.countExcused ? "/EXCUSED" : ""}. Denominators follow recorded enrollment dates.`,
         );
       doc
         .fontSize(8)

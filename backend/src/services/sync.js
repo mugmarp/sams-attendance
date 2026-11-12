@@ -1,3 +1,8 @@
+import {
+  enrollmentCovers,
+  enrollmentWhere,
+  enrollmentContext,
+} from "./academic.js";
 import { createHash } from "node:crypto";
 import { prisma } from "../config/db.js";
 import {
@@ -31,6 +36,9 @@ function context(session) {
     courseId: session.courseId,
     examinerId: session.course.examinerId,
     threshold: session.course.attendanceThreshold,
+    countLate: session.course.countLate,
+    countExcused: session.course.countExcused,
+    policyVersion: session.course.policyVersion,
     academicYear: session.course.academicYear,
   };
 }
@@ -57,7 +65,10 @@ export async function prepareRegister(actor, sessionId, purpose) {
         "Prepare an open class, or review a completed class explicitly",
       );
     const rows = await tx.enrollment.findMany({
-      where: { courseId: session.courseId },
+      where: {
+        courseId: session.courseId,
+        ...enrollmentWhere(session.startTime),
+      },
       include: { student: { select: { id: true, name: true, regNo: true } } },
       orderBy: { student: { regNo: "asc" } },
     });
@@ -66,7 +77,7 @@ export async function prepareRegister(actor, sessionId, purpose) {
       const record = records.find((item) => item.studentId === row.studentId);
       return {
         student: row.student,
-        enrollmentId: row.id,
+        ...enrollmentContext(row),
         attendance: record ? { ...record, changes: [] } : null,
       };
     });
@@ -77,6 +88,8 @@ export async function prepareRegister(actor, sessionId, purpose) {
           row.student.id,
           {
             enrollmentId: row.enrollmentId,
+            effectiveFrom: row.effectiveFrom,
+            effectiveUntil: row.effectiveUntil,
             version: row.attendance?.version || 0,
           },
         ]),
@@ -172,7 +185,13 @@ async function mark(tx, actor, op, session) {
     );
   if (
     op.baseSessionVersion !== preparation.snapshot.context.version ||
-    hash(context(session)) !== hash(preparation.snapshot.context)
+    hash(context(session)) !==
+      hash({
+        countLate: true,
+        countExcused: false,
+        policyVersion: 1,
+        ...preparation.snapshot.context,
+      })
   )
     return outcome(
       "CONFLICT",
@@ -202,7 +221,15 @@ async function mark(tx, actor, op, session) {
       },
     },
   });
-  if (!prepared || !enrollment || enrollment.id !== prepared.enrollmentId)
+  if (
+    !prepared ||
+    !enrollmentCovers(enrollment, session.startTime) ||
+    enrollment.id !== prepared.enrollmentId ||
+    (prepared.effectiveFrom || null) !==
+      enrollmentContext(enrollment).effectiveFrom ||
+    (prepared.effectiveUntil || null) !==
+      enrollmentContext(enrollment).effectiveUntil
+  )
     return outcome(
       "DENIED",
       "ENROLLMENT_CHANGED",
@@ -249,7 +276,7 @@ async function studentClaim(tx, actor, op, session) {
       },
     },
   });
-  if (!enrollment)
+  if (!enrollmentCovers(enrollment, session.startTime))
     return outcome(
       "DENIED",
       "NOT_ENROLLED",
@@ -324,7 +351,7 @@ async function decideClaim(tx, actor, op, session) {
         },
       },
     });
-    if (!enrollment)
+    if (!enrollmentCovers(enrollment, session.startTime))
       return outcome(
         "DENIED",
         "NOT_ENROLLED",

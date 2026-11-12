@@ -1,0 +1,20 @@
+{
+  "academicYear": "2026/2027",
+  "semester": 1,
+  "lecturesBegin": "2026-08-17",
+  "semesterEnds": "2026-12-12",
+  "teachingEnds": null,
+  "timeZone": "Africa/Kampala",
+  "verification": "INDEXED_OFFICIAL_REFERENCE",
+  "checkedOn": "2026-11-11",
+  "sources": [
+    "https://www.must.ac.ug/academic-calendar/",
+    "https://www.must.ac.ug/1670-strong-and-49-phds-conferred-as-must-celebrates-historic-33rd-graduation-ceremony-at-kihumuro-main-campus/"
+  ],
+  "events": [{ "date": "2026-10-29", "title": "33rd Graduation Ceremony", "teachingClosureConfirmed": false }],
+  "notes": [
+    "Dates were found in the official site's search index; direct calendar retrieval returned HTTP 403.",
+    "Semester end does not establish the final lecture date. Examination periods and teaching exclusions require review.",
+    "Calendar week is elapsed weeks from lecturesBegin, not a verified faculty teaching-week number."
+  ]
+}

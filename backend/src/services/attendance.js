@@ -1,3 +1,4 @@
+import { enrollmentCovers, audit } from "./academic.js";
 import { randomBytes } from "node:crypto";
 import { prisma } from "../config/db.js";
 import {
@@ -18,6 +19,9 @@ export function sessionDTO(session, lecturer = false) {
       : null;
   return {
     ...safe,
+    course: Object.fromEntries(
+      Object.entries(safe.course).filter(([key]) => key !== "enrollments"),
+    ),
     courseCode: session.course.code,
     courseTitle: session.course.title,
     date: session.startTime,
@@ -87,6 +91,16 @@ export async function manageSession(actor, id, action) {
       },
       include: { course: true },
     });
+    if (action !== "stop")
+      await audit(
+        tx,
+        actor.userId,
+        "SESSION_" + action,
+        "Session",
+        id,
+        { status: session.status, version: session.version },
+        { status: updated.status, version: updated.version },
+      );
     return sessionDTO(updated, true);
   });
 }
@@ -96,7 +110,7 @@ export async function submitCheckin(studentId, sessionId, code) {
     const enrolled = await tx.enrollment.findUnique({
       where: { studentId_courseId: { studentId, courseId: session.courseId } },
     });
-    if (!enrolled)
+    if (!enrollmentCovers(enrolled, session.startTime))
       throw new ForbiddenError("You are not enrolled in this course");
     const existing = await tx.attendance.findUnique({
       where: { studentId_sessionId: { studentId, sessionId } },
@@ -162,7 +176,8 @@ export async function correctAttendance(
     const enrollment = await tx.enrollment.findUnique({
       where: { studentId_courseId: { studentId, courseId: session.courseId } },
     });
-    if (!enrollment) throw new ValidationError("Student not enrolled");
+    if (!enrollmentCovers(enrollment, session.startTime))
+      throw new ValidationError("Student is not enrolled for this class date");
     return writeManualAttendance(
       tx,
       actor,
