@@ -14,7 +14,7 @@ For disposable demonstration data only: `docker compose exec -e ALLOW_DEMO_SEED=
 
 ## Real hosting considerations
 
-A running local/Compose PostgreSQL instance is a live database, not a mock. This repository does not claim that a public persistent university deployment exists. For remote hosting, put an HTTPS reverse proxy in front of the loopback application port, set FRONTEND_URL to the exact origin, and set TRUST_PROXY=1 only for one trusted proxy hop. Direct access keeps TRUST_PROXY=0. Do not expose PostgreSQL publicly. Same-origin fetch calls need no browser localhost API URL.
+A running local/Compose PostgreSQL instance is a live database, not a mock. A native public pilot is now hosted at https://sams.tirallab.page; this is not an institutionally approved deployment. See SERVER_READINESS.md for measured checks and adoption limits. For remote hosting, put an HTTPS reverse proxy in front of the loopback application port, set FRONTEND_URL to the exact origin, and set TRUST_PROXY=1 only for one trusted proxy hop. Direct access keeps TRUST_PROXY=0. Do not expose PostgreSQL publicly. Same-origin fetch calls need no browser localhost API URL.
 
 Keep environment secrets outside Git. Plan backups and restore drills, monitoring, approved retention, institutional identity/account recovery and token revocation before real use. Operator-created accounts use an initial password; this prototype does not provide self-service recovery.
 

@@ -41,3 +41,7 @@ A healthy HTTPS application is not institution-wide capacity proof. Confirm teac
 ## Environment loading detail
 
 Quote DATABASE_URL in the private environment file. Its `&connection_limit=3&pool_timeout=10` query parameters are shell operators when left unquoted; systemd and the documented migration shell must both read the same full value. Initial provisioning exposed this quoting issue before any migration/attendance data was written; the environment was corrected and all five migrations then applied successfully.
+
+## Executed pilot evidence
+
+The native pilot is live; measured results, approved cleanup, source release and remaining acceptance work are recorded in [SERVER_READINESS.md](SERVER_READINESS.md#native-pilot-deployment--12-november-2026). The operator can run `smoke-check.py` as root to verify HTTPS/roles without logging secrets, and `verify-backup.py` after the daily dump to test restoration into a new isolated database and export a private off-VPS copy. The export refuses to overwrite an existing same-day file. Do not run destructive API/Postman tests on the deployed database.

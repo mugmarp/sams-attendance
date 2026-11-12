@@ -58,3 +58,7 @@ Seven backend groups add real-reference quality/provenance, preview/apply/exclus
 A separate live `mylectures` refresh retrieved 1,304 rows at a resolved commit and stored source provenance; no classes were automatically changed. The snapshot PDF was rendered with Poppler and visually inspected. The browser suite uses the installed Chrome executable locally; a missing default Playwright download was resolved by selecting that browser. Test setup is confined to an isolated `_test` database. Real semester class generation remains awaiting registrar review of teaching dates/exclusions.
 
 Phase 3 preview migration is preceded by another local recovery database copy and checked for preservation of core row counts. No main-preview seed/reset or VPS write is part of this phase.
+
+## Native HTTPS pilot acceptance
+
+On 12 November the native pilot passed public HTTPS health/login-page checks, three role sign-ins/scoped reads, forbidden/unauthorized/wrong-password cases and ten bounded concurrent health/database requests. All five migrations applied to a dedicated new database; no historical or university attendance was seeded. A custom-format backup restored into a fresh disposable database with matching core counts, and its off-VPS copy matched SHA-256. Both Node/PostgreSQL listeners are loopback-only; service/renewal/backup timers and log rotation were verified. See [SERVER_READINESS.md](SERVER_READINESS.md) for observations and limits. These checks do not replace physical-device or real-workload acceptance.

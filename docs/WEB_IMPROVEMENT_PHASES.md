@@ -1,6 +1,6 @@
 # SAMS web improvement and deployment phases
 
-Plan agreed in scope on 11 November 2026: improve the web application first; defer Android packaging and the Capacitor/TWA decision. The application will use **https://sams.tirallab.page**. This document records implementation order, completed increments and remaining acceptance work. Public deployment and Android packaging are not completed.
+Plan agreed in scope on 11 November 2026: improve the web application first; defer Android packaging and the Capacitor/TWA decision. The application will use **https://sams.tirallab.page**. This document records implementation order, completed increments and remaining acceptance work. A native public pilot was deployed on 12 November 2026; physical-device/operational adoption checks and Android packaging remain outstanding.
 
 ## Deployment facts supplied by the user
 
@@ -51,6 +51,8 @@ Implemented on 11 November 2026: weekly reference/live dated views, versioned re
 Acceptance: an administrator can configure one real offering, enrolled students and actual dated sessions without editing seed files. Repeated imports do not duplicate classes. Reports agree with an independently checked register and preserve the distinction between attendance qualification and final exam clearance.
 
 ## Phase 4 — Verify PWA and deploy a controlled pilot
+
+Native hosting is now deployed at the intended HTTPS domain, with systemd, loopback-only Node/PostgreSQL, Nginx/TLS, private initial accounts, verified local restoration and an off-VPS recovery copy. See [measured deployment evidence](SERVER_READINESS.md#native-pilot-deployment--12-november-2026). Only the approved npm cache was cleaned. Physical-device PWA acceptance, recurring external backups, real registrar configuration and broader workload measurements remain; this phase is not claimed fully accepted.
 
 Inspect the VPS early; perform deployment after the required application checks:
 

@@ -34,7 +34,7 @@ The backend reads `backend/.env` when started from that directory or with `npm s
 
 ## Sample accounts
 
-These synthetic accounts exist after seeding; they do not belong to the university.
+These synthetic accounts exist after local seeding; they do not belong to the university. **The hosted pilot uses the same emails with private generated passwords, not the public passwords below.** The VPS operator retrieves them privately from `/etc/sams/initial-accounts.json`.
 
 | Role | Email | Password |
 |---|---|---|
@@ -104,4 +104,4 @@ The interface uses server-synchronized Kampala dates and normal attendance termi
 
 ## Timetable and record review
 
-The timetable shows actual authorized dated classes with visible-page refresh every 15 seconds and a separate filterable weekly reference. Administrators can check the approved source repositories, review teaching dates/exclusions and preview changes before applying future classes. Source updates remain staged; completed attendance is protected. Enrollment dates, versioned counting policy and saved report snapshots preserve the context behind totals. See [the workflow and calendar evidence](docs/TIMETABLE_AND_RECORDS.md). Public hosting at **https://sams.tirallab.page** remains the next operational phase.
+The timetable shows actual authorized dated classes with visible-page refresh every 15 seconds and a separate filterable weekly reference. Administrators can check the approved source repositories, review teaching dates/exclusions and preview changes before applying future classes. Source updates remain staged; completed attendance is protected. Enrollment dates, versioned counting policy and saved report snapshots preserve the context behind totals. See [the workflow and calendar evidence](docs/TIMETABLE_AND_RECORDS.md). A native pilot is now hosted at **https://sams.tirallab.page**; see [deployment evidence and limits](docs/SERVER_READINESS.md#native-pilot-deployment--12-november-2026).
