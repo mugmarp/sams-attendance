@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+enum UserRole {
+  STUDENT
+  EXAMINER
+  ADMIN
+}
+enum SessionType {
+  LECTURE
+  TUTORIAL
+  PRACTICAL
+  LAB
+  CLINICAL
+}
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+enum CheckInMethod {
+  CODE
+  MANUAL
+}
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  isActive Boolean @default(true)
+  passwordHash String
+  authVersion Int @default(0)
+  mustChangePassword Boolean @default(false)
+  role UserRole @default(STUDENT)
+  regNo String? @unique
+  admissionYear Int?
+  sponsorshipCode String?
+  programmeCode String?
+  programme Programme? @relation(fields: [programmeCode], references: [code])
+  studyGroupKey String?
+  studyGroup ProgrammeGroup? @relation(fields: [studyGroupKey], references: [key])
+  studyAcademicYear String?
+  studySemester Int?
+  dataOrigin String @default("OPERATOR")
+  name String
+  program String?
+  year Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  examinerCourses Course[]
+  enrollments Enrollment[]
+  attendances Attendance[]
+  changes AttendanceChange[]
+  preparations OfflinePreparation[]
+  receipts SyncReceipt[]
+  claims AttendanceClaim[] @relation("ClaimStudent")
+  decisions AttendanceClaim[] @relation("ClaimReviewer")
+  auditEvents AuditEvent[]
+  timetableReviews TimetableReview[]
+  reportSnapshots ReportSnapshot[]
+  @@index([programmeCode, year])
+  @@index([studyGroupKey])
+}
+model Course {
+  id String @id @default(cuid())
+  code String
+  title String
+  creditUnits Int @default(3)
+  program String
+  programmeCode String?
+  programme Programme? @relation(fields: [programmeCode], references: [code])
+  audiences CourseAudience[]
+  year Int
+  semester Int
+  attendanceThreshold Int @default(80)
+  countLate Boolean @default(true)
+  countExcused Boolean @default(false)
+  policyVersion Int @default(1)
+  academicYear String
+  examinerId String
+  examiner User @relation(fields: [examinerId], references: [id])
+  sessions Session[]
+  enrollments Enrollment[]
+  timetableEntries TimetableEntry[]
+  reportSnapshots ReportSnapshot[]
+  @@unique([code, academicYear, semester])
+  @@index([programmeCode, year, semester, academicYear])
+}
+model Session {
+  id String @id @default(cuid())
+  timetableEntryId String?
+  timetableEntry TimetableEntry? @relation(fields: [timetableEntryId], references: [id])
+  timetableDate DateTime? @db.Date
+  version Int @default(1)
+  naturalKey String @unique
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+  startTime DateTime
+  endTime DateTime
+  room String?
+  sessionType SessionType @default(LECTURE)
+  status SessionStatus @default(SCHEDULED)
+  checkinSecret String?
+  checkinStartedAt DateTime?
+  checkinClosesAt DateTime?
+  attendances Attendance[]
+  preparations OfflinePreparation[]
+  claims AttendanceClaim[]
+  @@unique([timetableEntryId, timetableDate])
+  @@index([courseId, startTime])
+}
+model Enrollment {
+  id String @id @default(cuid())
+  effectiveFrom DateTime? @db.Date
+  effectiveUntil DateTime? @db.Date
+  studentId String
+  student User @relation(fields: [studentId], references: [id])
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+  @@unique([studentId, courseId])
+}
+model Attendance {
+  id String @id @default(cuid())
+  studentId String
+  student User @relation(fields: [studentId], references: [id])
+  sessionId String
+  session Session @relation(fields: [sessionId], references: [id])
+  version Int @default(1)
+  status AttendanceStatus @default(PRESENT)
+  method CheckInMethod @default(CODE)
+  recordedAt DateTime @default(now())
+  changes AttendanceChange[]
+  @@unique([studentId, sessionId])
+}
+model AttendanceChange {
+  id String @id @default(cuid())
+  attendanceId String
+  attendance Attendance @relation(fields: [attendanceId], references: [id])
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  operationId String? @db.Uuid
+  previousStatus AttendanceStatus?
+  status AttendanceStatus
+  reason String
+  recordedAt DateTime @default(now())
+}
+
+model OfflinePreparation {
+  id String @id @default(cuid())
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  sessionId String
+  session Session @relation(fields: [sessionId], references: [id])
+  purpose String
+  snapshot Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  @@index([actorId, sessionId])
+}
+model SyncReceipt {
+  id String @id @default(cuid())
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  operationId String @db.Uuid
+  payloadHash String
+  payload Json
+  result Json
+  receivedAt DateTime @default(now())
+  @@unique([actorId, operationId])
+}
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+model AttendanceClaim {
+  id String @id @default(cuid())
+  studentId String
+  student User @relation("ClaimStudent", fields: [studentId], references: [id])
+  sessionId String
+  session Session @relation(fields: [sessionId], references: [id])
+  reason String
+  status ClaimStatus @default(PENDING)
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  reviewerId String?
+  reviewer User? @relation("ClaimReviewer", fields: [reviewerId], references: [id])
+  decisionReason String?
+  decidedAt DateTime?
+  @@unique([studentId, sessionId])
+  @@index([sessionId, status])
+}
+
+model AcademicTerm {
+  id String @id @default(cuid())
+  academicYear String
+  semester Int
+  startsOn DateTime @db.Date
+  endsOn DateTime @db.Date
+  excludedDates Json
+  sourceUrl String
+  sourceNote String
+  version Int @default(1)
+  reviewedAt DateTime @default(now())
+  entries TimetableEntry[]
+  @@unique([academicYear, semester])
+}
+model TimetablePublication {
+  id String @id @default(cuid())
+  source String
+  sourceRevision String?
+  contentHash String
+  metadata Json
+  rows Json
+  importedAt DateTime @default(now())
+  checkedAt DateTime @default(now())
+  entries TimetableEntry[]
+  @@unique([source, contentHash])
+  @@index([source, checkedAt])
+}
+model TimetableEntry {
+  id String @id @default(cuid())
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+  termId String
+  term AcademicTerm @relation(fields: [termId], references: [id])
+  publicationId String
+  publication TimetablePublication @relation(fields: [publicationId], references: [id])
+  sourceKey String
+  weekday Int
+  startMinute Int
+  endMinute Int
+  room String?
+  sessionType SessionType
+  version Int @default(1)
+  sessions Session[]
+  @@unique([courseId, termId, sourceKey])
+  @@index([courseId, termId])
+}
+model TimetableReview {
+  id String @id @default(cuid())
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  input Json
+  baselineHash String
+  plan Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  appliedAt DateTime?
+}
+model ReportSnapshot {
+  id String @id @default(cuid())
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  data Json
+  contentHash String
+  reason String
+  createdAt DateTime @default(now())
+  @@index([courseId, createdAt])
+}
+model AuditEvent {
+  id String @id @default(cuid())
+  actorId String?
+  actor User? @relation(fields: [actorId], references: [id])
+  kind String
+  entityType String
+  entityId String
+  before Json?
+  after Json?
+  reason String?
+  recordedAt DateTime @default(now())
+  @@index([entityType, entityId, recordedAt])
+}
+
+model Faculty {
+  code String @id
+  name String
+  programmes Programme[]
+}
+model Programme {
+  code String @id
+  name String
+  facultyCode String
+  faculty Faculty @relation(fields: [facultyCode], references: [code])
+  durationYears Int
+  sourceUrl String
+  groups ProgrammeGroup[]
+  students User[]
+  courses Course[]
+  @@index([facultyCode])
+}
+model ProgrammeGroup {
+  key String @id
+  programmeCode String
+  programme Programme @relation(fields: [programmeCode], references: [code])
+  studyYear Int
+  track String @default("")
+  students User[]
+  audiences CourseAudience[]
+  @@index([programmeCode, studyYear])
+}
+model CourseAudience {
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+  groupKey String
+  group ProgrammeGroup @relation(fields: [groupKey], references: [key])
+  @@id([courseId, groupKey])
+  @@index([groupKey])
+}

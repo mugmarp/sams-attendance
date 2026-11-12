@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0369a1" />
+    <title>Accounts · SAMS</title>
+    <link rel="icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header id="site-header" hidden></header>
+    <div class="header-inner" id="offline" role="status" hidden>
+      You’re offline. Account management needs a connection.
+    </div>
+    <main class="stack">
+      <h1>Account management</h1>
+      <p class="muted">
+        Find an account to reset a password, end sign-ins or change access.
+        Academic and attendance records are retained.
+      </p>
+      <p id="error" class="alert" role="alert" hidden></p>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <section class="card">
+        <div class="grid">
+          <div>
+            <label for="account-role">Account role</label
+            ><select id="account-role">
+              <option value="STUDENT">Student</option>
+              <option value="EXAMINER">Lecturer</option>
+              <option value="ADMIN">Registrar</option>
+            </select>
+          </div>
+          <div>
+            <label for="account-active">Account access</label
+            ><select id="account-active">
+              <option value="">Active and disabled</option>
+              <option value="true">Active</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
+        </div>
+        <div id="account-scope"></div>
+        <p id="account-count" class="small muted" role="status"></p>
+        <label for="target-account">Account</label
+        ><select id="target-account">
+          <option value="">Choose an account</option>
+        </select>
+        <div class="actions">
+          <button id="previous" type="button">Previous accounts</button
+          ><button id="next" type="button">Next accounts</button>
+        </div>
+        <p id="target-detail" aria-live="polite"></p>
+      </section>
+      <section id="action-card" class="card" hidden>
+        <h2>Manage selected account</h2>
+        <form id="account-action-form">
+          <label for="account-action">Action</label
+          ><select id="account-action">
+            <option value="reset-password">Reset password</option>
+            <option value="end-signins">End all sign-ins</option>
+            <option value="disable">Disable access</option>
+            <option value="enable">Reactivate access</option>
+          </select>
+          <div id="temporary-field">
+            <label for="temporary-password">Temporary password</label
+            ><input
+              id="temporary-password"
+              type="password"
+              autocomplete="new-password"
+              minlength="8"
+              maxlength="72"
+            />
+            <p class="small muted">
+              Share this privately after saving. The user must change it at the
+              next sign-in.
+            </p>
+          </div>
+          <label for="account-reason">Reason for account action</label
+          ><textarea
+            id="account-reason"
+            minlength="5"
+            maxlength="500"
+            required
+          ></textarea
+          ><label for="registrar-password">Your current password</label
+          ><input
+            id="registrar-password"
+            type="password"
+            autocomplete="current-password"
+            maxlength="200"
+            required
+          />
+          <p>
+            Every action ends the selected user’s current sign-ins and records
+            the reason. Re-enabling access does not restore old sign-ins.
+          </p>
+          <button class="primary">Apply account action</button>
+        </form>
+      </section>
+      <p id="registrar-note" class="muted" hidden>
+        Registrar accounts are listed for reference. Use My account to change
+        your own password.
+      </p>
+    </main>
+    <script type="module" src="/js/accounts.js"></script>
+  </body>
+</html>

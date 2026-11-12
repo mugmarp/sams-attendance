@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0369a1" />
+    <title>SAMS · MUST Attendance</title>
+    <link rel="icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header id="site-header" hidden></header>
+    <div class="header-inner" id="offline" role="status" hidden>
+      You’re offline. Saved check-ins are pending until the server accepts them.
+    </div>
+    <main class="stack narrow">
+      <p id="error" class="alert" role="alert" hidden></p>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <section id="checkin-view" class="stack" hidden>
+        <div>
+          <h1>Check in to class</h1>
+          <p class="muted">
+            Your programme timetable shows what is happening now and what comes
+            next. Enter the code when your lecturer opens attendance.
+          </p>
+        </div>
+        <section
+          class="card"
+          id="academic-profile"
+          aria-label="My academic profile"
+        ></section>
+        <div id="day-status" class="small muted"></div>
+        <section id="now-next" class="grid" aria-label="Now and next"></section>
+        <p id="class-conflict" class="alert" hidden></p>
+        <form class="card" id="checkin-form">
+          <p id="checkin-target" class="notice"></p>
+          <div id="class-choice" hidden>
+            <label for="session">Class</label
+            ><select id="session" required>
+              <option value="">Choose a class</option>
+            </select>
+          </div>
+          <div>
+            <label for="code">Check-in code</label
+            ><input
+              id="code"
+              class="large-code"
+              placeholder="7K9M2P"
+              pattern="[A-HJ-NP-Z2-9]{6}"
+              minlength="6"
+              maxlength="6"
+              autocomplete="off"
+              spellcheck="false"
+              required
+            />
+          </div>
+          <button id="submit-checkin" class="primary">Record attendance</button>
+        </form>
+        <section class="card">
+          <h2>Today’s timetable</h2>
+          <ul class="list" id="upcoming"></ul>
+        </section>
+        <section class="card">
+          <h2>Saved attempts</h2>
+          <p class="small muted">
+            Pending attempts are sent when you reconnect while this app is open.
+            Expired codes are rejected. Device timestamps do not establish
+            attendance.
+          </p>
+          <div id="queue"></div>
+          <button id="send-pending" hidden>Send pending attempts</button>
+          <details>
+            <summary>Server confirmations on this device</summary>
+            <div id="receipts"></div>
+          </details>
+        </section>
+      </section>
+      <section class="card" id="review-section" hidden>
+        <h2>Attendance review requests</h2>
+        <p class="small muted">
+          A request does not count as attendance. Your lecturer must approve it.
+        </p>
+        <div id="review-uploads"></div>
+        <div id="review-requests"></div>
+        <form id="request-review" hidden>
+          <h3 id="review-title">Request attendance review</h3>
+          <label for="review-reason">Explain your request</label
+          ><textarea
+            id="review-reason"
+            minlength="5"
+            maxlength="500"
+            required
+          ></textarea>
+          <button class="primary">Send review request</button
+          ><button id="cancel-review" type="button">Cancel</button>
+        </form>
+      </section>
+      <section id="summary-view" class="stack" hidden>
+        <div>
+          <h1>My attendance</h1>
+          <p class="muted">
+            Only completed classes within your enrollment dates count. Your
+            offering’s configured rule determines which statuses qualify.
+          </p>
+        </div>
+        <div id="summaries" class="stack"></div>
+        <p class="small muted">
+          This is an attendance report, not final examination clearance. Fees
+          and coursework are assessed separately. Contact your examiner if a
+          record needs correcting.
+        </p>
+      </section>
+    </main>
+    <footer>Mbarara University of Science and Technology · SAMS</footer>
+    <script type="module" src="/js/student.js"></script>
+  </body>
+</html>

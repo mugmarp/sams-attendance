@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0369a1" />
+    <title>My account · SAMS</title>
+    <link rel="icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header id="site-header" hidden></header>
+    <div class="header-inner" id="offline" role="status" hidden>
+      You’re offline. Account changes need a connection.
+    </div>
+    <main class="stack">
+      <h1>My account</h1>
+      <p id="error" class="alert" role="alert" hidden></p>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <p id="identity" class="muted"></p>
+      <p id="temporary" class="alert" hidden>
+        Change your temporary password before using your workspace.
+      </p>
+      <section class="card">
+        <h2>Change password</h2>
+        <p>
+          This ends all your sign-ins. Saved attendance attempts stay on this
+          browser; sign back in with this account to reconcile them.
+        </p>
+        <form id="password-form">
+          <label for="current-password">Current password</label
+          ><input
+            id="current-password"
+            type="password"
+            autocomplete="current-password"
+            maxlength="200"
+            required
+          /><label for="new-password">New password</label
+          ><input
+            id="new-password"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            maxlength="72"
+            required
+          /><label for="confirm-password">Confirm new password</label
+          ><input
+            id="confirm-password"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            maxlength="72"
+            required
+          />
+          <p class="small muted">
+            Use at least 8 characters and at most 72 UTF-8 bytes. Spaces are
+            allowed.
+          </p>
+          <button class="primary">Update password</button>
+        </form>
+      </section>
+      <section class="card">
+        <h2>End all sign-ins</h2>
+        <p>
+          Use this if you left SAMS signed in on another device. You will also
+          sign out here.
+        </p>
+        <form id="end-form">
+          <label for="end-password">Current password to end sign-ins</label
+          ><input
+            id="end-password"
+            type="password"
+            autocomplete="current-password"
+            maxlength="200"
+            required
+          /><button>End all sign-ins</button>
+        </form>
+      </section>
+    </main>
+    <script type="module" src="/js/account.js"></script>
+  </body>
+</html>

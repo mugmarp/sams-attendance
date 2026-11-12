@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+# Seven alternating local slots bound retention. External copies are still required.
+slot=$(date -u +%u)
+target="/var/backups/sams/daily-${slot}.dump"
+umask 077
+pg_dump --format=custom --no-owner --no-acl --file="${target}.next" sams
+pg_restore --list "${target}.next" >/dev/null
+mv "${target}.next" "$target"
+printf 'SAMS local backup completed: daily-%s.dump\n' "$slot"

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0369a1" />
+    <title>SAMS · MUST Attendance</title>
+    <link rel="icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <main class="login">
+      <section class="card stack">
+        <div>
+          <p class="eyebrow">MUST · STUDENT ATTENDANCE</p>
+          <h1>SAMS Attendance</h1>
+          <p class="muted">A clearer record of every class.</p>
+        </div>
+        <form id="login-form">
+          <p id="error" class="alert" role="alert" hidden></p>
+          <div>
+            <label for="email">Email or registration number</label
+            ><input
+              id="email"
+              name="email"
+              type="text"
+              autocomplete="username"
+              required
+            />
+          </div>
+          <div>
+            <label for="password">Password</label
+            ><input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+          <button class="primary" id="submit">Sign in</button>
+        </form>
+        <p class="small muted">
+          Use the account supplied by your course administrator.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="/js/login.js"></script>
+  </body>
+</html>

@@ -1,0 +1,104 @@
+name: Verify JavaScript SAMS
+on:
+  push:
+    branches: [main, 'migration/**']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://sams:sams-test-only@localhost:5432/sams_test
+      JWT_SECRET: ci-access-secret-at-least-32-characters-long
+      JWT_REFRESH_SECRET: ci-refresh-secret-at-least-32-characters-long
+      SAMS_E2E_DATABASE_URL: postgresql://sams:sams-test-only@localhost:5432/sams_test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sams_test
+          POSTGRES_USER: sams
+          POSTGRES_PASSWORD: sams-test-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U sams -d sams_test"
+          --health-interval=5s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - run: npm ci --prefix backend
+      - run: npm ci --prefix frontend
+      - run: npm run prisma:generate --prefix backend
+      - run: npm run prisma:deploy --prefix backend
+      - run: npm run check --prefix backend
+      - run: npm run check --prefix frontend
+      - run: npm test --prefix backend
+      - run: npm run seed --prefix backend
+      - name: Select hosted Chromium or install a bounded fallback
+        timeout-minutes: 5
+        working-directory: frontend
+        run: |
+          browser=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)
+          if [ -n "$browser" ]; then
+            echo "PLAYWRIGHT_EXECUTABLE_PATH=$browser" >> "$GITHUB_ENV"
+            "$browser" --version
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - name: Start the Express API and plain frontend
+        run: |
+          npm start --prefix backend > /tmp/sams-app.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/api/health && curl -fsS http://localhost:3000/login >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/sams-app.log
+          exit 1
+      - name: Execute the assessed Postman collection
+        run: npx --yes newman@6.2.3 run postman/SAMS.postman_collection.json --env-var baseUrl=http://localhost:3000/api --bail
+      - run: npm run test:e2e --prefix frontend
+      - name: Browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-evidence
+          path: frontend/test-results
+      - name: Smoke-test packaged Express, migrations and runtime seed
+        env:
+          DB_PASSWORD: ci-compose-database-only
+          DB_PORT: '55433'
+          FRONTEND_PORT: '5175'
+          FRONTEND_URL: http://localhost:5175
+        run: |
+          docker compose up --build -d
+          docker compose exec -T -e ALLOW_DEMO_SEED=true backend npm run seed
+          curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://localhost:5175/api/health
+          python3 - <<'PYTHON'
+          import json, urllib.request
+          assert b'/js/login.js' in urllib.request.urlopen('http://localhost:5175/login').read()
+          request = urllib.request.Request('http://localhost:5175/api/auth/login', data=json.dumps({'email':'student@demo.sams.test','password':'SamsDemo2026!'}).encode(), headers={'Content-Type':'application/json'})
+          signed_in = json.load(urllib.request.urlopen(request))
+          request = urllib.request.Request('http://localhost:5175/api/student/sessions/upcoming', headers={'Authorization':'Bearer ' + signed_in['accessToken']})
+          classes = json.load(urllib.request.urlopen(request))
+          assert len(classes) >= 2
+          assert all('checkinSecret' not in item for item in classes)
+          print('Packaged plain HTML/JS, database, login and safe class responses verified')
+          PYTHON
+      - name: Compose diagnostics and cleanup
+        if: always()
+        env:
+          DB_PASSWORD: ci-compose-database-only
+          DB_PORT: '55433'
+          FRONTEND_PORT: '5175'
+        run: |
+          docker compose logs --no-color
+          docker compose down

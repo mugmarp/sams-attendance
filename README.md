@@ -1,672 +1,240 @@
-# Student Attendance Management System (SAMS)
+# SAMS — Student Attendance Management System
 
-**Course:** SWE2106 — Internet Technologies and Web Design  
-**Institution:** Mbarara University of Science and Technology (MUST), Uganda  
-**Team:** Group B (11 members)  
-**Deadline:** 12 December 2026 (presentation)  
-**Repository:** https://github.com/mugmarp/sams-attendance
+Group B · SWE2106 Internet Technologies and Web Design · E-tivity 5
 
----
+SAMS digitizes **class attendance**, an Academic Registrar workflow. Students see their relevant classes and attendance, lecturers manage class registers, and registrars organize academic records and reports.
 
-## 1. Problem Statement
+The application uses **HTML, CSS and JavaScript**, a **Node.js/Express API**, and **PostgreSQL** through Prisma's JavaScript client. Express serves both the frontend and `/api` from one origin. No frontend compilation or separate frontend server is needed.
 
-The Academic Registrar at MUST requires a digital solution for tracking student class attendance to determine exam eligibility per **MUST Examination Regulations §2.3**:
+**Current status, 12 November 2026:** a controlled pilot is hosted at [sams.tirallab.page](https://sams.tirallab.page). Core workflows and account-management features are implemented, but the latest audit identified unresolved defects. See [known issues](#known-issues-and-adoption-boundaries) before relying on the system for operational attendance.
 
-> **Minimum attendance:** 80% of lectures, tutorials, and practical sessions  
-> **Exam eligibility:** Student must meet 80% attendance + coursework + fees paid
+[Proposal](docs/PROPOSAL.md) · [API reference](docs/API_SPEC.md) · [Postman walkthrough](docs/POSTMAN_DEMO.md) · [Validation record](docs/VALIDATION.md) · [Native deployment](docs/NATIVE_DEPLOYMENT.md)
 
-**Current process:** Paper registers (Appendix D of Examination Regulations) — manual, error-prone, no central visibility, 7-year retention burden.
+## Users and workflow
 
----
+| User | Main work |
+| --- | --- |
+| Student | View current/upcoming classes, submit a check-in and review personal attendance. |
+| Lecturer (`EXAMINER` in the API) | Create assigned class sessions, open check-in, review/correct attendance and prepare offline registers. |
+| Registrar (`ADMIN` in the API) | Manage accounts, academic placement, offerings, enrollment, timetable review and reports. |
 
-## 2. Solution: Code-Based Check-in
+1. The registrar creates an offering for a particular academic year/semester, assigns a lecturer and explicitly enrolls students.
+2. The lecturer creates a dated class and opens a ten-minute check-in window during that class. Its code rotates every two minutes; the window cannot extend past class end.
+3. The student signs in using an email or registration number. A single current enrolled class is targeted automatically. A class choice appears only when enrolled classes overlap; a weekly reference entry cannot authorize check-in.
+4. The student submits the lecturer's current code. The server checks identity, enrollment and time. A repeated accepted check-in returns the same record.
+5. The lecturer reviews the register, makes corrections with reasons and completes the held class. An unheld cancelled class is excluded from attendance calculations.
+6. Students see their own summaries. Authorized lecturers and registrars view course reports and download PDFs or save report snapshots.
 
-### 2.1 Core Concept
+## How the application fits together
 
-| Actor | Action |
-|-------|--------|
-| **Examiner** | Opens session → clicks "Start Check-in" → 6-digit code displayed (e.g., `7K9M2P`) |
-| **Student** | Opens app → "Enter Code" → types code → submits |
-| **System** | Validates code (match + not expired + student enrolled) → records attendance |
-| **Admin** | Views exam eligibility lists (80% calculation) → exports PDF matching Appendix D |
+![SAMS architecture](docs/architecture.svg)
 
-### 2.2 Why Code (Not QR/Geofence)
+For a check-in, `student.js` handles the form and `api.js` sends the request. Express routes validate it, authentication checks the current account, and the attendance service applies the rules in a database transaction. PostgreSQL stores the accepted record; the response updates the browser. Changing a browser display does not change the authoritative attendance record.
 
-| Factor | Code (PIN) | QR | Geofence |
-|--------|------------|-----|----------|
-| Build time | 30 min | 2-3 hrs | Days |
-| Phone support | 100% | 90% | GPS issues |
-| Lecture hall reality | Works offline, dim light | Camera fails | Indoor GPS unreliable |
-| Cheating risk | Shareable (mitigated by 2-min rotation) | Screenshot shareable | Low |
-| **Verdict** | ✅ **MVP** | Stretch | Skip |
+| Area | Starting points |
+| --- | --- |
+| Page structure and styling | `frontend/public/*.html`, `frontend/public/css/styles.css` |
+| Requests, navigation and sign-in state | `frontend/public/js/api.js`, `common.js`, `login.js` |
+| Student day and attendance | `student.js`, `day-model.js`, `backend/src/services/student-day.js` |
+| Lecturer register and registrar pages | `examiner.js`, `admin.js`, `timetable.js` |
+| Account management | `account.js`, `accounts.js`, `backend/src/routes/accounts.js` |
+| Offline storage and synchronization | `offline.js`, `register-offline.js`, `frontend/public/sw.js`, `backend/src/services/sync.js` |
+| API and attendance rules | `backend/src/app.js`, `routes/`, `middleware/`, `services/attendance.js`, `services/rules.js` |
+| Data and migrations | `backend/prisma/schema.prisma`, `backend/prisma/migrations/`, `data/` |
+| Verification and hosting | `backend/tests/`, `frontend/tests/`, `postman/`, `.github/workflows/`, `deploy/native/` |
 
-**Security:** Code rotates every 2 minutes, one-use per student, examiner physically present.
+JavaScript runs directly in Node and the browser. Zod performs runtime request validation; Prisma provides database access and migrations. `build` and `lint` script names are aliases for syntax checks, not TypeScript compilation.
 
----
+## Project structure
 
-## 3. Technical Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           SAMS ARCHITECTURE                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌──────────────┐         ┌──────────────┐         ┌──────────────┐        │
-│  │   EXAMINER   │         │    BACKEND   │         │   STUDENT    │        │
-│  │   (PWA)      │         │  (Express)   │         │   (PWA)      │        │
-│  └──────┬───────┘         └──────┬───────┘         └──────┬───────┘        │
-│         │                        │                        │                 │
-│         │ GET /sessions/today    │                        │                 │
-│         ├───────────────────────►│                        │                 │
-│         │                        │                        │                 │
-│         │ POST /sessions/:id/    │                        │                 │
-│         │ start-checkin          │                        │                 │
-│         ├───────────────────────►│                        │                 │
-│         │                        │                        │                 │
-│         │ { code, expiresAt }    │                        │                 │
-│         │◄───────────────────────┤                        │                 │
-│         │                        │                        │                 │
-│         │ Display code (refresh  │                        │                 │
-│         │ every 2 min)           │                        │                 │
-│         │                        │                        │                 │
-│         │                        │ POST /attendance/      │                 │
-│         │                        │ checkin                │                 │
-│         │                        │◄───────────────────────┤                 │
-│         │                        │   { code, sessionId }  │                 │
-│         │                        │                        │                 │
-│         │                        │ Validate & record      │                 │
-│         │                        │                        │                 │
-│         │                        │ { success, session }   │                 │
-│         │                        │───────────────────────►│                 │
-│         │                        │                        │                 │
-└─────────│────────────────────────│────────────────────────│────────────────┘
-          │                        │                        │
-          ▼                        ▼                        ▼
-   ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-   │  Session     │         │  CheckinCode │         │  Attendance  │
-   │  (PostgreSQL)│         │  (Redis/     │         │  (PostgreSQL │
-   │              │         │   in-memory) │         │   + IndexedDB)│
-   └──────────────┘         └──────────────┘         └──────────────┘
-```
-
----
-
-## 4. Data Models (Prisma)
-
-```prisma
-// backend/prisma/schema.prisma
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-enum SessionType {
-  LECTURE
-  TUTORIAL
-  PRACTICAL
-  LAB
-  CLINICAL
-}
-
-enum AttendanceStatus {
-  PRESENT
-  ABSENT
-  LATE
-  EXCUSED
-}
-
-enum CheckInMethod {
-  CODE
-  QR
-  MANUAL
-  GEOFENCE
-}
-
-enum UserRole {
-  STUDENT
-  EXAMINER
-  ADMIN
-}
-
-model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  passwordHash  String
-  role          UserRole @default(STUDENT)
-  regNo         String?  @unique // for students
-  name          String
-  program       String?  // BSE, BCS, etc.
-  year          Int?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  // Relations
-  studentSessions ExamSession[] @relation("StudentSessions")
-  examinerCourses Course[]      @relation("ExaminerCourses")
-  attendances     Attendance[]
-}
-
-model Course {
-  id            String   @id @default(cuid())
-  code          String   @unique // SWE2106
-  title         String
-  creditUnits   Int      @default(3)
-  program       String   // BSE, BCS, etc.
-  year          Int
-  semester      Int      // 1 or 2
-  examinerId    String?
-  examiner      User?    @relation("ExaminerCourses", fields: [examinerId], references: [id])
-  sessions      Session[]
-  enrollments   Enrollment[]
-}
-
-model Session {
-  id              String   @id @default(cuid())
-  courseId        String
-  course          Course   @relation(fields: [courseId], references: [id])
-  date            DateTime // Date only (start of day)
-  startTime       DateTime
-  endTime         DateTime
-  room            String?
-  sessionType     SessionType @default(LECTURE)
-  checkinCode     String?
-  codeExpiresAt   DateTime?
-  codeRotatedAt   DateTime?
-  attendances     Attendance[]
-  @@index([courseId, date])
-  @@index([date])
-}
-
-model Enrollment {
-  id        String @id @default(cuid())
-  studentId String
-  student   User   @relation("StudentSessions", fields: [studentId], references: [id])
-  courseId  String
-  course    Course @relation(fields: [courseId], references: [id])
-  @@unique([studentId, courseId])
-}
-
-model Attendance {
-  id          String @id @default(cuid())
-  studentId   String
-  student     User   @relation(fields: [studentId], references: [id])
-  sessionId   String
-  session     Session @relation(fields: [sessionId], references: [id])
-  status      AttendanceStatus @default(PRESENT)
-  method      CheckInMethod @default(CODE)
-  recordedAt  DateTime @default(now())
-  syncedAt    DateTime? // Null = pending offline sync
-  deviceInfo  String?
-  @@unique([studentId, sessionId])
-  @@index([sessionId])
-  @@index([studentId, recordedAt])
-}
-
-model CheckinCode {
-  id        String @id @default(cuid())
-  sessionId String @unique
-  code      String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-}
-```
-
----
-
-## 5. API Specification
-
-### 5.1 Authentication
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/login` | Email/password → JWT access + refresh |
-| POST | `/api/auth/refresh` | Refresh token → new access token |
-| GET | `/api/auth/me` | Current user profile |
-
-### 5.2 Examiner Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/examiner/sessions/today` | List today's sessions for examiner |
-| GET | `/api/examiner/sessions/:id` | Session details |
-| POST | `/api/examiner/sessions/:id/start-checkin` | Generate/rotate code |
-| POST | `/api/examiner/sessions/:id/stop-checkin` | Invalidate code |
-| GET | `/api/examiner/sessions/:id/attendance` | Live attendance list |
-
-### 5.3 Student Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/student/checkin` | Submit code → record attendance |
-| GET | `/api/student/attendance/summary` | Own attendance % per course |
-| GET | `/api/student/sessions/upcoming` | Upcoming sessions for enrolled courses |
-
-### 5.4 Admin Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/admin/eligibility/:courseId` | Exam eligibility list (80% rule) |
-| GET | `/api/admin/eligibility/:courseId/pdf` | Export PDF (Appendix D format) |
-| GET | `/api/admin/students` | Manage students |
-| GET | `/api/admin/courses` | Manage courses |
-
-### 5.5 Request/Response Examples
-
-**POST `/api/student/checkin`**
-```json
-// Request
-{
-  "sessionId": "cuid...",
-  "code": "7K9M2P"
-}
-
-// Response (200)
-{
-  "success": true,
-  "attendance": {
-    "id": "cuid...",
-    "sessionId": "cuid...",
-    "status": "PRESENT",
-    "method": "CODE",
-    "recordedAt": "2026-11-15T10:05:00Z"
-  },
-  "session": {
-    "courseCode": "SWE2106",
-    "date": "2026-11-15",
-    "startTime": "10:00"
-  }
-}
-```
-
-**GET `/api/admin/eligibility/:courseId`**
-```json
-// Response (200)
-{
-  "course": { "code": "SWE2106", "title": "Internet Technologies and Web Design" },
-  "students": [
-    {
-      "regNo": "2025/BSE/001/PS",
-      "name": "Alice Nakato",
-      "presentCount": 28,
-      "totalSessions": 30,
-      "attendancePct": 93.33,
-      "eligible": true
-    },
-    {
-      "regNo": "2025/BSE/002/PS",
-      "name": "Bob Kato",
-      "presentCount": 22,
-      "totalSessions": 30,
-      "attendancePct": 73.33,
-      "eligible": false
-    }
-  ]
-}
-```
-
----
-
-## 6. Offline-First Design (Student PWA)
-
-### 6.1 IndexedDB Queue
-```typescript
-// frontend/src/services/offlineQueue.ts
-interface QueuedCheckin {
-  id: string;
-  sessionId: string;
-  code: string;
-  timestamp: number;
-  retries: number;
-}
-
-// On submit (online or offline):
-await queueCheckin(sessionId, code);
-
-// Background sync (service worker):
-navigator.serviceWorker.ready.then(reg => {
-  reg.sync.register('attendance-sync');
-});
-```
-
-### 6.2 Sync Strategy
-- Queue failed requests in IndexedDB
-- Service Worker `sync` event triggers retry
-- Max 5 retries, then discard
-- Visual indicator: "Synced" / "Pending" / "Failed"
-
----
-
-## 7. Eligibility Calculation (80% Rule)
-
-```sql
--- Single optimized query
-SELECT 
-  u.id as student_id,
-  u.reg_no,
-  u.name,
-  COUNT(a.id) FILTER (WHERE a.status = 'PRESENT') as present_count,
-  COUNT(s.id) as total_sessions,
-  ROUND(
-    COUNT(a.id) FILTER (WHERE a.status = 'PRESENT') * 100.0 / 
-    NULLIF(COUNT(s.id), 0), 2
-  ) as attendance_pct,
-  CASE 
-    WHEN COUNT(s.id) = 0 THEN false
-    WHEN COUNT(a.id) FILTER (WHERE a.status = 'PRESENT') * 100.0 / COUNT(s.id) >= 80 
-    THEN true ELSE false 
-  END as eligible
-FROM users u
-JOIN enrollments e ON e.student_id = u.id
-JOIN courses c ON c.id = e.course_id
-JOIN sessions s ON s.course_id = c.id
-LEFT JOIN attendances a ON a.session_id = s.id AND a.student_id = u.id
-WHERE c.id = $1
-GROUP BY u.id, u.reg_no, u.name;
-```
-
----
-
-## 8. PDF Export (Appendix D Format)
-
-Matches MUST Examination Regulations **Appendix D: Examination Attendance Register** exactly:
-
-```
-MBARARA UNIVERSITY OF SCIENCE AND TECHNOLOGY
-EXAMINATION ATTENDANCE REGISTER
-
-Course: SWE2106 - Internet Technologies and Web Design
-Program: BSE Year: II Semester: I
-Date: 15/11/2026
-
-| No. | Reg No.         | Name           | Status   | Signature |
-|-----|-----------------|----------------|----------|-----------|
-| 1   | 2025/BSE/001/PS | Alice Nakato   | PRESENT  |           |
-| 2   | 2025/BSE/002/PS | Bob Kato       | ABSENT   |           |
-...
-```
-
-Generated via `@react-pdf/renderer` or `pdfkit`.
-
----
-
-## 9. Project Structure
-
-```
+```text
 sams-attendance/
 ├── backend/
 │   ├── src/
-│   │   ├── config/           # env.ts, db.ts, redis.ts
-│   │   ├── controllers/      # auth, examiner, student, admin
-│   │   ├── middleware/       # auth.ts, validate.ts, rateLimit.ts
-│   │   ├── routes/           # API route definitions
-│   │   ├── services/         # checkinCode.ts, eligibility.ts, pdf.ts
-│   │   ├── utils/            # errors.ts, asyncHandler.ts, jwt.ts
-│   │   ├── app.ts            # Express app setup
-│   │   └── server.ts         # Entry point
+│   │   ├── app.js             Express setup and route mounting
+│   │   ├── server.js          Server entry point
+│   │   ├── config/            Database connection and environment settings
+│   │   ├── controllers/       Authentication handlers
+│   │   ├── middleware/        Authentication, permissions and error handling
+│   │   ├── routes/            API endpoints and request validation
+│   │   ├── services/          Attendance, academic, timetable and report logic
+│   │   └── utils/             Shared helpers and password policy
 │   ├── prisma/
-│   │   ├── schema.prisma
-│   │   └── seed.ts           # Loads data/students.csv, timetable
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── Dockerfile
+│   │   ├── schema.prisma      Database models and relationships
+│   │   ├── migrations/        Versioned database changes
+│   │   └── seed.js            Local sample records
+│   ├── scripts/               Account provisioning, imports and syntax checks
+│   └── tests/                 Backend API and service tests
 ├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── Login.tsx
-│   │   │   ├── ExaminerDashboard.tsx
-│   │   │   ├── ExaminerSession.tsx       # Rotating code display
-│   │   │   ├── StudentCheckin.tsx        # Code input
-│   │   │   ├── StudentSummary.tsx        # My attendance %
-│   │   │   └── AdminEligibility.tsx      # Exam lists + PDF
-│   │   ├── components/
-│   │   │   ├── CodeDisplay.tsx           # Large 6-digit with countdown
-│   │   │   ├── CodeInput.tsx             # 6-char input with auto-focus
-│   │   │   ├── AttendanceTable.tsx
-│   │   │   └── EligibilityTable.tsx
-│   │   ├── hooks/
-│   │   │   ├── useAuth.ts
-│   │   │   ├── useOfflineQueue.ts
-│   │   │   └── useSessions.ts
-│   │   ├── services/
-│   │   │   ├── api.ts
-│   │   │   ├── indexedDB.ts
-│   │   │   └── sync.ts
-│   │   ├── types/
-│   │   │   └── api.ts
-│   │   ├── App.tsx
-│   │   ├── main.tsx
-│   │   └── vite-env.d.ts
-│   ├── index.html
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── vite.config.ts
-│   └── tailwind.config.js
-├── data/
-│   ├── students.csv              # 50 synthesized students
-│   ├── enrollments.csv           # Student ↔ Course
-│   ├── timetable_export.json     # 1,304 real sessions (mylectures-2)
-│   └── timetable_metadata.json
-├── docs/
-│   ├── ARCHITECTURE.md           # This file (system design)
-│   ├── API_SPEC.md               # Full OpenAPI spec
-│   ├── DATA_DICTIONARY.md        # Entity definitions
-│   ├── ATTENDANCE_METHODS.md     # Code vs QR vs Geofence analysis
-│   ├── FEASIBILITY_ANALYSIS.md   # SAMS vs Transcript vs Course Reg
-│   ├── MUST_SYSTEMS_INTEGRATION.md # MUST ecosystem map
-│   └── DEPLOYMENT.md             # Docker, env, MUST server
-├── docker-compose.yml
-├── README.md
-└── .github/workflows/ci.yml
+│   ├── public/
+│   │   ├── *.html             Login, student, lecturer and registrar pages
+│   │   ├── css/               Shared styles
+│   │   ├── js/                Page behavior, API calls and offline storage
+│   │   ├── sw.js              Service worker and application-shell cache
+│   │   └── manifest.webmanifest
+│   ├── scripts/               Frontend checks
+│   └── tests/                 Browser workflow tests
+├── data/                      Versioned academic reference data
+├── postman/                   API collection and local environment template
+├── deploy/native/             VPS services, Nginx and backup utilities
+├── docs/                      Proposal, API, design and operating documentation
+├── .github/workflows/         Automated verification
+├── docker-compose.yml         Optional container setup
+└── README.md                  Setup, workflows and project guide
 ```
 
----
+Edit application code in `backend/src/` and `frontend/public/`. Dependency folders and old local build output are not source folders. Private credentials, environment secrets, student import files and database backups stay outside version control.
 
-## 10. Development Setup
+## Group B folder allocation
 
-### 10.1 Prerequisites
-- Node 20+
-- PostgreSQL 15+ (local or Docker)
-- Redis 7+ (for check-in codes, optional for dev)
+The following allocation gives each member a starting area for code review, improvements and explanation. It is flexible: folders are shared, members can assist one another, and an API change may need a corresponding page or test change. These are working areas, not exclusive ownership or team-lead appointments.
 
-### 10.2 Quick Start
+| Member | Main folders | Starting focus |
+| --- | --- | --- |
+| Wokwaba Charles | `backend/src/controllers/`, `backend/src/middleware/` | Login, authentication and access checks; coordinate changes to frontend login behavior. |
+| Kanyesigye Brian | `data/`, `backend/prisma/` | Faculties, programmes, student placement and database relationships; coordinate catalogue-service changes. |
+| Kwesiga Lewis | `backend/src/services/`, `frontend/public/` | Timetable processing and its page, especially `timetable.js`. |
+| Akatuwijuka Annibow | `frontend/public/` | Student pages, check-in feedback and shared styling where needed. |
+| Natweta Cyril | `backend/src/services/`, `backend/src/routes/` | Attendance processing, check-in validation and attendance rules. |
+| Wawangula Generous | `frontend/public/` | Lecturer pages, class controls and register display, especially `examiner.html` and `js/examiner.js`. |
+| Mugendawala Mark Paul | `backend/src/config/`, `deploy/native/`, `.github/workflows/` | API integration, environment configuration, hosting and recovery; coordinate changes to `app.js` and `server.js`. |
+| Katto Andrew | `frontend/public/js/`, `backend/src/services/` | Offline storage and synchronization; coordinate service-worker changes. |
+| Nabaweesi Patricia Mirembe | `backend/src/services/`, `docs/` | Attendance summaries, report calculations and PDF output. |
+| Matovu Edwine Levi | `backend/src/routes/`, `frontend/public/` | Account-management endpoints and pages, including password changes and resets. |
+| Amen Joel Osuta | `postman/`, `backend/tests/`, `frontend/tests/`, `docs/` | API examples, invalid-request checks, workflow testing and documentation accuracy. |
+
+Keep one clear task in each PR and describe what changed, why and how it was checked. Before editing shared files such as `schema.prisma`, `styles.css`, route files or the main API test file, coordinate with anyone already changing them. Include related tests with the feature rather than leaving verification entirely to one member. A member's PR should record their actual changes to the shared baseline.
+
+## Run locally
+
+Use Node.js 22+ and a running PostgreSQL database. PostgreSQL 16 is the hosted CI and VPS baseline. Create a dedicated local database/user, then run these commands from the repository root:
+
 ```bash
-# Clone
-git clone https://github.com/mugmarp/sams-attendance
-cd sams-attendance
-
-# Backend
-cd backend
-cp .env.example .env  # Edit DATABASE_URL
-npm install
-npx prisma migrate dev --name init
-npm run seed
-npm run dev           # http://localhost:3000
-
-# Frontend (new terminal)
-cd frontend
-npm install
-npm run dev           # http://localhost:5173
+npm ci --prefix backend
+cp backend/.env.example backend/.env
 ```
 
-### 10.3 Environment Variables
+Edit `backend/.env` before continuing:
+
+- Set `DATABASE_URL` to your local database.
+- Generate two different JWT secrets, each at least 32 characters. Run `openssl rand -hex 32` separately for each value.
+- For the default local setup, use `PORT=3000`, `FRONTEND_URL=http://localhost:3000` and `TRUST_PROXY=0`.
+
 ```bash
-# backend/.env
-DATABASE_URL="postgresql://user:pass@localhost:5432/sams?schema=public"
-JWT_SECRET="your-super-secret-key-min-32-chars"
-JWT_REFRESH_SECRET="different-super-secret-key-min-32-chars"
-JWT_ACCESS_TTL="15m"
-JWT_REFRESH_TTL="7d"
-PORT=3000
-NODE_ENV=development
-FRONTEND_URL="http://localhost:5173"
-REDIS_URL="redis://localhost:6379"  # optional
+npm run prisma:generate --prefix backend
+npm run prisma:deploy --prefix backend
+npm run seed --prefix backend
+npm start --prefix backend
 ```
 
----
+Open [localhost:3000](http://localhost:3000). `npm run dev --prefix backend` enables Node's watch mode. Browser requests use relative `/api` URLs.
 
-## 11. Deployment
+**Seed only a disposable local/test database.** The seed creates fictional identities, enrollment, completed history and dated practice classes. It preserves existing passwords and marks rather than resetting them; it is not a production provisioning command. To repeat an attendance walkthrough after completing a class, create another class through the lecturer form.
 
-### 11.1 Docker Compose (Local/Prod)
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: sams
-      POSTGRES_USER: sams
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports: ["5432:5432"]
+### Local seed accounts
 
-  redis:
-    image: redis:7-alpine
-    ports: ["6379:6379"]
+| Role | Email | Password |
+| --- | --- | --- |
+| Lecturer | examiner@demo.sams.test | SamsDemo2026! |
+| Student | student@demo.sams.test | SamsDemo2026! |
+| Registrar | admin@demo.sams.test | SamsDemo2026! |
 
-  backend:
-    build: ./backend
-    ports: ["3000:3000"]
-    environment:
-      DATABASE_URL: postgresql://sams:${DB_PASSWORD}@postgres:5432/sams
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-    depends_on: [postgres, redis]
+`student2` through `student5` at `demo.sams.test` use the same local password. The seeded students share two BSE offerings with sample history and current/upcoming classes. These addresses are fictional.
 
-  frontend:
-    build: ./frontend
-    ports: ["5173:5173"]
-    depends_on: [backend]
+**Hosted passwords differ from this table.** They are generated privately and must be obtained from the authorized operator. New bootstrap/cohort imports generate unique 12-character passwords with two pronounceable groups and four digits, such as `Mavo4826Leri` (illustration only). Existing passwords are preserved; credential files contain the initial values and do not track later password changes. Never publish hosted credentials, private rosters, tokens or database dumps.
 
-volumes:
-  postgres_data:
+## Academic records and timetable
+
+Faculties, programmes, study years and timetable tracks are stored separately from course offerings and enrollment. The registrar uses dependent filters to work within an academic scope. A registration such as `2025/BSE/108/PS` supplies an intake year, programme token, sequence and sponsorship token; the sequence is not a class number. Academic placement is suggested, then confirmed, with recorded reasons for later changes.
+
+Institutional-looking emails can be derived using the supplied registration convention. A derived address is not evidence of mailbox ownership, and no automatic email delivery or verification is implemented.
+
+The timetable distinguishes **dated SAMS classes** from **weekly source references**. Staff review source versions, times, teaching dates and exceptions before applying future timetable entries. Refreshing a source does not automatically change classes or create attendance. The audit found calendar and scheduling defects in these paths; their correction is still pending.
+
+The five-programme sample covers BSE, BCS, BIT, BBA and BME. User-supplied records and synthetic records are distinguished; neither programme membership nor importing a student creates enrollment. Separate hosted practice offerings use `-P` course codes. The supplied group-member roster is not enrolled or marked by the practice walkthrough.
+
+[Academic structure and source decisions](docs/ACADEMIC_STRUCTURE_AND_DAY.md) · [Timetable and saved reports](docs/TIMETABLE_AND_RECORDS.md) · [Private import guide](docs/IMPORT_GUIDE.md)
+
+## Attendance rules
+
+- Offerings are separate by course code, academic year and semester. Only **completed** sessions within a student's effective enrollment dates enter the denominator.
+- PRESENT counts. LATE and EXCUSED follow the offering's versioned policy; the defaults count LATE and exclude EXCUSED.
+- Zero completed classes means **not assessed**. Exact counts determine whether a threshold is met before the displayed percentage is rounded.
+- The default 80% and the original proposal's 75% are configurable project examples, pending institutional policy confirmation.
+- A report describes the **attendance requirement**, not final examination clearance. Fees, coursework and other clearance decisions are outside the workflow.
+- Lecturer corrections retain the actor, previous/new status, reason and time. Saved report snapshots retain their original counting context.
+- A shared code cannot prove physical presence; lecturer oversight remains necessary.
+
+## Offline and account behavior
+
+A prior online visit/sign-in on HTTPS or localhost is required. The service worker caches the application shell; IndexedDB stores user-scoped snapshots, pending attempts and prepared registers. First-time offline sign-in and background synchronization while the app is closed are not supported.
+
+Students' pending attempts are retried with the app open after reconnection or through **Send pending attempts**. Expired/closed codes are rejected rather than accepted using a device timestamp. Failed attempts can be referred to the lecturer for review.
+
+Lecturers prepare a register online, save reasoned marks offline and synchronize later. Preparations last 72 hours. Changed records require explicit review; operation receipts prevent duplicate accepted changes. **Pending work is not accepted attendance.** Physical Android installation/update/offline acceptance remains pending.
+
+**My account** provides password changes and end-all-sign-ins. Registrars use **Accounts** for student/lecturer recovery and access changes, with a current password and reason. Reset passwords are shared privately and must be replaced before workspace access. The audit identified account-creation gaps, so the recovery checks should not be read as comprehensive protection of every provisioning path.
+
+Saved records remain on the browser after sign-out. Reconcile pending work before clearing site data, particularly on a shared device. Browser-cached views cannot learn of account revocation until reconnection.
+
+[Offline register contract](docs/OFFLINE_REGISTER.md) · [Account management](docs/ACCOUNT_MANAGEMENT.md)
+
+## Postman and verification
+
+Import `postman/SAMS.postman_collection.json` and `postman/SAMS.local.postman_environment.json`. The collection contains descriptions, response examples and assertions, and captures tokens and record IDs automatically.
+
+The verified regression baseline is **54 backend tests, 33 browser tests, 129 Postman requests and 337 assertions**. These results predate correction of the latest audit findings; passing them does not establish that the newly found cases are covered.
+
+Run mutating tests and the full collection only against a separate disposable database named `sams_test`. The backend API tests clear its fixtures. Never point them at the hosted pilot or real attendance records.
+
+```bash
+npm ci --prefix frontend
+npm run check --prefix backend
+npm run check --prefix frontend
+export DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/sams_test
+export NODE_ENV=test
+npm run prisma:deploy --prefix backend
+npm test --prefix backend
+npm run seed --prefix backend
+PORT=3001 FRONTEND_URL=http://localhost:3001 npm start --prefix backend
 ```
 
-### 11.2 MUST Server Deployment
-- Request test server from MUST ICT (PostgreSQL + Node 20 + HTTPS)
-- Or deploy to Render/Railway free tier for demo
-- Configure `FRONTEND_URL` and CORS for production domain
+With that test server running, use a second terminal:
 
----
-
-## 12. Testing Strategy
-
-| Layer | Tool | Coverage Target |
-|-------|------|-----------------|
-| Unit | Jest | 80% services, utils |
-| Integration | Supertest | All API endpoints |
-| E2E | Playwright | Critical flows (check-in, eligibility) |
-| Contract | Postman | Collection in `postman/` |
-
-### Postman Collection Structure
-```
-SAMS Attendance/
-├── Auth/
-│   ├── Login (Student)
-│   ├── Login (Examiner)
-│   ├── Login (Admin)
-│   └── Refresh Token
-├── Examiner/
-│   ├── Get Today's Sessions
-│   ├── Start Check-in
-│   ├── Stop Check-in
-│   └── View Live Attendance
-├── Student/
-│   ├── Submit Check-in Code
-│   ├── My Attendance Summary
-│   └── Upcoming Sessions
-└── Admin/
-    ├── Get Eligibility List
-    ├── Export Eligibility PDF
-    └── Manage Students/Courses
+```bash
+npx --yes newman@6.2.3 run postman/SAMS.postman_collection.json \
+  --env-var baseUrl=http://localhost:3001/api --bail
 ```
 
----
+For browser tests, install Chromium from the `frontend` directory with `npx playwright install chromium`, or select an installed Chrome/Chromium through `PLAYWRIGHT_EXECUTABLE_PATH`. Then run from the repository root:
 
-## 13. Team Workstreams (5 Weeks)
-
-| Week | Backend (2-3) | Frontend (2) | QA/Docs (1-2) | Deliverable |
-|------|---------------|--------------|---------------|-------------|
-| **1** | Prisma schema, auth, `/health`, Session CRUD, Seed script | Login, routing, Examiner session list | CI setup, Postman skeleton | Examiner sees today's sessions |
-| **2** | Code gen/rotation/validation, Attendance recording, Offline queue API | Examiner "Start Check-in" → code display; Student code input | Unit tests, integration tests | **Code check-in works end-to-end** |
-| **3** | Eligibility query, PDF export (Appendix D), Admin endpoints | Student summary, Admin eligibility list + PDF | E2E tests, Postman collection complete | Exam eligibility report |
-| **4** | Polish, rate limiting, error handling, deploy | PWA manifest, responsive, offline indicator | Demo rehearsal, docs final | **Presentation ready** |
-| **5** | Buffer, bug fixes, load test | Buffer, demo rehearsal | Final demo | **Live demo** |
-
----
-
-## 14. Risk Register
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| Examiner adoption fails | High | Critical | Code is simplest method; 2-min rotation; paper fallback |
-| Offline sync bugs | Medium | High | IndexedDB + Service Worker; test in airplane mode |
-| PDF format rejection | Low | Medium | Match Appendix D exactly; get Registrar preview |
-| No test server | Medium | Low | Deploy to Render free tier (public HTTPS) |
-| Scope creep | High | High | **Freeze scope Nov 17** — only MVP endpoints |
-
----
-
-## 15. References & Context
-
-| Document | Purpose |
-|----------|---------|
-| `docs/FEASIBILITY_ANALYSIS.md` | Why SAMS over Transcript/Course Reg |
-| `docs/MUST_SYSTEMS_INTEGRATION.md` | MUST ecosystem, data sources, import strategy |
-| `docs/ATTENDANCE_METHODS.md` | Code vs QR vs Geofence decision |
-| `data/timetable_export.json` | 1,304 real sessions from timetable.must.ac.ug |
-| `data/students.csv` | 50 synthesized students (realistic MUST format) |
-| `backend/prisma/seed.ts` | Loads all CSV/JSON into DB |
-
----
-
-## 16. For Codex / Coding Agent
-
-### Starting Context
-You are implementing **SAMS Attendance System** — a code-based attendance check-in for Mbarara University of Science and Technology (MUST). 
-
-**Key constraints:**
-- **No external APIs** — all data is local (CSV/JSON seeded)
-- **Code-based check-in** — 6-digit rotating codes, not QR/geofence
-- **Offline-first** — student PWA works in lecture halls without WiFi
-- **80% rule** — exam eligibility per MUST Examination Regulations §2.3
-- **5-week deadline** — MVP scope frozen, no feature creep
-
-### Implementation Priority
-1. **Week 1:** Backend auth + Prisma + Session CRUD + Seed data
-2. **Week 2:** Check-in code generation/validation + Attendance recording + Offline queue
-3. **Week 3:** Eligibility calculation + PDF export (Appendix D format)
-4. **Week 4:** Frontend polish + PWA + Postman collection + Deploy
-
-### Coding Standards
-- TypeScript strict mode
-- Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`
-- PR required for all changes (see `docs/GIT_PR_GUIDE.md`)
-- Tests for every service function
-- No console.log in production code
-
-### Data Files (Already in Repo)
-```
-data/
-├── students.csv              # 50 students, 11 programs
-├── enrollments.csv           # ~250 student-course mappings
-├── timetable_export.json     # 1,304 sessions (real MUST data)
-└── timetable_metadata.json   # Version info
+```bash
+SAMS_BASE_URL=http://localhost:3001 \
+SAMS_API_URL=http://localhost:3001 \
+SAMS_E2E_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/sams_test \
+  npm run test:e2e --prefix frontend
 ```
 
-### Seed Script Must Handle
-- Users (students + examiners + admins)
-- Courses (from timetable_export.json unique course codes)
-- Sessions (all 1,304 from timetable_export.json)
-- Enrollments (from enrollments.csv)
-- Floor resolution for rooms (port logic from mylectures-2)
+[Presentation runbook](docs/POSTMAN_DEMO.md) · [Executed checks and limits](docs/VALIDATION.md)
 
----
+## Hosting
 
-*Version 1.0 | 2026-11-10 | Ready for Codex implementation*
+The pilot runs on an **Azure Student Subscription virtual machine** with native systemd, Node.js, PostgreSQL and Nginx/HTTPS. The native procedure is preferred for the supplied small VPS. Docker Compose is an optional development/CI path, not the running VPS arrangement.
+
+Daily local backups and a verified manual off-VPS recovery copy exist. A recurring off-site backup destination and retention schedule still need arranging. Restore checks use a separate disposable database; they do not overwrite accepted attendance.
+
+[Native setup and recovery](docs/NATIVE_DEPLOYMENT.md) · [Measured deployment record](docs/SERVER_READINESS.md) · [Optional Compose setup](docs/DEPLOYMENT.md)
+
+## Reference application
+
+[mylectures-2](https://github.com/mugmarp/mylectures-2) and the earlier [mylectures](https://github.com/mugmarp/mylectures) are **Android timetable applications**. Their academic catalogue, timetable data, shared-group matching and duplicate-handling ideas informed SAMS. The inspected revisions and differences are recorded in [the source analysis](docs/ACADEMIC_STRUCTURE_AND_DAY.md#what-the-android-references-contributed).
+
+SAMS implements the relevant concepts in JavaScript for the web workflow. It does not port the Android interface or account-free programme selection into attendance authorization. Android wrapping is deferred until the web/PWA workflow is accepted; no Capacitor/TWA decision has been made.
+
+## Known issues and adoption boundaries
+
+The 12 November audit confirmed open issues in privileged-account creation, scheduling conflict checks, old-year timetable projection, new-offering academic validation and long-title PDF layout. These findings have **not yet been fixed**. The separate multibyte initial-password validation issue is fixed by the shared 8-character/72-byte password schema. Detailed reproduction evidence is kept locally rather than included in this public README.
+
+Keep the pilot to controlled project use while these defects are corrected and tested. Operational adoption also requires confirmed teaching assignments/dates/exceptions, approved attendance policy, physical-device acceptance, recurring external backups and measured workload testing. Institutional approval, SSO, automatic email recovery, fee/coursework clearance and HoD approval workflows are not implemented.
+
+The README is the current entry point. Older phase documents and verification totals are historical records; use the latest dated sections of [VALIDATION.md](docs/VALIDATION.md) and [SERVER_READINESS.md](docs/SERVER_READINESS.md) for executed evidence.

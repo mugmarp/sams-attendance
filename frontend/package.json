@@ -1,0 +1,17 @@
+{
+  "name": "sams-frontend",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Plain HTML, CSS and browser JavaScript served by Express",
+  "scripts": {
+    "start": "npm --prefix ../backend start",
+    "check": "node scripts/check-js.js",
+    "build": "npm run check",
+    "lint": "npm run check",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
+  }
+}
