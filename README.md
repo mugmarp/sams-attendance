@@ -123,7 +123,7 @@ Saved records remain on the browser after sign-out. Reconcile pending work befor
 
 Import `postman/SAMS.postman_collection.json` and `postman/SAMS.local.postman_environment.json`. The collection contains descriptions, response examples and assertions, and captures tokens and record IDs automatically.
 
-The verified regression baseline is **53 backend tests, 33 browser tests, 129 Postman requests and 337 assertions**. These results predate correction of the latest audit findings; passing them does not establish that the newly found cases are covered.
+The verified regression baseline is **54 backend tests, 33 browser tests, 129 Postman requests and 337 assertions**. These results predate correction of the latest audit findings; passing them does not establish that the newly found cases are covered.
 
 Run mutating tests and the full collection only against a separate disposable database named `sams_test`. The backend API tests clear its fixtures. Never point them at the hosted pilot or real attendance records.
 
@@ -173,7 +173,7 @@ SAMS implements the relevant concepts in JavaScript for the web workflow. It doe
 
 ## Known issues and adoption boundaries
 
-The 12 November audit confirmed open issues in privileged-account creation, multibyte password validation, scheduling conflict checks, old-year timetable projection, new-offering academic validation and long-title PDF layout. These findings have **not yet been fixed**. Detailed reproduction evidence is kept locally rather than included in this public README.
+The 12 November audit confirmed open issues in privileged-account creation, scheduling conflict checks, old-year timetable projection, new-offering academic validation and long-title PDF layout. These findings have **not yet been fixed**. The separate multibyte initial-password validation issue is fixed by the shared 8-character/72-byte password schema. Detailed reproduction evidence is kept locally rather than included in this public README.
 
 Keep the pilot to controlled project use while these defects are corrected and tested. Operational adoption also requires confirmed teaching assignments/dates/exceptions, approved attendance policy, physical-device acceptance, recurring external backups and measured workload testing. Institutional approval, SSO, automatic email recovery, fee/coursework clearance and HoD approval workflows are not implemented.
 

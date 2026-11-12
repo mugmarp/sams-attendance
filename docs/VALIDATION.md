@@ -84,3 +84,5 @@ The backend suite now passes **53 tests**. The initial-password generator uses c
 ### Password length revision
 
 The generator contract now requires 12 ASCII characters. A shared password schema accepts 8 characters, rejects 7, and checks the 72-byte UTF-8 boundary as well as character length. It is used for initial account creation, general import, password changes and registrar resets. Earlier 16-character results above describe the previous release.
+
+The revised local backend suite passed all **54 tests**, including API account lifecycle regressions and the new password-policy boundaries. Syntax checks passed. Live rollout verified all 51 rotated cohort passwords against bcrypt, rejected their previous values, checked sign-in version increments, preserved core record counts and confirmed a temporary-password login plus the HTTPS 8-character form minimum.
