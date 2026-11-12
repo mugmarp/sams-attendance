@@ -1,6 +1,6 @@
 # Live Postman presentation
 
-The collection is an assessed deliverable: it contains 106 documented requests, saved sample responses and executable success/failure assertions. Run it in order against a **disposable, seeded** database. It creates synthetic accounts, course offerings, enrollments and dated classes; it does not erase them. Every run uses unique identifiers so the collection can be repeated.
+The collection is an assessed deliverable: it contains 129 documented requests, saved sample responses and executable success/failure assertions. Run it in order against a **disposable, seeded** database. It creates synthetic accounts, course offerings, enrollments and dated classes; it does not erase them. Every run uses unique identifiers so the collection can be repeated.
 
 ## Setup
 
@@ -63,18 +63,22 @@ For repeatable assessment testing, use an isolated database named `sams_test`, s
 - Why does 3/4 pass a 75% policy and fail 80%? Who confirms that policy?
 - Why is attendance qualification different from overall examination clearance?
 - Why is a saved offline attempt pending rather than proof of attendance?
-- What limitations remain: shared codes, institutional approval, account recovery/revocation and public hosting?
+- What limitations remain: shared codes, institutional approval, open audit findings, physical-device checks and recurring external backups?
 
 ## Optional offline/reconciliation presentation
 
-The final 22 requests exercise the Phase 2 API after the original core workflow: prepare a roster, accept/replay a saved mark, reject changed content under one operation ID, generate a stale-version conflict, inspect a current REVIEW preparation and apply a deliberate linked correction. A separate class demonstrates an uncounted student claim, ownership/role restrictions, atomic lecturer approval, duplicate decision replay and stale-decision rejection.
+The Phase 2 extension adds 22 requests to exercise its API after the original core workflow: prepare a roster, accept/replay a saved mark, reject changed content under one operation ID, generate a stale-version conflict, inspect a current REVIEW preparation and apply a deliberate linked correction. A separate class demonstrates an uncounted student claim, ownership/role restrictions, atomic lecturer approval, duplicate decision replay and stale-decision rejection.
 
-Explain that a 200 response from /sync/operations means the batch was processed; each result has its own outcome. Demonstrate actual disconnected use in the browser: prepare, disconnect, save locally, reload, reconnect. Postman verifies the server contract but does not itself establish offline browser usability. The full collection currently passes 75 requests and 241 assertions on isolated synthetic data.
+Explain that a 200 response from /sync/operations means the batch was processed; each result has its own outcome. Demonstrate actual disconnected use in the browser: prepare, disconnect, save locally, reload, reconnect. Postman verifies the server contract but does not itself establish offline browser usability. The Phase 2 baseline passed 75 requests and 241 assertions on isolated synthetic data.
 
 ## Timetable and report extension
 
-The final 20 requests read the actual SWE2106/BSE II source, review a synthetic bounded teaching calendar in the disposable database, preview/apply/replay future classes, verify student scoping and role denial, freeze a report, change policy, verify frozen JSON/PDF stability, correct enrollment bounds and reject an impossible date. These are executable examples, not institutional teaching dates or approved policy. They intentionally modify the seeded offering/calendar in the disposable database; never run the collection against operational records. Current verified total: **95 requests, 279 assertions, zero failures**.
+The timetable extension adds 20 requests that read the SWE2106/BSE II source, review a synthetic bounded teaching calendar in the disposable database, preview/apply/replay future classes, verify student scoping and role denial, freeze a report, change policy, verify frozen JSON/PDF stability, correct enrollment bounds and reject an impossible date. These are executable examples, not institutional teaching dates or approved policy. They intentionally modify the seeded offering/calendar in the disposable database; never run the collection against operational records. Phase 3 baseline: **95 requests, 279 assertions, zero failures**.
 
 ## Academic structure extension
 
-The final eleven requests verify catalogue/registration preview, derived identity and registration sign-in, personal day scoping, protected student directory access, faculty/programme filtering, explicit repeat-year placement, identity mismatch rejection and bounded lists. Current verified total: **106 requests, 301 assertions**. Run only on the isolated seeded database.
+The academic structure extension adds eleven requests to verify catalogue/registration preview, derived identity and registration sign-in, personal day scoping, protected student directory access, faculty/programme filtering, explicit repeat-year placement, identity mismatch rejection and bounded lists. Academic structure baseline: **106 requests, 301 assertions**. Run only on the isolated seeded database.
+
+## Current account-management extension
+
+The latest 23 requests cover an isolated recovery account, protected management routes, registrar reauthentication/reasons, temporary-password restrictions, password changes, disable/reactivate behavior and revocation of access/refresh sign-ins. Current regression total: **129 requests and 337 assertions**. Earlier totals in the phase sections above are historical. The recent audit identified additional provisioning and validation defects; this collection has not yet been extended with those regression cases, and its success does not mean those defects are fixed.

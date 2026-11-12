@@ -1,8 +1,9 @@
 {
   "date": "2026-11-12",
   "branch": "migration/javascript-assignment",
-  "requests": 106,
-  "assertions": 301,
+  "requests": 129,
+  "assertions": 337,
   "failures": 0,
-  "database": "isolated PostgreSQL, synthetic records only"
+  "database": "isolated PostgreSQL, synthetic records only",
+  "note": "Regression baseline; latest audit findings remain open and need additional cases."
 }
