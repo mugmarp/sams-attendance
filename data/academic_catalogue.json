@@ -1,0 +1,179 @@
+{
+  "source": "https://github.com/mugmarp/mylectures-2/blob/62a6e27fbdd0b13b109fa86861207bf671852f59/app/src/main/java/com/lectures/features/onboarding/FacultyData.kt",
+  "officialBSE": "https://www.must.ac.ug/programme/bachelor-of-software-engineering/",
+  "registrationExample": "https://www.must.ac.ug/study-at-must/tuition-fees/",
+  "status": "REFERENCE_REQUIRES_REGISTRAR_REVIEW",
+  "faculties": [
+    {
+      "code": "medicine",
+      "name": "Faculty of Medicine",
+      "programmes": [
+        {
+          "code": "MBR",
+          "name": "MBChB (Medicine & Surgery)",
+          "durationYears": 5
+        },
+        {
+          "code": "PHA",
+          "name": "B. Pharmacy (BPharm)",
+          "durationYears": 4
+        },
+        {
+          "code": "BNS",
+          "name": "BSc Nursing Science",
+          "durationYears": 4
+        },
+        {
+          "code": "MLS",
+          "name": "BSc Medical Lab Science",
+          "durationYears": 4
+        },
+        {
+          "code": "BSP",
+          "name": "BSc Physiotherapy",
+          "durationYears": 4
+        },
+        {
+          "code": "PHS",
+          "name": "BSc Pharmaceutical Sciences",
+          "durationYears": 3
+        },
+        {
+          "code": "DCM",
+          "name": "Dip. Community HIV/AIDS Care & Mgt",
+          "durationYears": 2
+        },
+        {
+          "code": "DEM",
+          "name": "Dip. Emergency Medicine",
+          "durationYears": 2
+        },
+        {
+          "code": "DCAM",
+          "name": "Adv. Dip. Child & Adolescent Mental Health",
+          "durationYears": 2
+        }
+      ]
+    },
+    {
+      "code": "science",
+      "name": "Faculty of Science",
+      "programmes": [
+        {
+          "code": "BS",
+          "name": "BSc Education (BSc.Ed)",
+          "durationYears": 3
+        },
+        {
+          "code": "DLT",
+          "name": "Dip. Science Laboratory Technology",
+          "durationYears": 2
+        },
+        {
+          "code": "HEAP",
+          "name": "Higher Education Access Cert.",
+          "durationYears": 1
+        }
+      ]
+    },
+    {
+      "code": "fast",
+      "name": "Faculty of Applied Sciences and Technology",
+      "programmes": [
+        {
+          "code": "BME",
+          "name": "BEng Biomedical Engineering",
+          "durationYears": 4
+        },
+        {
+          "code": "EEE",
+          "name": "BEng Electrical & Electronics Engineering",
+          "durationYears": 4
+        },
+        {
+          "code": "PEEM",
+          "name": "BSc Petroleum Engineering & Env. Mgt",
+          "durationYears": 4
+        },
+        {
+          "code": "CVE",
+          "name": "BSc Civil Engineering",
+          "durationYears": 4
+        },
+        {
+          "code": "MIE",
+          "name": "BSc Mechanical & Industrial Engineering",
+          "durationYears": 4
+        }
+      ]
+    },
+    {
+      "code": "computing",
+      "name": "Faculty of Computing and Informatics",
+      "programmes": [
+        {
+          "code": "BCS",
+          "name": "BSc Computer Science",
+          "durationYears": 3
+        },
+        {
+          "code": "BIT",
+          "name": "B. Information Technology",
+          "durationYears": 3
+        },
+        {
+          "code": "BSE",
+          "name": "B.Sc. in Software Engineering",
+          "durationYears": 4
+        }
+      ]
+    },
+    {
+      "code": "business",
+      "name": "Faculty of Business and Management Sciences",
+      "programmes": [
+        {
+          "code": "BBA",
+          "name": "B. Business Administration",
+          "durationYears": 3
+        },
+        {
+          "code": "BSAF",
+          "name": "BSc Accounting & Finance",
+          "durationYears": 3
+        },
+        {
+          "code": "ECO",
+          "name": "BSc Economics",
+          "durationYears": 3
+        },
+        {
+          "code": "BPSM",
+          "name": "BSc Procurement & Supply Chain Mgt",
+          "durationYears": 3
+        }
+      ]
+    },
+    {
+      "code": "interdisciplinary",
+      "name": "Faculty of Interdisciplinary Studies",
+      "programmes": [
+        {
+          "code": "BSAL",
+          "name": "BSc Agriculture & Livelihoods",
+          "durationYears": 4
+        },
+        {
+          "code": "BGWH",
+          "name": "BSc Gender & Applied Women Health",
+          "durationYears": 3
+        },
+        {
+          "code": "BPCD",
+          "name": "BSc Planning & Community Dev.",
+          "durationYears": 3
+        }
+      ]
+    }
+  ]
+}

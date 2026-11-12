@@ -1,3 +1,14 @@
+import {
+  deduplicateReference,
+  confirmedInterval,
+} from "../services/student-day.js";
+import {
+  parseGroup,
+  matchesGroup,
+  ROMAN,
+  selectableGroup,
+} from "../services/catalogue.js";
+import { filters, courseWhere } from "../services/academic-filters.js";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../config/db.js";
@@ -79,15 +90,68 @@ router.get(
         })
       : await latestPublication();
     if (!publication) throw new NotFoundError("Source publication not found");
-    const all = publication.rows;
+    const all = publication.rows,
+      f = filters(req.query);
+    let group = input.group;
+    if (req.user.role === "STUDENT") {
+      const student = await prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: {
+          studyGroupKey: true,
+          programmeCode: true,
+          program: true,
+          year: true,
+        },
+      });
+      group =
+        student.studyGroupKey ||
+        ((student.programmeCode || student.program) && ROMAN[student.year]
+          ? `${student.programmeCode || student.program} ${ROMAN[student.year]}`
+          : null);
+      if (!group || !parseGroup(group) || !selectableGroup(parseGroup(group)))
+        return res.json({
+          publication: {
+            id: publication.id,
+            source: publication.source,
+            metadata: publication.metadata,
+            checkedAt: publication.checkedAt,
+          },
+          groups: [],
+          total: all.length,
+          matched: 0,
+          rows: [],
+          days: DAYS,
+          warnings: [
+            "Ask the registrar to confirm your programme, year and track",
+          ],
+          needsAcademicProfile: true,
+        });
+    }
+    const catalogueProgrammes = await prisma.programme.findMany({
+      where: {
+        ...(f.faculty ? { facultyCode: f.faculty } : {}),
+        ...(f.programme ? { code: f.programme } : {}),
+      },
+      select: { code: true },
+    });
+    const codes = new Set(catalogueProgrammes.map((p) => p.code));
+    const inScope = (raw) => {
+      const p = parseGroup(raw);
+      return (
+        (!f.faculty && !f.programme && !f.year) ||
+        (p && codes.has(p.programmeCode) && (!f.year || p.studyYear === f.year))
+      );
+    };
     const selected = all.filter(
       (row) =>
-        (!input.group ||
-          row.program_group === input.group ||
-          (Array.isArray(row.shared_with) &&
-            row.shared_with.includes(input.group))) &&
+        (!group || matchesGroup(row, group)) &&
+        [row.program_group, ...(row.shared_with || [])].some(inScope) &&
         (!input.course || row.course_code === input.course),
     );
+    const displayRows =
+      req.user.role === "STUDENT"
+        ? deduplicateReference(selected, group)
+        : selected;
     res.json({
       publication: {
         id: publication.id,
@@ -98,17 +162,31 @@ router.get(
         checkedAt: publication.checkedAt,
         importedAt: publication.importedAt,
       },
-      groups: [
-        ...new Set(
-          all.flatMap((r) => [
-            r.program_group,
-            ...(Array.isArray(r.shared_with) ? r.shared_with : []),
-          ]),
-        ),
-      ].sort(),
+      groups:
+        req.user.role === "STUDENT"
+          ? [group]
+          : [
+              ...new Set(
+                all.flatMap((r) => [
+                  r.program_group,
+                  ...(Array.isArray(r.shared_with) ? r.shared_with : []),
+                ]),
+              ),
+            ]
+              .filter((g) =>
+                req.user.role === "STUDENT" ? g === group : inScope(g),
+              )
+              .sort(),
       total: all.length,
-      matched: selected.length,
-      rows: selected.slice(0, 200).map((r) => ({ ...r, ...inspectRow(r) })),
+      matched: displayRows.length,
+      rawMatched: selected.length,
+      rows: displayRows
+        .slice(0, 200)
+        .map((r) => ({
+          ...r,
+          ...inspectRow(r),
+          operatorReviewed: confirmedInterval(r, group),
+        })),
       days: DAYS,
       warnings: [
         "Weekly reference entries are not completed attendance classes",
@@ -136,6 +214,8 @@ router.get(
           ? {}
           : { course: { examinerId: req.user.userId } }),
     };
+    const f = filters(req.query);
+    where.course = { AND: [where.course || {}, courseWhere(f)] };
     const rows = await prisma.session.findMany({
       where,
       include: {

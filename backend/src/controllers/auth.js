@@ -16,6 +16,12 @@ const publicUser = {
   regNo: true,
   program: true,
   year: true,
+  programmeCode: true,
+  studyGroupKey: true,
+  studyAcademicYear: true,
+  studySemester: true,
+  admissionYear: true,
+  sponsorshipCode: true,
 };
 function tokens(user) {
   const payload = { userId: user.id, email: user.email, role: user.role };
@@ -26,13 +32,15 @@ function tokens(user) {
 }
 export const login = asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({
-    where: { email: req.body.email.toLowerCase().trim() },
+    where: (req.body.identifier || req.body.email).includes("@")
+      ? { email: (req.body.identifier || req.body.email).toLowerCase().trim() }
+      : { regNo: req.body.identifier.trim().toUpperCase() },
   });
   if (
     !user?.isActive ||
     !(await bcrypt.compare(req.body.password, user.passwordHash))
   )
-    throw new UnauthorizedError("Invalid email or password");
+    throw new UnauthorizedError("Invalid sign-in or password");
   const safe = await prisma.user.findUniqueOrThrow({
     where: { id: user.id },
     select: publicUser,

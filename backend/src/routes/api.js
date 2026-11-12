@@ -1,3 +1,9 @@
+import catalogueRoutes from "./catalogue.js";
+import {
+  filters,
+  courseWhere,
+  studentWhere,
+} from "../services/academic-filters.js";
 import academicRoutes from "./academic.js";
 import { enrollmentCovers, enrollmentWhere } from "../services/academic.js";
 import syncRoutes from "./sync.js";
@@ -64,10 +70,15 @@ router.post(
   "/auth/login",
   authRateLimit,
   validate(
-    z.object({
-      email: z.string().email().max(254),
-      password: z.string().min(1).max(200),
-    }),
+    z
+      .object({
+        email: z.string().email().max(254).optional(),
+        identifier: z.string().trim().min(3).max(254).optional(),
+        password: z.string().min(1).max(200),
+      })
+      .refine((v) => !!(v.email || v.identifier), {
+        message: "Email or registration number is required",
+      }),
   ),
   login,
 );
@@ -81,6 +92,7 @@ router.get("/auth/me", authenticate, me);
 router.use(authenticate);
 router.use(syncRoutes);
 router.use(academicRoutes);
+router.use(catalogueRoutes);
 router.get(
   "/student/sessions/upcoming",
   requireStudent,
@@ -265,10 +277,16 @@ router.post(
 router.get(
   "/admin/courses",
   requireAdmin,
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    const f = filters(req.query);
     res.json(
       await prisma.course.findMany({
+        where: courseWhere(f),
+        take: f.limit,
+        skip: f.offset,
         include: {
+          programme: { include: { faculty: true } },
+          audiences: { include: { group: true } },
           examiner: { select: { name: true } },
           _count: { select: { enrollments: true, sessions: true } },
         },
@@ -280,16 +298,27 @@ router.get(
 router.get(
   "/admin/students",
   requireAdmin,
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    const f = filters(req.query);
     res.json(
       await prisma.user.findMany({
-        where: { role: "STUDENT" },
+        where: studentWhere(f),
+        take: f.limit,
+        skip: f.offset,
         select: {
           id: true,
           regNo: true,
           name: true,
           program: true,
           year: true,
+          programmeCode: true,
+          studyGroupKey: true,
+          studyAcademicYear: true,
+          studySemester: true,
+          admissionYear: true,
+          email: true,
+          dataOrigin: true,
+          programme: { include: { faculty: true } },
         },
         orderBy: { regNo: "asc" },
       }),

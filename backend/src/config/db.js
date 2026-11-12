@@ -1,4 +1,4 @@
-// backend/src/config/db.ts
+// Shared Prisma client for the JavaScript backend.
 import { PrismaClient } from "@prisma/client";
 export const prisma =
   global.prisma ??

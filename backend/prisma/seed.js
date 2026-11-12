@@ -1,3 +1,4 @@
+import { profileData } from "../src/services/catalogue.js";
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -60,7 +61,16 @@ export async function seedDemo() {
           passwordHash: hash,
           name,
           role: "STUDENT",
-          regNo: `DEMO/BSE/${String(index + 1).padStart(3, "0")}`,
+          ...profileData({
+            regNo: `2025/BSE/${991 + index}/PS`,
+            programmeCode: "BSE",
+            year: 2,
+            studyGroupKey: "BSE II",
+            studyAcademicYear: "2026/2027",
+            studySemester: 1,
+          }),
+          dataOrigin: "SYNTHETIC",
+          regNo: `2025/BSE/${991 + index}/PS`,
           program: "BSE",
           year: 2,
         },
@@ -71,7 +81,7 @@ export async function seedDemo() {
   const day = kampalaDay(now);
   for (const [code, title] of [
     ["SWE2106", "Internet Technologies and Web Design"],
-    ["SWE2103", "Database Systems"],
+    ["SWE2103", "Probability and Statistics"],
   ]) {
     const course = await prisma.course.upsert({
       where: {
@@ -86,6 +96,8 @@ export async function seedDemo() {
         code,
         title,
         program: "BSE",
+        programmeCode: "BSE",
+        audiences: { create: { groupKey: "BSE II" } },
         year: 2,
         semester: 1,
         academicYear: "2026/2027",

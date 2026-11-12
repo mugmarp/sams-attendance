@@ -23,7 +23,8 @@ sams_npm=${3:?existing npm CLI required}
 [[ -f $sams_npm ]] || { echo 'Supplied npm CLI not found'; exit 1; }
 sams_npm_source=$(dirname "$(dirname "$(readlink -f "$sams_npm")")")
 install -d /usr/local/lib/sams-node/lib/node_modules
-cp -a "$sams_npm_source" /usr/local/lib/sams-node/lib/node_modules/npm
+install -d /usr/local/lib/sams-node/lib/node_modules/npm
+cp -a "$sams_npm_source/." /usr/local/lib/sams-node/lib/node_modules/npm/
 chown -R root:root /usr/local/lib/sams-node
 sams_npm=/usr/local/lib/sams-node/lib/node_modules/npm/bin/npm-cli.js
 cd "$sams_release/backend"

@@ -18,7 +18,7 @@ try:
 finally:
     # Only this invocation's newly created, explicitly disposable database is dropped.
     pg('dropdb',restored)
-export=pathlib.Path('/home/myvps')/('SAMS-recovery-'+now.date().isoformat()+'.dump')
+export=pathlib.Path('/home/myvps')/('SAMS-recovery-'+now.strftime('%Y-%m-%d-%H%M%S')+'.dump')
 fd=os.open(export,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
 with os.fdopen(fd,'wb') as out,source.open('rb') as incoming: shutil.copyfileobj(incoming,out)
 owner=pwd.getpwnam('myvps');os.chown(export,owner.pw_uid,owner.pw_gid)

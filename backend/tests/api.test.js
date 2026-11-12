@@ -41,6 +41,7 @@ before(async () => {
   await db.timetableEntry.deleteMany();
   await db.academicTerm.deleteMany();
   await db.timetablePublication.deleteMany();
+  await db.courseAudience.deleteMany();
   await db.course.deleteMany();
   await db.user.deleteMany();
   const passwordHash = await bcrypt.hash("TestPassword2026!", 4);
@@ -67,6 +68,10 @@ before(async () => {
       role: "STUDENT",
       passwordHash,
       regNo: "TEST/001",
+      program: "BSE",
+      programmeCode: "BSE",
+      year: 2,
+      studyGroupKey: "BSE II",
     },
   });
   studentId = learner.id;
@@ -1497,4 +1502,238 @@ test("saved report snapshots retain old policy and counts after audited policy c
     .set(auth(examiner))
     .expect(200)
     .expect("Content-Type", /application\/pdf/);
+});
+
+test("catalogued registration derives the institutional email and supports password-protected registration sign-in", async () => {
+  const created = await request(app)
+    .post("/api/admin/users")
+    .set(auth(admin))
+    .send({
+      name: "Profile Verification Learner",
+      regNo: "2025/BSE/88001/PS",
+      password: "TestPassword2026!",
+      role: "STUDENT",
+      programmeCode: "BSE",
+      year: 2,
+      studyGroupKey: "BSE II",
+      studyAcademicYear: "2026/2027",
+      studySemester: 1,
+    });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.equal(created.body.email, "2025bse88001@sdt.must.ac.ug");
+  assert.equal("passwordHash" in created.body, false);
+  const signed = await request(app)
+    .post("/api/auth/login")
+    .send({ identifier: "2025/bse/88001/ps", password: "TestPassword2026!" });
+  assert.equal(signed.status, 200);
+  assert.equal(signed.body.user.studyGroupKey, "BSE II");
+  const denied = await request(app)
+    .post("/api/auth/login")
+    .send({ identifier: "2025/BSE/88001/PS", password: "wrong" });
+  assert.equal(denied.status, 401);
+  const day = await request(app)
+    .get("/api/student/day")
+    .set(auth(signed.body.accessToken));
+  assert.equal(day.status, 200);
+  assert.equal(day.body.profile.programme.faculty.code, "computing");
+  assert.equal(day.body.classes.length, 0);
+  assert.ok(day.body.weekly.events.length > 0);
+  assert.ok(
+    day.body.weekly.events.every(
+      (e) => e.kind === "REFERENCE" && !("activeCode" in e),
+    ),
+  );
+  const scoped = await request(app)
+    .get("/api/timetable/reference?group=BIT%20I")
+    .set(auth(signed.body.accessToken));
+  assert.equal(scoped.status, 200);
+  assert.deepEqual(scoped.body.groups, ["BSE II"]);
+});
+test("registrar programme filters include explicit shared audiences and exclude unrelated faculties", async () => {
+  const shared = await request(app)
+    .post("/api/admin/courses")
+    .set(auth(admin))
+    .send({
+      code: "SHARED8801",
+      title: "Shared teaching audience verification",
+      program: "BSE",
+      year: 2,
+      academicYear: "2026/2027",
+      semester: 1,
+      examinerId: (await db.course.findUnique({ where: { id: courseId } }))
+        .examinerId,
+      audienceGroups: ["BSE II", "BCS II"],
+    });
+  assert.equal(shared.status, 201, JSON.stringify(shared.body));
+  const computing = await request(app)
+    .get("/api/admin/courses?faculty=computing&programme=BCS")
+    .set(auth(admin));
+  assert.equal(computing.status, 200);
+  assert.ok(computing.body.some((c) => c.id === shared.body.id));
+  const business = await request(app)
+    .get("/api/admin/courses?faculty=business")
+    .set(auth(admin));
+  assert.equal(business.status, 200);
+  assert.equal(
+    business.body.some((c) => c.id === shared.body.id),
+    false,
+  );
+  const people = await request(app)
+    .get(
+      "/api/admin/students?faculty=computing&programme=BSE&year=2&search=88001",
+    )
+    .set(auth(admin));
+  assert.equal(people.status, 200);
+  assert.equal(people.body.length, 1);
+  assert.equal("passwordHash" in people.body[0], false);
+  assert.equal(
+    (
+      await request(app)
+        .get("/api/admin/students?programme=BSE")
+        .set(auth(student))
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await request(app).get("/api/admin/courses?limit=999").set(auth(admin)))
+      .status,
+    400,
+  );
+});
+test("placement correction preserves enrollment history and cannot silently change a registration programme", async () => {
+  const learner = await db.user.findUniqueOrThrow({
+    where: { regNo: "2025/BSE/88001/PS" },
+  });
+  const enrollment = await db.enrollment.create({
+    data: { studentId: learner.id, courseId },
+  });
+  const input = {
+    programmeCode: "BSE",
+    year: 1,
+    studyGroupKey: "BSE I",
+    studyAcademicYear: "2026/2027",
+    studySemester: 1,
+    reason: "Confirmed repeat-year placement for verification",
+  };
+  assert.equal(
+    (
+      await request(app)
+        .patch(`/api/admin/students/${learner.id}/profile`)
+        .set(auth(admin))
+        .send(input)
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await db.enrollment.findUnique({ where: { id: enrollment.id } })).courseId,
+    courseId,
+  );
+  assert.equal(
+    (await db.user.findUnique({ where: { id: learner.id } })).year,
+    1,
+  );
+  assert.equal(
+    (
+      await request(app)
+        .patch(`/api/admin/students/${learner.id}/profile`)
+        .set(auth(admin))
+        .send({ ...input, programmeCode: "BIT", studyGroupKey: "BIT I" })
+    ).status,
+    400,
+  );
+  const audit = await db.auditEvent.findFirst({
+    where: { entityId: learner.id, kind: "ACADEMIC_PROFILE_CHANGED" },
+  });
+  assert.ok(audit);
+  assert.equal("passwordHash" in audit.before, false);
+});
+test("registration preview distinguishes intake, sequence, sponsorship and programme duration", async () => {
+  const preview = await request(app)
+    .get(
+      "/api/admin/registration/preview?regNo=2026%2FBSE%2F080%2FPS&academicYear=2026%2F2027",
+    )
+    .set(auth(admin));
+  assert.equal(preview.status, 200);
+  assert.equal(preview.body.suggestedYear, 1);
+  assert.equal(preview.body.sequence, "080");
+  assert.equal(preview.body.programme.faculty.code, "computing");
+  assert.equal(
+    (
+      await request(app)
+        .get(
+          "/api/admin/registration/preview?regNo=bad&academicYear=2026%2F2027",
+        )
+        .set(auth(admin))
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await request(app)
+        .get(
+          "/api/admin/registration/preview?regNo=2025%2FBSE%2F108%2FPS&academicYear=2026%2F2027",
+        )
+        .set(auth(student))
+    ).status,
+    403,
+  );
+  const invalid = await request(app)
+    .post("/api/admin/users")
+    .set(auth(admin))
+    .send({
+      name: "Invalid programme verification",
+      regNo: "2025/BSE/88002/PS",
+      password: "TestPassword2026!",
+      role: "STUDENT",
+      programmeCode: "BIT",
+      year: 2,
+      studyGroupKey: "BIT II",
+    });
+  assert.equal(invalid.status, 400);
+});
+test("out-of-audience enrollment requires a recorded exception instead of silently mixing programmes", async () => {
+  const studentRes = await request(app)
+    .post("/api/admin/users")
+    .set(auth(admin))
+    .send({
+      name: "Audience exception learner",
+      regNo: "2025/BME/88003/PS",
+      password: "TestPassword2026!",
+      role: "STUDENT",
+      programmeCode: "BME",
+      year: 2,
+      studyGroupKey: "BME II",
+      studyAcademicYear: "2026/2027",
+      studySemester: 1,
+    });
+  assert.equal(studentRes.status, 201);
+  const shared = await db.course.findFirstOrThrow({
+      where: { code: "SHARED8801" },
+    }),
+    path = `/api/admin/courses/${shared.id}/enroll`;
+  assert.equal(
+    (
+      await request(app)
+        .post(path)
+        .set(auth(admin))
+        .send({ studentId: studentRes.body.id })
+    ).status,
+    400,
+  );
+  const allowed = await request(app)
+    .post(path)
+    .set(auth(admin))
+    .send({
+      studentId: studentRes.body.id,
+      overrideReason: "Verified approved cross-programme elective",
+    });
+  assert.equal(allowed.status, 201);
+  assert.ok(
+    await db.auditEvent.findFirst({
+      where: {
+        entityId: allowed.body.id,
+        reason: "Verified approved cross-programme elective",
+      },
+    }),
+  );
 });
