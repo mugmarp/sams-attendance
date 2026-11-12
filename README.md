@@ -87,6 +87,8 @@ Edit application code in `backend/src/` and `frontend/public/`. Dependency folde
 
 ## Group B folder allocation
 
+Start with the [team system guide](docs/TEAM_SYSTEM_GUIDE.md) for an explanation of the workflow, code, database, offline behavior and hosting.
+
 The following allocation gives each member a starting area for code review, improvements and explanation. It is flexible: folders are shared, members can assist one another, and an API change may need a corresponding page or test change. These are working areas, not exclusive ownership or team-lead appointments.
 
 | Member | Main folders | Starting focus |
