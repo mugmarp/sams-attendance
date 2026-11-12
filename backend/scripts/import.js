@@ -1,3 +1,4 @@
+import { passwordSchema } from "../src/utils/passwordPolicy.js";
 import { pathToFileURL } from "node:url";
 import "dotenv/config";
 import fs from "node:fs";
@@ -103,8 +104,7 @@ export function validateDataset(input) {
 }
 export async function importDataset(db, input, initialPassword) {
   const data = validateDataset(input);
-  if (initialPassword.length < 12)
-    throw new Error("IMPORT_INITIAL_PASSWORD must be at least 12 characters");
+  passwordSchema.parse(initialPassword);
   const passwordHash = await bcrypt.hash(initialPassword, 12);
   return db.$transaction(
     async (tx) => {
@@ -137,7 +137,8 @@ export async function importDataset(db, input, initialPassword) {
         if (
           existing &&
           (existing.examinerId !== users.get(examinerEmail) ||
-            existing.title !== c.title || existing.attendanceThreshold !== c.attendanceThreshold)
+            existing.title !== c.title ||
+            existing.attendanceThreshold !== c.attendanceThreshold)
         )
           throw new Error(`Course identity conflict: ${key}`);
         const saved =

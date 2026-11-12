@@ -80,3 +80,7 @@ After the exercise, the full dump restored to a separate disposable database wit
 ## Readable initial-password verification
 
 The backend suite now passes **53 tests**. The initial-password generator uses cryptographic randomInt and issues distinct 16-character ASCII credentials within each provisioning batch. Isolated CLI checks created three bootstrap accounts and two imported students, verified every generated password against its stored bcrypt hash, checked mode 0600 and absence from stdout, confirmed bootstrap rejects nonempty databases and confirmed repeat import preserves hashes/auth versions. A 10,000-password batch met the format/uniqueness contract. This change does not reset hosted passwords, lower the 12-character minimum or resolve the open audit findings in other credential-entry paths. Browser and Postman behavior are unchanged.
+
+### Password length revision
+
+The generator contract now requires 12 ASCII characters. A shared password schema accepts 8 characters, rejects 7, and checks the 72-byte UTF-8 boundary as well as character length. It is used for initial account creation, general import, password changes and registrar resets. Earlier 16-character results above describe the previous release.

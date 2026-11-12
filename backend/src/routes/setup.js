@@ -1,3 +1,4 @@
+import { passwordSchema } from "../utils/passwordPolicy.js";
 import {
   profileData,
   registration,
@@ -77,7 +78,7 @@ router.post(
       .object({
         email: z.string().trim().toLowerCase().email().max(254).optional(),
         name: z.string().trim().min(2).max(120),
-        password: z.string().min(12).max(72),
+        password: passwordSchema,
         role: z.enum(["STUDENT", "EXAMINER", "ADMIN"]),
         regNo: z.string().trim().min(3).max(60).optional(),
         program: z.string().trim().min(1).max(30).optional(),
@@ -157,7 +158,8 @@ router.post(
       }))
         ? [code + " " + ["", "I", "II", "III", "IV", "V", "VI"][data.year]]
         : []);
-    if(audienceGroups&&audienceGroups.length===0)throw new ValidationError('Select at least one programme-group audience');
+    if (audienceGroups && audienceGroups.length === 0)
+      throw new ValidationError("Select at least one programme-group audience");
     if (
       new Set(selected).size !== selected.length ||
       (await prisma.programmeGroup.count({
@@ -165,16 +167,14 @@ router.post(
       })) !== selected.length
     )
       throw new ValidationError("Choose existing distinct programme groups");
-    res
-      .status(201)
-      .json(
-        await prisma.course.create({
-          data: {
-            ...data,
-            audiences: { create: selected.map((groupKey) => ({ groupKey })) },
-          },
-        }),
-      );
+    res.status(201).json(
+      await prisma.course.create({
+        data: {
+          ...data,
+          audiences: { create: selected.map((groupKey) => ({ groupKey })) },
+        },
+      }),
+    );
   }),
 );
 router.post(

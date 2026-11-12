@@ -7,7 +7,7 @@ const vowels = "aeiou";
 const digits = "23456789";
 const pick = (alphabet) => alphabet[randomInt(alphabet.length)];
 function group() {
-  const value = Array.from({ length: 6 }, (_, index) =>
+  const value = Array.from({ length: 4 }, (_, index) =>
     pick(index % 2 === 0 ? consonants : vowels),
   ).join("");
   return value[0].toUpperCase() + value.slice(1);

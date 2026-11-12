@@ -1,3 +1,4 @@
+import { passwordSchema } from "../utils/passwordPolicy.js";
 import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -18,14 +19,7 @@ import { audit } from "../services/academic.js";
 
 const router = Router();
 const identity = z.string().cuid();
-export const passwordSchema = z
-  .string()
-  .min(12)
-  .max(72)
-  .refine(
-    (value) => Buffer.byteLength(value, "utf8") <= 72,
-    "Use a password of at most 72 UTF-8 bytes",
-  );
+export { passwordSchema } from "../utils/passwordPolicy.js";
 const currentPassword = z.string().min(1).max(200);
 const reason = z.string().trim().min(5).max(500);
 const limit = rateLimit({

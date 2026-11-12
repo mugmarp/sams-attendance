@@ -81,7 +81,7 @@ Open [localhost:3000](http://localhost:3000). `npm run dev --prefix backend` ena
 
 `student2` through `student5` at `demo.sams.test` use the same local password. The seeded students share two BSE offerings with sample history and current/upcoming classes. These addresses are fictional.
 
-**Hosted passwords differ from this table.** They are generated privately and must be obtained from the authorized operator. New bootstrap/cohort imports generate unique 16-character passwords with two pronounceable groups and four digits, such as `Mavonu4826Lerika` (illustration only). Existing passwords are preserved; credential files contain the initial values and do not track later password changes. Never publish hosted credentials, private rosters, tokens or database dumps.
+**Hosted passwords differ from this table.** They are generated privately and must be obtained from the authorized operator. New bootstrap/cohort imports generate unique 12-character passwords with two pronounceable groups and four digits, such as `Mavo4826Leri` (illustration only). Existing passwords are preserved; credential files contain the initial values and do not track later password changes. Never publish hosted credentials, private rosters, tokens or database dumps.
 
 ## Academic records and timetable
 
