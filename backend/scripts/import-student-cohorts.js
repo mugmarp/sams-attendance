@@ -1,6 +1,6 @@
 import "dotenv/config";
 import fs from "node:fs";
-import { randomBytes } from "node:crypto";
+import { readablePassword } from "../src/utils/readablePassword.js";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { PrismaClient } from "@prisma/client";
@@ -98,8 +98,9 @@ try {
     if (!actor) throw new Error("An active registrar account must exist");
     fd = fs.openSync(credentialPath, "wx", 0o600);
     const accounts = [];
+    const usedPasswords = new Set();
     for (const plan of planned.filter((p) => !p.existing)) {
-      const password = randomBytes(24).toString("base64url");
+      const password = readablePassword(usedPasswords);
       accounts.push({
         ...plan,
         password,

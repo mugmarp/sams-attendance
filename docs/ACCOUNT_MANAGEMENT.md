@@ -19,3 +19,9 @@ The v7 app-shell cache includes the account screens; the existing v3 IndexedDB s
 Local checks on 12 November 2026: **51 backend tests, 33 browser tests, 129 Postman requests and 337 assertions** pass. Cases cover password validation, both token types, disabled/reactivated accounts, mandatory password change, protected registrar accounts, credential-free bounded lists, concurrent changes, private audit content and pending-attendance preservation. The complete mutating collection runs only against a disposable database.
 
 The local preview migration followed a recovery database copy and preserved User 7, Course 2, Enrollment 10, Session 14, Attendance 50 and AttendanceChange 0. Live deployment evidence is recorded separately in SERVER_READINESS.md.
+
+## Readable initial passwords
+
+The operational bootstrap and student-cohort importer generate 16-character ASCII initial passwords: two six-letter pronounceable groups around four digits. For example, `Mavonu4826Lerika` illustrates the format and is not a working account password. Characters are sampled with Node crypto.randomInt; no name, registration number, date or sequence determines a password. A shared set prevents duplicates within each import/bootstrap batch. The pattern provides approximately 50 bits of random choice; it is intended for the controlled pilot and does not replace an institutional credential policy or MFA.
+
+Generation does not lower the existing 12-character minimum or change current passwords. Bootstrap still requires an empty User table, and repeated cohort imports preserve existing hashes. Credential output stays mode 0600 and exclusive-create; passwords are not logged. A credential file records initial passwords only, not subsequent user changes or resets. Changing the generator is not a bulk reset of hosted accounts.

@@ -81,7 +81,7 @@ Open [localhost:3000](http://localhost:3000). `npm run dev --prefix backend` ena
 
 `student2` through `student5` at `demo.sams.test` use the same local password. The seeded students share two BSE offerings with sample history and current/upcoming classes. These addresses are fictional.
 
-**Hosted passwords differ from this table.** They are generated privately and must be obtained from the authorized operator. Never publish hosted credentials, private rosters, tokens or database dumps.
+**Hosted passwords differ from this table.** They are generated privately and must be obtained from the authorized operator. New bootstrap/cohort imports generate unique 16-character passwords with two pronounceable groups and four digits, such as `Mavonu4826Lerika` (illustration only). Existing passwords are preserved; credential files contain the initial values and do not track later password changes. Never publish hosted credentials, private rosters, tokens or database dumps.
 
 ## Academic records and timetable
 
@@ -123,7 +123,7 @@ Saved records remain on the browser after sign-out. Reconcile pending work befor
 
 Import `postman/SAMS.postman_collection.json` and `postman/SAMS.local.postman_environment.json`. The collection contains descriptions, response examples and assertions, and captures tokens and record IDs automatically.
 
-The verified regression baseline is **51 backend tests, 33 browser tests, 129 Postman requests and 337 assertions**. These results predate correction of the latest audit findings; passing them does not establish that the newly found cases are covered.
+The verified regression baseline is **53 backend tests, 33 browser tests, 129 Postman requests and 337 assertions**. These results predate correction of the latest audit findings; passing them does not establish that the newly found cases are covered.
 
 Run mutating tests and the full collection only against a separate disposable database named `sams_test`. The backend API tests clear its fixtures. Never point them at the hosted pilot or real attendance records.
 
