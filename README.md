@@ -101,7 +101,7 @@ The following allocation gives each member a starting area for code review, impr
 | Katto Andrew | `frontend/public/js/`, `backend/src/services/` | Offline storage and synchronization; coordinate service-worker changes. |
 | Nabaweesi Patricia Mirembe | `backend/src/services/`, `docs/` | Attendance summaries, report calculations and PDF output. |
 | Matovu Edwine Levi | `backend/src/routes/`, `frontend/public/` | Account-management endpoints and pages, including password changes and resets. |
-| Amen Joel Osuta | `postman/`, `backend/tests/`, `frontend/tests/`, `docs/` | API examples, invalid-request checks, workflow testing and documentation accuracy. |
+| Amen Joel Osuta | `postman/`, `backend/tests/`, `frontend/tests/` | API examples, invalid-request checks, workflow testing and documentation accuracy. |
 
 Keep one clear task in each PR and describe what changed, why and how it was checked. Before editing shared files such as `schema.prisma`, `styles.css`, route files or the main API test file, coordinate with anyone already changing them. Include related tests with the feature rather than leaving verification entirely to one member. A member's PR should record their actual changes to the shared baseline.
 
