@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SAMS · Timetable</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header id="site-header" hidden></header>
+    <div class="header-inner" id="offline" role="status" hidden>
+      You’re offline. Showing saved timetable data where available.
+    </div>
+    <main class="stack">
+      <p id="error" class="alert" role="alert" hidden></p>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <section class="card">
+        <h1>Timetable</h1>
+        <p id="calendar-summary"></p>
+        <p id="calendar-events" class="small muted"></p>
+        <p class="small muted">
+          Weekly reference patterns and dated attendance classes are shown
+          separately. Source changes need registrar review before changing class
+          registers.
+        </p>
+      </section>
+      <section class="card">
+        <div class="heading">
+          <h2>My dated classes</h2>
+          <div>
+            <label for="schedule-date">Date (Kampala)</label
+            ><input type="date" id="schedule-date" required />
+          </div>
+        </div>
+        <p id="live-status" class="small muted"></p>
+        <div id="dated-classes" class="grid"></div>
+      </section>
+      <section class="card">
+        <h2>Weekly reference timetable</h2>
+        <div class="grid">
+          <div>
+            <label for="program-group">Program group</label
+            ><select id="program-group">
+              <option value="">All groups</option>
+            </select>
+          </div>
+          <div>
+            <label for="reference-course">Course code (optional)</label
+            ><input
+              id="reference-course"
+              maxlength="40"
+              placeholder="Course code"
+            />
+          </div>
+          <button id="filter-reference">Show reference</button>
+        </div>
+        <p id="source-status" class="small muted"></p>
+        <p class="small muted">
+          Source time disagreements are displayed for review. These entries do
+          not establish that a class was held.
+        </p>
+        <div id="weekly-classes" class="grid"></div>
+      </section>
+      <section id="timetable-admin" class="stack" hidden>
+        <section class="card">
+          <h2>Source updates</h2>
+          <div class="actions">
+            <select id="repository-source" aria-label="Repository source">
+              <option value="mylectures">mylectures</option>
+              <option value="mylectures-2">mylectures-2</option></select
+            ><button id="check-source">Check latest source</button>
+          </div>
+          <p id="source-checks" class="small"></p>
+          <label for="publication">Source publication to review</label
+          ><select id="publication"></select>
+        </section>
+        <details class="card">
+          <summary>Review academic calendar</summary>
+          <p class="small muted">
+            Reference dates can include examinations. Verify actual teaching
+            dates and closures; graduation is not automatically a teaching
+            cancellation.
+          </p>
+          <form id="term-form">
+            <label for="existing-term">Academic term</label
+            ><select id="existing-term">
+              <option value="">Create from reference dates</option>
+            </select>
+            <div class="grid">
+              <div>
+                <label for="term-year">Academic year</label
+                ><input id="term-year" pattern="[0-9]{4}/[0-9]{4}" required />
+              </div>
+              <div>
+                <label for="term-semester">Semester</label
+                ><select id="term-semester">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                </select>
+              </div>
+              <div>
+                <label for="term-start">Semester starts</label
+                ><input type="date" id="term-start" required />
+              </div>
+              <div>
+                <label for="term-end">Semester ends</label
+                ><input type="date" id="term-end" required />
+              </div>
+            </div>
+            <label for="excluded-dates"
+              >Confirmed non-teaching dates: YYYY-MM-DD | reason, one per
+              line</label
+            ><textarea id="excluded-dates"></textarea
+            ><label for="calendar-source">Calendar source URL</label
+            ><input type="url" id="calendar-source" required /><label
+              for="calendar-reason"
+              >Calendar verification and exclusions checked</label
+            ><textarea
+              id="calendar-reason"
+              minlength="5"
+              maxlength="500"
+              required
+            ></textarea
+            ><label
+              ><input id="calendar-reviewed" type="checkbox" required /> I
+              reviewed these dates and teaching exclusions.</label
+            ><button class="primary">Save reviewed calendar</button>
+          </form>
+        </details>
+        <section class="card">
+          <h2>Preview dated classes</h2>
+          <p class="small muted">
+            Choose a source row and an existing offering. Verify times, staff
+            assignment and the actual teaching window. Nothing is written to
+            attendance registers until you apply the preview.
+          </p>
+          <form id="preview-form">
+            <label for="source-entry">Source row</label
+            ><select id="source-entry" required></select>
+            <p id="row-details" class="small"></p>
+            <div class="grid">
+              <div>
+                <label for="mapped-course"
+                  >SAMS course offering and assigned lecturer</label
+                ><select id="mapped-course" required></select>
+              </div>
+              <div>
+                <label for="mapped-term">Reviewed academic term</label
+                ><select id="mapped-term" required></select>
+              </div>
+              <div>
+                <label for="mapped-entry">Existing weekly rule</label
+                ><select id="mapped-entry">
+                  <option value="">Create new rule</option>
+                </select>
+              </div>
+              <div>
+                <label for="mapped-day">Weekday</label
+                ><select id="mapped-day" required></select>
+              </div>
+              <div>
+                <label for="mapped-start">Reviewed start time</label
+                ><input type="time" id="mapped-start" required />
+              </div>
+              <div>
+                <label for="mapped-end">Reviewed end time</label
+                ><input type="time" id="mapped-end" required />
+              </div>
+              <div>
+                <label for="mapped-room"
+                  >Venue (leave blank if unspecified)</label
+                ><input id="mapped-room" maxlength="120" />
+              </div>
+              <div>
+                <label for="mapped-type">Reviewed class type</label
+                ><select id="mapped-type" required>
+                  <option value="">Choose class type</option>
+                  <option>LECTURE</option>
+                  <option>TUTORIAL</option>
+                  <option>PRACTICAL</option>
+                  <option>LAB</option>
+                  <option>CLINICAL</option>
+                </select>
+              </div>
+              <div>
+                <label for="generate-from"
+                  >Generate from (future dates only)</label
+                ><input type="date" id="generate-from" required />
+              </div>
+              <div>
+                <label for="generate-to">Generate through</label
+                ><input type="date" id="generate-to" required />
+              </div>
+            </div>
+            <label for="mapping-reason"
+              >Review reason, including any source disagreements resolved</label
+            ><textarea
+              id="mapping-reason"
+              minlength="5"
+              maxlength="500"
+              required
+            ></textarea
+            ><label
+              ><input id="mapping-reviewed" type="checkbox" required /> I
+              checked the offering, lecturer, times and actual teaching
+              dates.</label
+            ><button class="primary">Preview changes</button>
+          </form>
+          <div id="preview-result"></div>
+          <button id="apply-preview" class="primary" hidden>
+            Apply reviewed changes
+          </button>
+        </section>
+      </section>
+    </main>
+    <footer>Mbarara University of Science and Technology · SAMS</footer>
+    <script type="module" src="/js/timetable.js"></script>
+  </body>
+</html>

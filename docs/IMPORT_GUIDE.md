@@ -33,3 +33,9 @@ Declare every referenced user and course in the file. Student users require uniq
 The importer checks schema, duplicates and references before writing, then applies everything in one transaction. Re-importing the same dataset does not duplicate sessions/enrollments or reset attendance/passwords. Existing user role/registration, course examiner/title/threshold and session course/dates must agree; conflicts roll back the import. Changes to established identities/schedules require deliberate operator review rather than silently rewriting attendance history.
 
 The original reference dataset has 52 student rows, 260 enrollment rows and 1,304 weekly slots. Only 129 enrollment rows match its timetable course codes. It needs reconciliation, actual semester dates and review of shared/multiple-examiner classes before conversion. This prototype assigns one examiner per offering; split independently taught offerings deliberately if necessary. Do not turn weekly slots into attendance records for classes that have not actually been held.
+
+## Reviewed browser timetable workflow
+
+Prefer **Timetable setup** for ongoing weekly schedule changes: review the calendar/exceptions, select a versioned source row, map an existing offering and preview before applying. This workflow can preserve stable IDs while reviewing future changes; the older normalized CLI deliberately rejects schedule conflicts. Neither path creates completed attendance from a weekly slot. See [TIMETABLE_AND_RECORDS.md](TIMETABLE_AND_RECORDS.md).
+
+Legacy normalized CLI enrollments have no explicit date fields and remain unbounded; review effective dates in the registrar report before using historical totals. New browser/API enrollments default to today's Kampala date and support deliberate date correction. Never infer enrollment start from the date a historical import happened.

@@ -1,5 +1,13 @@
 import { api } from "./api.js";
-import { $, escape, init, showError, notice, currentDate } from "./common.js";
+import {
+  $,
+  escape,
+  init,
+  showError,
+  notice,
+  currentDate,
+  day,
+} from "./common.js";
 const lecturer = location.pathname.startsWith("/examiner/report/");
 const user = await init(lecturer ? ["EXAMINER", "ADMIN"] : ["ADMIN"]);
 const courseId =
@@ -31,7 +39,7 @@ function renderReport() {
   $("#course-title").textContent =
     `${report.course.code} · ${report.course.title} · ${report.course.academicYear}, Semester ${report.course.semester}`;
   $("#stats").innerHTML = [
-    ["Enrolled", students.length],
+    ["Enrollment records", students.length],
     ["Attendance requirement met", students.filter((s) => s.eligible).length],
     ["Not assessed", students.filter((s) => s.attendancePct === null).length],
   ]
@@ -48,6 +56,28 @@ function renderReport() {
     .join("");
   $("#empty-report").hidden = visible.length > 0;
   $("#report-rules").textContent = report.rules;
+  $("#report-context").textContent =
+    `Live report · policy v${report.course.policyVersion} · ${report.pendingClaims || 0} pending review requests. Each student's denominator follows recorded enrollment dates.`;
+  if (user.role === "ADMIN") {
+    $("#policy-controls").hidden = false;
+    $("#enrollment-controls").hidden = false;
+    if (!$("#policy-form").contains(document.activeElement)) {
+      $("#policy-threshold").value = report.course.attendanceThreshold;
+      $("#policy-late").checked = report.course.countLate;
+      $("#policy-excused").checked = report.course.countExcused;
+    }
+    const selected = $("#dated-enrollment").value;
+    $("#dated-enrollment").innerHTML =
+      '<option value="">Choose an enrollment</option>' +
+      students
+        .map(
+          (s) =>
+            `<option value="${s.enrollmentId}">${escape(s.name)} · ${escape(s.regNo)}${s.effectiveUntil ? " · withdrawal recorded" : ""}</option>`,
+        )
+        .join("");
+    if (students.some((s) => s.enrollmentId === selected))
+      $("#dated-enrollment").value = selected;
+  }
 }
 async function loadReport() {
   try {
@@ -80,6 +110,71 @@ if (user) {
     await loadReport();
     setInterval(loadReport, 15000);
     $("#filter").onchange = () => report && renderReport();
+    await loadSnapshots();
+    $("#snapshot-form").onsubmit = async (event) => {
+      event.preventDefault();
+      try {
+        await api(`/reports/courses/${courseId}/snapshots`, {
+          method: "POST",
+          body: {
+            reason: $("#snapshot-reason").value,
+            reviewedPendingWork: true,
+            basePolicyVersion: report.course.policyVersion,
+          },
+        });
+        notice("Report snapshot saved with its current policy and counts.");
+        await loadSnapshots();
+      } catch (error) {
+        showError(error);
+      }
+    };
+    if (user.role === "ADMIN") {
+      $("#policy-form").onsubmit = async (event) => {
+        event.preventDefault();
+        try {
+          await api(`/admin/courses/${courseId}/policy`, {
+            method: "PATCH",
+            body: {
+              attendanceThreshold: Number($("#policy-threshold").value),
+              countLate: $("#policy-late").checked,
+              countExcused: $("#policy-excused").checked,
+              basePolicyVersion: report.course.policyVersion,
+              reason: $("#policy-reason").value,
+            },
+          });
+          notice(
+            "Configured policy updated; existing snapshots are unchanged.",
+          );
+          await loadReport();
+        } catch (error) {
+          showError(error);
+        }
+      };
+      $("#dated-enrollment").onchange = () => {
+        const row = report.students.find(
+          (s) => s.enrollmentId === $("#dated-enrollment").value,
+        );
+        $("#effective-from").value = row?.effectiveFrom?.slice(0, 10) || "";
+        $("#effective-until").value = row?.effectiveUntil?.slice(0, 10) || "";
+      };
+      $("#enrollment-dates-form").onsubmit = async (event) => {
+        event.preventDefault();
+        try {
+          await api(`/admin/enrollments/${$("#dated-enrollment").value}`, {
+            method: "PATCH",
+            body: {
+              effectiveFrom: $("#effective-from").value || null,
+              effectiveUntil: $("#effective-until").value || null,
+              reason: $("#enrollment-reason").value,
+            },
+          });
+          notice("Enrollment dates saved; historical attendance was retained.");
+          await loadReport();
+        } catch (error) {
+          showError(error);
+        }
+      };
+    }
     $("#download").onclick = async () => {
       const button = $("#download");
       button.disabled = true;
@@ -136,6 +231,7 @@ async function saveSetup(form, path, body, text) {
   try {
     await api(path, { method: "POST", body });
     form.reset();
+    if (form.id === "enrollment-form") $("#enroll-from").value = day();
     notice(text);
     await Promise.all([loadCourses(), setupOptions()]);
   } catch (error) {
@@ -189,13 +285,47 @@ if (user && !courseId) {
       "Course offering created.",
     );
   };
+  $("#enroll-from").value = day();
   $("#enrollment-form").onsubmit = (event) => {
     event.preventDefault();
     saveSetup(
       event.currentTarget,
       "/admin/courses/" + $("#enroll-course").value + "/enroll",
-      { studentId: $("#enroll-student").value },
+      {
+        studentId: $("#enroll-student").value,
+        effectiveFrom: $("#enroll-from").value,
+      },
       "Student enrolled in the course.",
     );
   };
+}
+
+async function loadSnapshots() {
+  const list = await api(`/reports/courses/${courseId}/snapshots`);
+  $("#report-snapshots").innerHTML = list.length
+    ? list
+        .map(
+          (s) =>
+            `<p><strong>${escape(new Date(s.createdAt).toLocaleString("en-GB", { timeZone: "Africa/Kampala" }))}</strong> · ${escape(s.reason)} <button data-snapshot="${s.id}">Download saved PDF</button></p>`,
+        )
+        .join("")
+    : "<p>No saved report snapshots.</p>";
+  for (const button of $("#report-snapshots").querySelectorAll(
+    "[data-snapshot]",
+  ))
+    button.onclick = async () => {
+      try {
+        const blob = await api(
+          `/reports/snapshots/${button.dataset.snapshot}/pdf`,
+        );
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `attendance-snapshot-${button.dataset.snapshot}.pdf`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (error) {
+        showError(error);
+      }
+    };
 }

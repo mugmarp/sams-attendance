@@ -150,6 +150,11 @@
             <summary>Enroll a student</summary>
             <form id="enrollment-form">
               <div>
+                <label for="enroll-from"
+                  >Attendance effective from (Kampala date)</label
+                ><input id="enroll-from" type="date" required />
+              </div>
+              <div>
                 <label for="enroll-course">Course offering</label
                 ><select id="enroll-course" required></select>
               </div>
@@ -197,6 +202,79 @@
             </table>
           </div>
           <p id="empty-report" hidden>No students match this filter.</p>
+          <p id="report-context" class="small muted"></p>
+          <details id="policy-controls" class="card" hidden>
+            <summary>Review configured attendance rule</summary>
+            <form id="policy-form">
+              <label for="policy-threshold"
+                >Required attendance percentage</label
+              ><input
+                id="policy-threshold"
+                type="number"
+                min="1"
+                max="100"
+                required
+              /><label
+                ><input id="policy-late" type="checkbox" /> Count LATE as
+                attended</label
+              ><label
+                ><input id="policy-excused" type="checkbox" /> Count EXCUSED as
+                attended</label
+              ><label for="policy-reason"
+                >Reason and policy source checked</label
+              ><textarea
+                id="policy-reason"
+                minlength="5"
+                maxlength="500"
+                required
+              ></textarea
+              ><button class="primary">Save new policy version</button>
+            </form>
+          </details>
+          <details id="enrollment-controls" class="card" hidden>
+            <summary>Review enrollment dates or withdrawal</summary>
+            <form id="enrollment-dates-form">
+              <label for="dated-enrollment">Student enrollment</label
+              ><select id="dated-enrollment" required></select
+              ><label for="effective-from"
+                >Attendance begins (blank means unrecorded legacy date)</label
+              ><input id="effective-from" type="date" /><label
+                for="effective-until"
+                >Withdrawal effective on (this date is excluded)</label
+              ><input id="effective-until" type="date" /><label
+                for="enrollment-reason"
+                >Reason for date change</label
+              ><textarea
+                id="enrollment-reason"
+                minlength="5"
+                maxlength="500"
+                required
+              ></textarea
+              ><button class="primary">Save enrollment dates</button>
+            </form>
+          </details>
+          <details class="card">
+            <summary>Save an attendance report snapshot</summary>
+            <p class="small muted">
+              The live report can change. A saved snapshot retains its policy,
+              enrollment dates and counts as issued. It is not final examination
+              clearance.
+            </p>
+            <form id="snapshot-form">
+              <label for="snapshot-reason">Reason for this snapshot</label
+              ><textarea
+                id="snapshot-reason"
+                minlength="5"
+                maxlength="500"
+                required
+              ></textarea
+              ><label
+                ><input id="snapshot-reviewed" type="checkbox" required /> I
+                reviewed pending requests and device synchronization.</label
+              ><button class="primary">Save report snapshot</button>
+            </form>
+            <div id="report-snapshots"></div>
+          </details>
         </section>
         <p id="report-rules" class="small muted"></p>
       </section>

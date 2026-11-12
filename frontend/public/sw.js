@@ -1,10 +1,11 @@
-const CACHE = "sams-workspace-v4";
+const CACHE = "sams-workspace-v5";
 const FILES = [
   "/login",
   "/login.html",
   "/examiner.html",
   "/student.html",
   "/admin.html",
+  "/timetable.html",
   "/css/styles.css",
   "/icon.svg",
   "/manifest.webmanifest",
@@ -14,6 +15,7 @@ const FILES = [
     "login",
     "offline",
     "register-offline",
+    "timetable",
     "examiner",
     "student",
     "admin",
@@ -50,15 +52,18 @@ self.addEventListener("fetch", (event) => {
   )
     return;
   if (event.request.mode === "navigate") {
-    const page = url.pathname.startsWith("/examiner/report/")
-      ? "/admin.html"
-      : url.pathname.startsWith("/examiner")
-        ? "/examiner.html"
-        : url.pathname.startsWith("/student")
-          ? "/student.html"
-          : url.pathname.startsWith("/admin")
-            ? "/admin.html"
-            : "/login.html";
+    const page =
+      url.pathname === "/timetable" || url.pathname === "/admin/timetable"
+        ? "/timetable.html"
+        : url.pathname.startsWith("/examiner/report/")
+          ? "/admin.html"
+          : url.pathname.startsWith("/examiner")
+            ? "/examiner.html"
+            : url.pathname.startsWith("/student")
+              ? "/student.html"
+              : url.pathname.startsWith("/admin")
+                ? "/admin.html"
+                : "/login.html";
     event.respondWith(
       fetch(event.request).catch(() =>
         caches.match(page, { ignoreVary: true }),

@@ -13,7 +13,9 @@ async function loadClasses() {
   try {
     const result = await studentData(user.id, "/student/sessions/upcoming");
     classes = result.data;
-    const selected = $("#session").value;
+    const selected =
+      $("#session").value ||
+      new URL(location.href).searchParams.get("sessionId");
     $("#session").innerHTML =
       '<option value="">Choose a class</option>' +
       classes

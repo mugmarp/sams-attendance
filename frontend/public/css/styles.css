@@ -627,3 +627,11 @@ body.workspace a {
     margin: 12px 16px;
   }
 }
+
+input[type="checkbox"] {
+  display: inline-block;
+  width: auto;
+  padding: 0;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}

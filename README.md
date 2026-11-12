@@ -8,7 +8,7 @@ SAMS replaces a paper class register with lecturer-controlled code check-in. An 
 
 This branch follows the assignment and the useful parts of the two original proposals. It uses **plain HTML pages, authored CSS and browser JavaScript**, served by a **JavaScript Express server** connected to **PostgreSQL**. There is no TypeScript compilation, React, JSX, Vite or Tailwind application. Prisma's JavaScript client is retained for database transactions and migrations.
 
-[Current proposal](docs/PROPOSAL.md) · [Proposal decisions](docs/PROPOSAL_ALIGNMENT.md) · [API reference](docs/API_SPEC.md) · [Postman demonstration](docs/POSTMAN_DEMO.md) · [Verification](docs/VALIDATION.md) · [Offline registers and review](docs/OFFLINE_REGISTER.md)
+[Current proposal](docs/PROPOSAL.md) · [Proposal decisions](docs/PROPOSAL_ALIGNMENT.md) · [API reference](docs/API_SPEC.md) · [Postman demonstration](docs/POSTMAN_DEMO.md) · [Verification](docs/VALIDATION.md) · [Offline registers and review](docs/OFFLINE_REGISTER.md) · [Timetable and saved reports](docs/TIMETABLE_AND_RECORDS.md)
 
 ![SAMS architecture](docs/architecture.svg)
 
@@ -56,7 +56,7 @@ Additional students: student2 through student5 at demo.sams.test, with the same 
 ## Rules and boundaries
 
 - Course offerings are separate by code, academic year and semester. Only completed classes count; future/scheduled and cancelled classes do not reduce attendance.
-- PRESENT and LATE count as attended; ABSENT, EXCUSED and missing records do not. Zero completed classes means **not assessed**.
+- PRESENT counts as attended; LATE and EXCUSED follow the offering’s versioned policy (defaults: LATE counts, EXCUSED does not). Only classes within each student’s effective enrollment dates count. Zero completed classes means **not assessed**.
 - Each offering has a configured threshold. The default 80% and the original proposal's 75% are demonstration choices pending policy confirmation. Exact counts determine qualification before display rounding.
 - The output means **attendance requirement met**, not final examination clearance. The application does not assess fees/coursework and does not claim an official Appendix D format.
 - Check-in requires enrollment and a class in progress. A ten-minute window is capped at class end; its current code changes every two minutes. Old/closed codes cannot create attendance.
@@ -101,3 +101,7 @@ The validated local JSON importer is available with `IMPORT_INITIAL_PASSWORD=...
 See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for HTTPS, proxy settings, backup and operational limits. Public hosting, institutional approval, SSO, account recovery/revocation, fee/coursework integration, HoD excuse approval and bulk marking are not claimed. Individual-member contribution work is excluded from this task as requested.
 
 The interface uses server-synchronized Kampala dates and normal attendance terminology. Account fixtures and historical records above are for local testing; live class records retain the dates entered by the lecturer.
+
+## Timetable and record review
+
+The timetable shows actual authorized dated classes with visible-page refresh every 15 seconds and a separate filterable weekly reference. Administrators can check the approved source repositories, review teaching dates/exclusions and preview changes before applying future classes. Source updates remain staged; completed attendance is protected. Enrollment dates, versioned counting policy and saved report snapshots preserve the context behind totals. See [the workflow and calendar evidence](docs/TIMETABLE_AND_RECORDS.md). Public hosting at **https://sams.tirallab.page** remains the next operational phase.

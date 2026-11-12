@@ -40,6 +40,8 @@ Acceptance: disable the network, mark a prepared class, reload, reconnect and ve
 
 ## Phase 3 — Make real class setup and reports trustworthy
 
+Implemented on 11 November 2026: weekly reference/live dated views, versioned repository staging, reviewed future-class generation, enrollment bounds, configurable versioned counting, frozen report/PDF snapshots and lifecycle audit. See [TIMETABLE_AND_RECORDS.md](TIMETABLE_AND_RECORDS.md). Institutional teaching dates/exceptions and policy still require approval; public hosting and physical-device pilot acceptance remain Phase 4. Verification: 35 backend tests, 25 browser tests and 95 Postman requests/279 assertions.
+
 - Add reviewed timetable import/preview for one offering, with explicit rejection of ambiguous times and unresolved lecturer mappings. Preserve source versions and stable SAMS identities.
 - Expand weekly timetable entries only using confirmed semester dates and teaching exceptions. Keep scheduled classes separate from completed classes.
 - Handle effective enrollment dates so late enrollment does not silently create earlier absences. Preserve historical attendance after withdrawal.

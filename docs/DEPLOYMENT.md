@@ -32,3 +32,11 @@ Executed checks and hosted Compose results are recorded in VALIDATION.md. Docker
 
 
 The Phase 2 database migration adds defaulted versions/isActive and preparation, receipt and claim tables without resetting attendance. Apply it before restarting the new application; take the normal database backup first for an operational database. Old clients can still use existing endpoints, but close/reopen tabs to use the prepared-register workflow. Disabling an account in the database blocks protected requests; no administrator account-lifecycle UI or recovery workflow is provided yet. See OFFLINE_REGISTER.md for limits and restart/replay verification.
+
+## Timetable phase deployment
+
+Apply additive migrations `202611110004_timetable_and_records` and `202611110005_timetable_keys` after taking a recovery snapshot. Do not reset or seed the operational database. Node 22+ is required; `undici` supplies a per-request EnvHttpProxyAgent only when HTTP(S)_PROXY configuration is present. Without proxy configuration normal fetch is used. No proxy secrets belong in Git.
+
+The application image includes `data/timetable_export.json`, `data/timetable_metadata.json` and `data/academic_calendar_reference.json`; it does not bundle the student CSV for public use. Keep these alongside the backend when deploying outside Docker. Source retrieval is bounded and failed refreshes retain previous publications. Repository checks run every 30 minutes only for activated providers and never publish class changes automatically. Outbound anonymous GitHub limits still apply.
+
+Shell cache v5 adds the timetable page/module and retains IndexedDB v3. Updates do not reset pending work. Actual teaching dates/exceptions and source mappings must be reviewed before applying future classes. The official calendar reference alone is not institutional teaching approval.

@@ -79,3 +79,28 @@ Examples and executable assertions are in `postman/SAMS.postman_collection.json`
 Typed operations are MARK, REVIEW_MARK, STUDENT_CLAIM and CLAIM_DECISION. Strict schemas reject malformed/extra fields; maximum 20 operations and the existing 16 KiB request-body limit apply. An HTTP 200 batch may include CONFLICT, NEEDS_REVIEW or DENIED outcomes. Replays of identical actor/UUID content return the original receipt with replayed=true. Reusing an ID for changed content conflicts. No device timestamp establishes attendance. See [OFFLINE_REGISTER.md](OFFLINE_REGISTER.md) for complete field definitions and executable Postman examples.
 
 Protected requests recheck the current database role and isActive flag rather than relying on an old JWT role claim. Disabled accounts cannot sign in or refresh. This does not provide a full account recovery or session revocation interface.
+
+## Timetable and record extensions
+
+All routes require current authenticated accounts. ADMIN is required for `/admin/*`. Civil dates use validated YYYY-MM-DD; reasons require 5–500 characters. See [workflow semantics](TIMETABLE_AND_RECORDS.md).
+
+| Method/path under `/api` | Contract |
+|---|---|
+| GET `/timetable/calendar` | Sourced calendar reference and reviewed terms; non-admins receive safe term fields |
+| GET `/timetable/reference?group=&course=&publicationId=` | Staged weekly reference, provenance, quality flags, max 200 matches |
+| GET `/timetable/sessions?from=&to=` | Authorized dated classes, maximum 31-day difference / 500 rows; no check-in secrets |
+| POST `/admin/timetable/refresh` | `{source:"mylectures"}` or `mylectures-2`; fixed repositories; 503 retains prior source on outage |
+| GET `/admin/timetable/publications` | Latest 20 publications and 10 checks |
+| POST `/admin/timetable/terms` | academicYear, semester, startsOn, endsOn, excludedDates [{date,reason}], HTTPS sourceUrl, sourceNote, reviewed:true; existing term requires baseVersion |
+| GET `/admin/timetable/entries` | Reviewed mappings with offering/calendar identity |
+| POST `/admin/timetable/preview` | publicationId, sourceKey, courseId, termId, optional entryId, weekday (ISO 1–7), startTime/endTime (HH:mm), room, sessionType, from/to, reviewed:true, reason; 201 review, no class writes |
+| POST `/admin/timetable/reviews/:id/apply` | Author-owned unexpired unchanged review; blockers/staleness return 409, repeated apply is safe |
+| PATCH `/admin/courses/:id/policy` | attendanceThreshold (1–100), countLate, countExcused, basePolicyVersion, reason; conflicts 409 |
+| PATCH `/admin/enrollments/:id` | effectiveFrom/effectiveUntil (civil date or null), reason; start inclusive, withdrawal exclusive |
+| POST `/reports/courses/:id/snapshots` | Assigned lecturer/admin; reason, reviewedPendingWork:true, basePolicyVersion; 201 consistent frozen report |
+| GET `/reports/courses/:id/snapshots` | Assigned lecturer/admin; latest 20 snapshot descriptors |
+| GET `/reports/snapshots/:id` | Assigned lecturer/admin; saved JSON/policy/counts/hash |
+| GET `/reports/snapshots/:id/pdf` | Assigned lecturer/admin; PDF generated from frozen data |
+| GET `/admin/audit?entityType=&entityId=` | Latest 100 scoped events |
+
+Enrollment creation now accepts optional effectiveFrom, defaulting to the current Kampala day. Reports include enrollment IDs/bounds, policyVersion/countLate/countExcused and pendingClaims. Existing live report endpoints reflect current policy; snapshots preserve earlier policy.

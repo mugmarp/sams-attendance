@@ -95,7 +95,14 @@ export async function init(roles) {
             ["/examiner/dashboard", "Classes"],
           ]
         : [["/examiner/dashboard", "My classes"]];
+  links.push(["/timetable", "Timetable"]);
+  if (user.role === "ADMIN")
+    links.push(["/admin/timetable", "Timetable setup"]);
   const icons = {
+    "/timetable":
+      '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 11h18M8 3v4M16 3v4"/>',
+    "/admin/timetable":
+      '<path d="M4 5h16M4 12h16M4 19h16M8 3v4M16 10v4M10 17v4"/>',
     "/admin/courses": '<path d="M4 19V5m0 14h16M8 15v-4m5 4V7m5 8v-7"/>',
     "/examiner/dashboard":
       '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>',
