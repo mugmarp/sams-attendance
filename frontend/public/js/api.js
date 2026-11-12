@@ -198,6 +198,11 @@ export async function api(
       data.message || "The request could not be completed.",
     );
     error.status = response.status;
+    if (data.error === "PASSWORD_CHANGE_REQUIRED") {
+      // Pause replay without changing any pending payload or outcome.
+      error.identity = true;
+      error.requiresPasswordChange = true;
+    }
     const after = response.headers.get("Retry-After");
     const delay =
       after === null

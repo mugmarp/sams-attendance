@@ -14,7 +14,7 @@ $("#login-form").onsubmit = async (event) => {
       body: { identifier: $("#email").value, password: $("#password").value },
     });
     saveSession(data);
-    location.assign(home(data.user.role));
+    location.assign(data.user.mustChangePassword ? "/account" : home(data.user.role));
   } catch (error) {
     showError(error);
   } finally {

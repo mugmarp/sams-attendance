@@ -37,6 +37,8 @@ model User {
   email String @unique
   isActive Boolean @default(true)
   passwordHash String
+  authVersion Int @default(0)
+  mustChangePassword Boolean @default(false)
   role UserRole @default(STUDENT)
   regNo String? @unique
   admissionYear Int?

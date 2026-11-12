@@ -109,3 +109,7 @@ The timetable shows actual authorized dated classes with visible-page refresh ev
 ## Personal academic day
 
 Students see happening-now and next-up classes for their confirmed programme/year/track, with automatic targeting of a single current enrolled class. Registrar faculty/programme/year/group filters and source-backed catalogue records keep offerings and cohorts organized. Registration numbers can identify sign-in and suggest institutional emails/placement, with explicit registrar confirmation. Read [the evidence, data decisions and five-programme sample plan](docs/ACADEMIC_STRUCTURE_AND_DAY.md). SAMS remains a web application; Android packaging is deferred.
+
+### Account access and recovery
+
+Use **My account** to change a password or end all sign-ins. Registrars use **Accounts** to filter and manage student/lecturer access, with their current password and a recorded reason. Reset passwords must be delivered privately; users must replace them before entering the workspace. Disabled accounts retain academic/attendance history, and reactivation never restores old tokens. No automatic email recovery is claimed. See [account management](docs/ACCOUNT_MANAGEMENT.md).

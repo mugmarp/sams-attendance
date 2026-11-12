@@ -8,6 +8,7 @@ import academicRoutes from "./academic.js";
 import { enrollmentCovers, enrollmentWhere } from "../services/academic.js";
 import syncRoutes from "./sync.js";
 import setupRoutes from "./setup.js";
+import accountRoutes from "./accounts.js";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../config/db.js";
@@ -24,6 +25,7 @@ import {
   ForbiddenError,
   NotFoundError,
   ValidationError,
+  AppError,
 } from "../utils/errors.js";
 import {
   manageSession,
@@ -90,6 +92,18 @@ router.post(
 );
 router.get("/auth/me", authenticate, me);
 router.use(authenticate);
+router.use(accountRoutes);
+router.use((req, _res, next) => {
+  if (req.user.mustChangePassword)
+    return next(
+      new AppError(
+        "PASSWORD_CHANGE_REQUIRED",
+        "Change your temporary password in My account before continuing.",
+        403,
+      ),
+    );
+  next();
+});
 router.use(syncRoutes);
 router.use(academicRoutes);
 router.use(catalogueRoutes);

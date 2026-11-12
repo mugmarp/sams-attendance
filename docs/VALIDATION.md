@@ -66,3 +66,7 @@ On 12 November the native pilot passed public HTTPS health/login-page checks, th
 ## Academic structure and day verification
 
 The latest suite passes **44 backend tests, 29 browser tests, and 106 Postman requests/301 assertions**. New coverage verifies registration/email/intake/year semantics, repeat-year overrides, track/shared-event matching and deduplication, exact time boundaries, explicit overlap selection, faculty-scoped lists, current-class automatic targeting, personal offline reference and enrollment exceptions. A synthetic copy of the private import dataset created 51 accounts once and preserved all on repeat without attendance writes. The owned preview migration followed a recovery database copy and preserved all six core row counts. See ACADEMIC_STRUCTURE_AND_DAY.md.
+
+## Account lifecycle verification
+
+The complete suite now passes **51 backend tests, 33 browser tests and 129 Postman requests/337 assertions**. Password changes, restricted temporary-password sign-ins, registrar reauthentication/reasons, persistent token revocation, disable/reactivate safety and simultaneous password changes are covered. Browser checks include a mobile recovery journey, administrator status changes, end-all-sign-ins and pending-work preservation. The original 29 browser cases still pass. Account API examples contain redacted tokens. See [ACCOUNT_MANAGEMENT.md](ACCOUNT_MANAGEMENT.md).

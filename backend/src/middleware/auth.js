@@ -15,11 +15,23 @@ export const authenticate = asyncHandler(async (req, _res, next) => {
   }
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
-    select: { role: true, isActive: true },
+    select: {
+      role: true,
+      isActive: true,
+      authVersion: true,
+      mustChangePassword: true,
+    },
   });
   if (!user?.isActive)
     throw new UnauthorizedError("This account is unavailable");
-  req.user = { ...payload, role: user.role };
+  if ((payload.authVersion ?? 0) !== user.authVersion)
+    throw new UnauthorizedError("This sign-in has ended. Sign in again.");
+  req.user = {
+    ...payload,
+    authVersion: user.authVersion,
+    role: user.role,
+    mustChangePassword: user.mustChangePassword,
+  };
   next();
 });
 export function authorize(...allowedRoles) {

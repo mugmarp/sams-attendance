@@ -411,3 +411,24 @@ test("phase-one version-two pending attempts survive the register storage upgrad
     state: "SYNCED",
   });
 });
+
+test("required password change pauses replay without failing saved attendance", async ({
+  page,
+}) => {
+  await boot(page);
+  await signIn(page);
+  await enqueue(page);
+  const before = await list(page);
+  await page.route("**/api/student/checkin", (route) =>
+    route.fulfill({
+      status: 403,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: "PASSWORD_CHANGE_REQUIRED",
+        message: "Change your temporary password",
+      }),
+    }),
+  );
+  await flush(page);
+  expect(await list(page)).toEqual(before);
+});

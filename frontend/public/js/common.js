@@ -72,6 +72,10 @@ export async function init(roles) {
       return null;
     }
   }
+  if (user.mustChangePassword && location.pathname !== "/account") {
+    location.replace("/account");
+    return null;
+  }
   if (!roles.includes(user.role)) {
     location.replace(home(user.role));
     return null;
@@ -98,7 +102,13 @@ export async function init(roles) {
   links.push(["/timetable", "Timetable"]);
   if (user.role === "ADMIN")
     links.push(["/admin/timetable", "Timetable setup"]);
+  if (user.role === "ADMIN") links.push(["/admin/accounts", "Accounts"]);
+  links.push(["/account", "My account"]);
   const icons = {
+    "/account":
+      '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
+    "/admin/accounts":
+      '<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M17 5h4m-2-2v4M17 12h4"/>',
     "/timetable":
       '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 11h18M8 3v4M16 3v4"/>',
     "/admin/timetable":

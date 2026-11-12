@@ -1720,13 +1720,10 @@ test("out-of-audience enrollment requires a recorded exception instead of silent
     ).status,
     400,
   );
-  const allowed = await request(app)
-    .post(path)
-    .set(auth(admin))
-    .send({
-      studentId: studentRes.body.id,
-      overrideReason: "Verified approved cross-programme elective",
-    });
+  const allowed = await request(app).post(path).set(auth(admin)).send({
+    studentId: studentRes.body.id,
+    overrideReason: "Verified approved cross-programme elective",
+  });
   assert.equal(allowed.status, 201);
   assert.ok(
     await db.auditEvent.findFirst({
@@ -1735,5 +1732,306 @@ test("out-of-audience enrollment requires a recorded exception instead of silent
         reason: "Verified approved cross-programme elective",
       },
     }),
+  );
+});
+
+// Account lifecycle cases use separate identities so existing attendance fixtures stay intact.
+async function lifecycleUser(role = "STUDENT") {
+  return db.user.create({
+    data: {
+      name: "Lifecycle Test User",
+      email: `${randomUUID()}@lifecycle.test`,
+      role,
+      passwordHash: await bcrypt.hash("TestPassword2026!", 4),
+    },
+  });
+}
+async function signLifecycle(user, password = "TestPassword2026!") {
+  return request(app)
+    .post("/api/auth/login")
+    .send({ email: user.email, password });
+}
+const management = (reason = "Verified in person for account recovery") => ({
+  currentPassword: "TestPassword2026!",
+  reason,
+});
+
+test("password changes validate the old password, enforce byte limits and revoke both token types", async () => {
+  const user = await lifecycleUser();
+  const signed = (await signLifecycle(user)).body;
+  const route = "/api/auth/password";
+  for (const [body, status] of [
+    [
+      { currentPassword: "incorrect", newPassword: "UpdatedPassword2026!" },
+      401,
+    ],
+    [{ currentPassword: "TestPassword2026!", newPassword: "short" }, 400],
+    [
+      { currentPassword: "TestPassword2026!", newPassword: "😀".repeat(20) },
+      400,
+    ],
+    [
+      {
+        currentPassword: "TestPassword2026!",
+        newPassword: "TestPassword2026!",
+      },
+      400,
+    ],
+  ])
+    assert.equal(
+      (await request(app).post(route).set(auth(signed.accessToken)).send(body))
+        .status,
+      status,
+    );
+  assert.equal(
+    (await db.user.findUniqueOrThrow({ where: { id: user.id } })).authVersion,
+    0,
+  );
+  const changed = await request(app)
+    .post(route)
+    .set(auth(signed.accessToken))
+    .send({
+      currentPassword: "TestPassword2026!",
+      newPassword: "UpdatedPassword2026!",
+    });
+  assert.equal(changed.status, 200);
+  assert.equal(
+    (await request(app).get("/api/auth/me").set(auth(signed.accessToken)))
+      .status,
+    401,
+  );
+  assert.equal(
+    (
+      await request(app)
+        .post("/api/auth/refresh")
+        .send({ refreshToken: signed.refreshToken })
+    ).status,
+    401,
+  );
+  assert.equal((await signLifecycle(user)).status, 401);
+  assert.equal((await signLifecycle(user, "UpdatedPassword2026!")).status, 200);
+  const events = await db.auditEvent.findMany({ where: { entityId: user.id } });
+  assert.equal(events.length, 1);
+  assert.equal(events[0].kind, "PASSWORD_CHANGED");
+  assert.ok(!JSON.stringify(events).includes("UpdatedPassword"));
+  assert.ok(!JSON.stringify(events).includes("passwordHash"));
+});
+
+test("ending all sign-ins is persistent and requires the account owner's password", async () => {
+  const user = await lifecycleUser("EXAMINER");
+  const first = (await signLifecycle(user)).body,
+    second = (await signLifecycle(user)).body;
+  const result = await request(app)
+    .post("/api/auth/end-signins")
+    .set(auth(first.accessToken))
+    .send({ currentPassword: "TestPassword2026!" });
+  assert.equal(result.status, 200);
+  for (const session of [first, second]) {
+    assert.equal(
+      (await request(app).get("/api/auth/me").set(auth(session.accessToken)))
+        .status,
+      401,
+    );
+    assert.equal(
+      (
+        await request(app)
+          .post("/api/auth/refresh")
+          .send({ refreshToken: session.refreshToken })
+      ).status,
+      401,
+    );
+  }
+  assert.equal((await signLifecycle(user)).status, 200);
+});
+
+test("registrar recovery requires reauthentication and a reason and protects registrar accounts", async () => {
+  const user = await lifecycleUser();
+  assert.equal(
+    (await request(app).get("/api/admin/accounts").set(auth(student))).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(app)
+        .post(`/api/admin/accounts/${user.id}/reset-password`)
+        .set(auth(student))
+        .send({ ...management(), temporaryPassword: "TemporaryPassword2026!" })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(app)
+        .post(`/api/admin/accounts/${user.id}/reset-password`)
+        .set(auth(admin))
+        .send({
+          ...management(),
+          currentPassword: "wrong",
+          temporaryPassword: "TemporaryPassword2026!",
+        })
+    ).status,
+    401,
+  );
+  assert.equal(
+    (
+      await request(app)
+        .patch(`/api/admin/accounts/${user.id}/status`)
+        .set(auth(admin))
+        .send({ currentPassword: "TestPassword2026!", isActive: false })
+    ).status,
+    400,
+  );
+  const administrator = await db.user.findUniqueOrThrow({
+    where: { email: "admin@test.example" },
+  });
+  assert.equal(
+    (
+      await request(app)
+        .patch(`/api/admin/accounts/${administrator.id}/status`)
+        .set(auth(admin))
+        .send({ ...management(), isActive: false })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await db.user.findUniqueOrThrow({ where: { id: user.id } })).authVersion,
+    0,
+  );
+});
+
+test("disable and re-enable never resurrect old access or refresh tokens", async () => {
+  const user = await lifecycleUser();
+  const old = (await signLifecycle(user)).body;
+  const url = `/api/admin/accounts/${user.id}/status`;
+  for (const isActive of [false, true]) {
+    const response = await request(app)
+      .patch(url)
+      .set(auth(admin))
+      .send({ ...management(), isActive });
+    assert.equal(response.status, 200);
+    assert.equal(response.body.isActive, isActive);
+    assert.equal(response.body.passwordHash, undefined);
+    assert.equal(response.body.authVersion, undefined);
+    assert.equal(
+      (await request(app).get("/api/auth/me").set(auth(old.accessToken)))
+        .status,
+      401,
+    );
+    assert.equal(
+      (
+        await request(app)
+          .post("/api/auth/refresh")
+          .send({ refreshToken: old.refreshToken })
+      ).status,
+      401,
+    );
+    assert.equal((await signLifecycle(user)).status, isActive ? 200 : 401);
+  }
+  assert.equal(
+    (await db.user.findUniqueOrThrow({ where: { id: user.id } })).authVersion,
+    2,
+  );
+  assert.equal(await db.auditEvent.count({ where: { entityId: user.id } }), 2);
+});
+
+test("temporary-password recovery restricts the workspace until the owner changes it", async () => {
+  const user = await lifecycleUser();
+  const old = (await signLifecycle(user)).body;
+  const reset = await request(app)
+    .post(`/api/admin/accounts/${user.id}/reset-password`)
+    .set(auth(admin))
+    .send({ ...management(), temporaryPassword: "TemporaryPassword2026!" });
+  assert.equal(reset.status, 200);
+  assert.equal(reset.body.mustChangePassword, true);
+  assert.equal(reset.body.temporaryPassword, undefined);
+  assert.equal(
+    (await request(app).get("/api/auth/me").set(auth(old.accessToken))).status,
+    401,
+  );
+  const temporary = (await signLifecycle(user, "TemporaryPassword2026!")).body;
+  assert.equal(temporary.user.mustChangePassword, true);
+  const denied = await request(app)
+    .get("/api/student/sessions/upcoming")
+    .set(auth(temporary.accessToken));
+  assert.equal(denied.status, 403);
+  assert.equal(denied.body.error, "PASSWORD_CHANGE_REQUIRED");
+  assert.equal(
+    (await request(app).get("/api/auth/me").set(auth(temporary.accessToken)))
+      .status,
+    200,
+  );
+  assert.equal(
+    (
+      await request(app)
+        .post("/api/auth/password")
+        .set(auth(temporary.accessToken))
+        .send({
+          currentPassword: "TemporaryPassword2026!",
+          newPassword: "PermanentPassword2026!",
+        })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await request(app)
+        .post("/api/auth/refresh")
+        .send({ refreshToken: temporary.refreshToken })
+    ).status,
+    401,
+  );
+  const permanent = (await signLifecycle(user, "PermanentPassword2026!")).body;
+  assert.equal(permanent.user.mustChangePassword, false);
+  assert.equal(
+    (
+      await request(app)
+        .get("/api/student/sessions/upcoming")
+        .set(auth(permanent.accessToken))
+    ).status,
+    200,
+  );
+});
+
+test("account lists are bounded, role-filtered and contain no credentials", async () => {
+  const response = await request(app)
+    .get("/api/admin/accounts?role=STUDENT&search=Lifecycle&limit=2")
+    .set(auth(admin));
+  assert.equal(response.status, 200);
+  assert.equal(response.body.length, 2);
+  assert.ok(response.body.every((u) => u.role === "STUDENT"));
+  assert.ok(
+    response.body.every((u) => !("passwordHash" in u) && !("authVersion" in u)),
+  );
+  assert.equal(
+    (await request(app).get("/api/admin/accounts?limit=201").set(auth(admin)))
+      .status,
+    400,
+  );
+  assert.equal(
+    (
+      await request(app)
+        .get("/api/admin/accounts?active=invalid")
+        .set(auth(admin))
+    ).status,
+    400,
+  );
+});
+
+test("concurrent password changes cannot overwrite a newer credential", async () => {
+  const user = await lifecycleUser();
+  const signed = (await signLifecycle(user)).body;
+  const results = await Promise.all(
+    ["ConcurrentPasswordOne!", "ConcurrentPasswordTwo!"].map((newPassword) =>
+      request(app)
+        .post("/api/auth/password")
+        .set(auth(signed.accessToken))
+        .send({ currentPassword: "TestPassword2026!", newPassword }),
+    ),
+  );
+  assert.equal(results.filter((r) => r.status === 200).length, 1);
+  assert.ok(results.some((r) => [401, 409].includes(r.status)));
+  assert.equal(
+    (await db.user.findUniqueOrThrow({ where: { id: user.id } })).authVersion,
+    1,
   );
 });

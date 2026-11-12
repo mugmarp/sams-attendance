@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "SAMS \u2014 Assignment demonstration and validation",
+    "name": "SAMS — Assignment demonstration and validation",
     "description": "Run in order against a disposable seeded database. Creates synthetic accounts, an offering, enrollments and dated classes. Includes success/invalid requests, assertions and saved sample responses. Duplicate attendance retries are deliberately idempotent (200); duplicate account/offering/enrollment creation returns 409. Do not run on real university records.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -6666,6 +6666,1651 @@
               "})();"
             ]
           }
+        }
+      ]
+    },
+    {
+      "name": "Create isolated account for recovery checks",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/users",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Create isolated account for recovery checks. Expected HTTP 201. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Recovery Test Lecturer\",\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"role\": \"EXAMINER\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 201',()=>pm.response.to.have.status(201));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set('accountLifecycleId',data.id);",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/users",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Create isolated account for recovery checks. Expected HTTP 201. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Recovery Test Lecturer\",\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"role\": \"EXAMINER\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"id\":\"<sample-record-id>\",\"email\":\"recovery-mwdnw0s5y5mz@example.test\",\"name\":\"Recovery Test Lecturer\",\"role\":\"EXAMINER\",\"regNo\":null,\"program\":null,\"year\":null}"
+        }
+      ]
+    },
+    {
+      "name": "Sign in to the isolated recovery account",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Sign in to the isolated recovery account. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set('accountLifecycleToken',data.accessToken);",
+              "pm.collectionVariables.set('accountLifecycleRefresh',data.refreshToken);",
+              "pm.test('No password in identity',()=>pm.expect(data.user).not.to.have.property('passwordHash'));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Sign in to the isolated recovery account. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"accessToken\":\"<redacted-token>\",\"refreshToken\":\"<redacted-token>\",\"user\":{\"id\":\"<sample-record-id>\",\"isActive\":true,\"mustChangePassword\":false,\"email\":\"recovery-mwdnw0s5y5mz@example.test\",\"name\":\"Recovery Test Lecturer\",\"role\":\"EXAMINER\",\"regNo\":null,\"program\":null,\"year\":null,\"programmeCode\":null,\"studyGroupKey\":null,\"studyAcademicYear\":null,\"studySemester\":null,\"admissionYear\":null,\"sponsorshipCode\":null}}"
+        }
+      ]
+    },
+    {
+      "name": "Account management is registrar-only",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/accounts",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accountLifecycleToken}}"
+          }
+        ],
+        "description": "Account management is registrar-only. Expected HTTP 403. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 403',()=>pm.response.to.have.status(403));",
+              "const data=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/accounts",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountLifecycleToken}}"
+              }
+            ],
+            "description": "Account management is registrar-only. Expected HTTP 403. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed."
+          },
+          "status": "Forbidden",
+          "code": 403,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"FORBIDDEN\",\"message\":\"Insufficient permissions\"}"
+        }
+      ]
+    },
+    {
+      "name": "Registrar finds bounded accounts without credentials",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/accounts?role=EXAMINER&search=recovery-{{runId}}&limit=10",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "description": "Registrar finds bounded accounts without credentials. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test('Only the matching account',()=>pm.expect(data.length).to.eql(1));",
+              "pm.test('No password or token version',()=>{pm.expect(data[0]).not.to.have.property('passwordHash');pm.expect(data[0]).not.to.have.property('authVersion');});",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/accounts?role=EXAMINER&search=recovery-{{runId}}&limit=10",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "description": "Registrar finds bounded accounts without credentials. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed."
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "[{\"id\":\"<sample-record-id>\",\"name\":\"Recovery Test Lecturer\",\"email\":\"recovery-mwdnw0s5y5mz@example.test\",\"regNo\":null,\"role\":\"EXAMINER\",\"isActive\":true,\"mustChangePassword\":false,\"programmeCode\":null,\"year\":null,\"studyGroupKey\":null}]"
+        }
+      ]
+    },
+    {
+      "name": "Account recovery requires an audit reason",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/accounts/{{accountLifecycleId}}/reset-password",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Account recovery requires an audit reason. Expected HTTP 400. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"temporaryPassword\": \"TemporaryPassword2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const data=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/accounts/{{accountLifecycleId}}/reset-password",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Account recovery requires an audit reason. Expected HTTP 400. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"temporaryPassword\": \"TemporaryPassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"VALIDATION_ERROR\",\"message\":\"Validation failed\",\"details\":[{\"field\":\"reason\",\"message\":\"Invalid input: expected string, received undefined\"}]}"
+        }
+      ]
+    },
+    {
+      "name": "Registrar recovery requires current password",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/accounts/{{accountLifecycleId}}/reset-password",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Registrar recovery requires current password. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"incorrect\",\n  \"reason\": \"Identity verified for disposable API recovery test\",\n  \"temporaryPassword\": \"TemporaryPassword2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 401',()=>pm.response.to.have.status(401));",
+              "const data=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/accounts/{{accountLifecycleId}}/reset-password",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Registrar recovery requires current password. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"incorrect\",\n  \"reason\": \"Identity verified for disposable API recovery test\",\n  \"temporaryPassword\": \"TemporaryPassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"UNAUTHORIZED\",\"message\":\"Current password is incorrect or this sign-in has ended\"}"
+        }
+      ]
+    },
+    {
+      "name": "Reset a verified account to a temporary password",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/accounts/{{accountLifecycleId}}/reset-password",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Reset a verified account to a temporary password. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"reason\": \"Identity verified for disposable API recovery test\",\n  \"temporaryPassword\": \"TemporaryPassword2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test('Password change required',()=>pm.expect(data.mustChangePassword).to.eql(true));",
+              "pm.test('No password returned',()=>pm.expect(data).not.to.have.property('temporaryPassword'));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/accounts/{{accountLifecycleId}}/reset-password",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Reset a verified account to a temporary password. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"reason\": \"Identity verified for disposable API recovery test\",\n  \"temporaryPassword\": \"TemporaryPassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"id\":\"<sample-record-id>\",\"name\":\"Recovery Test Lecturer\",\"email\":\"recovery-mwdnw0s5y5mz@example.test\",\"regNo\":null,\"role\":\"EXAMINER\",\"isActive\":true,\"mustChangePassword\":true,\"programmeCode\":null,\"year\":null,\"studyGroupKey\":null}"
+        }
+      ]
+    },
+    {
+      "name": "Recovery revokes the old access token",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/auth/me",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accountLifecycleToken}}"
+          }
+        ],
+        "description": "Recovery revokes the old access token. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 401',()=>pm.response.to.have.status(401));",
+              "const data=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountLifecycleToken}}"
+              }
+            ],
+            "description": "Recovery revokes the old access token. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed."
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"UNAUTHORIZED\",\"message\":\"This sign-in has ended. Sign in again.\"}"
+        }
+      ]
+    },
+    {
+      "name": "Recovery revokes the old refresh token",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/refresh",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Recovery revokes the old refresh token. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{accountLifecycleRefresh}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 401',()=>pm.response.to.have.status(401));",
+              "const data=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Recovery revokes the old refresh token. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{accountLifecycleRefresh}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"UNAUTHORIZED\",\"message\":\"This sign-in has ended. Sign in again.\"}"
+        }
+      ]
+    },
+    {
+      "name": "Temporary password permits a restricted sign-in",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Temporary password permits a restricted sign-in. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"password\": \"TemporaryPassword2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set('temporaryLifecycleToken',data.accessToken);",
+              "pm.collectionVariables.set('temporaryLifecycleRefresh',data.refreshToken);",
+              "pm.test('No password in identity',()=>pm.expect(data.user).not.to.have.property('passwordHash'));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Temporary password permits a restricted sign-in. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"password\": \"TemporaryPassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"accessToken\":\"<redacted-token>\",\"refreshToken\":\"<redacted-token>\",\"user\":{\"id\":\"<sample-record-id>\",\"isActive\":true,\"mustChangePassword\":true,\"email\":\"recovery-mwdnw0s5y5mz@example.test\",\"name\":\"Recovery Test Lecturer\",\"role\":\"EXAMINER\",\"regNo\":null,\"program\":null,\"year\":null,\"programmeCode\":null,\"studyGroupKey\":null,\"studyAcademicYear\":null,\"studySemester\":null,\"admissionYear\":null,\"sponsorshipCode\":null}}"
+        }
+      ]
+    },
+    {
+      "name": "Temporary password cannot open the attendance workspace",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/examiner/courses",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{temporaryLifecycleToken}}"
+          }
+        ],
+        "description": "Temporary password cannot open the attendance workspace. Expected HTTP 403. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 403',()=>pm.response.to.have.status(403));",
+              "const data=pm.response.json();",
+              "pm.test('Password-change response',()=>pm.expect(data.error).to.eql('PASSWORD_CHANGE_REQUIRED'));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/examiner/courses",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{temporaryLifecycleToken}}"
+              }
+            ],
+            "description": "Temporary password cannot open the attendance workspace. Expected HTTP 403. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed."
+          },
+          "status": "Forbidden",
+          "code": 403,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"PASSWORD_CHANGE_REQUIRED\",\"message\":\"Change your temporary password in My account before continuing.\"}"
+        }
+      ]
+    },
+    {
+      "name": "Reject a short replacement password",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/password",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{temporaryLifecycleToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Reject a short replacement password. Expected HTTP 400. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"TemporaryPassword2026!\",\n  \"newPassword\": \"short\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+              "const data=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/password",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{temporaryLifecycleToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Reject a short replacement password. Expected HTTP 400. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"TemporaryPassword2026!\",\n  \"newPassword\": \"short\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"VALIDATION_ERROR\",\"message\":\"Validation failed\",\"details\":[{\"field\":\"newPassword\",\"message\":\"Too small: expected string to have >=12 characters\"}]}"
+        }
+      ]
+    },
+    {
+      "name": "Reject the wrong current password during a change",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/password",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{temporaryLifecycleToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Reject the wrong current password during a change. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"incorrect\",\n  \"newPassword\": \"PermanentPassword2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 401',()=>pm.response.to.have.status(401));",
+              "const data=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/password",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{temporaryLifecycleToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Reject the wrong current password during a change. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"incorrect\",\n  \"newPassword\": \"PermanentPassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"UNAUTHORIZED\",\"message\":\"Current password is incorrect or this sign-in has ended\"}"
+        }
+      ]
+    },
+    {
+      "name": "Account owner replaces the temporary password",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/password",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{temporaryLifecycleToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Account owner replaces the temporary password. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"TemporaryPassword2026!\",\n  \"newPassword\": \"PermanentPassword2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test('Sign in again',()=>pm.expect(data.signInRequired).to.eql(true));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/password",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{temporaryLifecycleToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Account owner replaces the temporary password. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"TemporaryPassword2026!\",\n  \"newPassword\": \"PermanentPassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"message\":\"Password updated. Sign in again with your new password.\",\"signInRequired\":true}"
+        }
+      ]
+    },
+    {
+      "name": "Changing a password revokes the temporary refresh token",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/refresh",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Changing a password revokes the temporary refresh token. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{temporaryLifecycleRefresh}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 401',()=>pm.response.to.have.status(401));",
+              "const data=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Changing a password revokes the temporary refresh token. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{temporaryLifecycleRefresh}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"UNAUTHORIZED\",\"message\":\"This sign-in has ended. Sign in again.\"}"
+        }
+      ]
+    },
+    {
+      "name": "Sign in with the permanent password",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Sign in with the permanent password. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"password\": \"PermanentPassword2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set('accountLifecycleToken',data.accessToken);",
+              "pm.collectionVariables.set('accountLifecycleRefresh',data.refreshToken);",
+              "pm.test('No password in identity',()=>pm.expect(data.user).not.to.have.property('passwordHash'));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Sign in with the permanent password. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"password\": \"PermanentPassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"accessToken\":\"<redacted-token>\",\"refreshToken\":\"<redacted-token>\",\"user\":{\"id\":\"<sample-record-id>\",\"isActive\":true,\"mustChangePassword\":false,\"email\":\"recovery-mwdnw0s5y5mz@example.test\",\"name\":\"Recovery Test Lecturer\",\"role\":\"EXAMINER\",\"regNo\":null,\"program\":null,\"year\":null,\"programmeCode\":null,\"studyGroupKey\":null,\"studyAcademicYear\":null,\"studySemester\":null,\"admissionYear\":null,\"sponsorshipCode\":null}}"
+        }
+      ]
+    },
+    {
+      "name": "Disable access without deleting account records",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/admin/accounts/{{accountLifecycleId}}/status",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Disable access without deleting account records. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"reason\": \"Identity verified for disposable API recovery test\",\n  \"isActive\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test('Disabled',()=>pm.expect(data.isActive).to.eql(false));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/accounts/{{accountLifecycleId}}/status",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Disable access without deleting account records. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"reason\": \"Identity verified for disposable API recovery test\",\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"id\":\"<sample-record-id>\",\"name\":\"Recovery Test Lecturer\",\"email\":\"recovery-mwdnw0s5y5mz@example.test\",\"regNo\":null,\"role\":\"EXAMINER\",\"isActive\":false,\"mustChangePassword\":false,\"programmeCode\":null,\"year\":null,\"studyGroupKey\":null}"
+        }
+      ]
+    },
+    {
+      "name": "Disabled account cannot sign in",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Disabled account cannot sign in. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"password\": \"PermanentPassword2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 401',()=>pm.response.to.have.status(401));",
+              "const data=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Disabled account cannot sign in. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"password\": \"PermanentPassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"UNAUTHORIZED\",\"message\":\"Invalid sign-in or password\"}"
+        }
+      ]
+    },
+    {
+      "name": "Reactivate the existing account",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/admin/accounts/{{accountLifecycleId}}/status",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Reactivate the existing account. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"reason\": \"Identity verified for disposable API recovery test\",\n  \"isActive\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test('Active',()=>pm.expect(data.isActive).to.eql(true));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/accounts/{{accountLifecycleId}}/status",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Reactivate the existing account. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"reason\": \"Identity verified for disposable API recovery test\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"id\":\"<sample-record-id>\",\"name\":\"Recovery Test Lecturer\",\"email\":\"recovery-mwdnw0s5y5mz@example.test\",\"regNo\":null,\"role\":\"EXAMINER\",\"isActive\":true,\"mustChangePassword\":false,\"programmeCode\":null,\"year\":null,\"studyGroupKey\":null}"
+        }
+      ]
+    },
+    {
+      "name": "Reactivation never resurrects a previous sign-in",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/auth/me",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accountLifecycleToken}}"
+          }
+        ],
+        "description": "Reactivation never resurrects a previous sign-in. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 401',()=>pm.response.to.have.status(401));",
+              "const data=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountLifecycleToken}}"
+              }
+            ],
+            "description": "Reactivation never resurrects a previous sign-in. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed."
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"UNAUTHORIZED\",\"message\":\"This sign-in has ended. Sign in again.\"}"
+        }
+      ]
+    },
+    {
+      "name": "Reactivated user starts a fresh sign-in",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Reactivated user starts a fresh sign-in. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"password\": \"PermanentPassword2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.collectionVariables.set('accountLifecycleToken',data.accessToken);",
+              "pm.collectionVariables.set('accountLifecycleRefresh',data.refreshToken);",
+              "pm.test('No password in identity',()=>pm.expect(data.user).not.to.have.property('passwordHash'));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Reactivated user starts a fresh sign-in. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recovery-{{runId}}@example.test\",\n  \"password\": \"PermanentPassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"accessToken\":\"<redacted-token>\",\"refreshToken\":\"<redacted-token>\",\"user\":{\"id\":\"<sample-record-id>\",\"isActive\":true,\"mustChangePassword\":false,\"email\":\"recovery-mwdnw0s5y5mz@example.test\",\"name\":\"Recovery Test Lecturer\",\"role\":\"EXAMINER\",\"regNo\":null,\"program\":null,\"year\":null,\"programmeCode\":null,\"studyGroupKey\":null,\"studyAcademicYear\":null,\"studySemester\":null,\"admissionYear\":null,\"sponsorshipCode\":null}}"
+        }
+      ]
+    },
+    {
+      "name": "Owner ends every sign-in",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/end-signins",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accountLifecycleToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Owner ends every sign-in. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"PermanentPassword2026!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+              "const data=pm.response.json();",
+              "pm.test('Sign-in required',()=>pm.expect(data.signInRequired).to.eql(true));",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/end-signins",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountLifecycleToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Owner ends every sign-in. Expected HTTP 200. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"PermanentPassword2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"message\":\"All sign-ins ended. Sign in again to continue.\",\"signInRequired\":true}"
+        }
+      ]
+    },
+    {
+      "name": "End-all-sign-ins invalidates refresh too",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/refresh",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "End-all-sign-ins invalidates refresh too. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{accountLifecycleRefresh}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "(function(){",
+              "pm.test('HTTP 401',()=>pm.response.to.have.status(401));",
+              "const data=pm.response.json();",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Verified synthetic example",
+          "originalRequest": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "End-all-sign-ins invalidates refresh too. Expected HTTP 401. Account recovery uses a separate synthetic identity in the disposable test database. No existing seed password or attendance is changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{accountLifecycleRefresh}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\"error\":\"UNAUTHORIZED\",\"message\":\"This sign-in has ended. Sign in again.\"}"
         }
       ]
     }
