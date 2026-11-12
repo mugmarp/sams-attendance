@@ -12,7 +12,9 @@ sams_release=/opt/sams/releases/$sams_commit
 id sams >/dev/null 2>&1 || useradd --system --home-dir /var/lib/sams --create-home --shell /usr/sbin/nologin sams
 install -d -m 0755 /opt/sams/releases /usr/local/lib/sams-node/bin
 install -d -o sams -g sams -m 0700 /var/cache/sams
-install -m 0755 "$(readlink -f "$sams_node")" /usr/local/lib/sams-node/bin/node
+if [[ $(readlink -f "$sams_node") != /usr/local/lib/sams-node/bin/node ]]; then
+  install -m 0755 "$(readlink -f "$sams_node")" /usr/local/lib/sams-node/bin/node
+fi
 sams_tmp=$(mktemp -d)
 trap 'rm -rf "$sams_tmp"' EXIT
 curl --fail --location --proto '=https' --tlsv1.2 "https://codeload.github.com/mugmarp/sams-attendance/tar.gz/$sams_commit" -o "$sams_tmp/release.tgz"
@@ -24,7 +26,9 @@ sams_npm=${3:?existing npm CLI required}
 sams_npm_source=$(dirname "$(dirname "$(readlink -f "$sams_npm")")")
 install -d /usr/local/lib/sams-node/lib/node_modules
 install -d /usr/local/lib/sams-node/lib/node_modules/npm
-cp -a "$sams_npm_source/." /usr/local/lib/sams-node/lib/node_modules/npm/
+if [[ $sams_npm_source != /usr/local/lib/sams-node/lib/node_modules/npm ]]; then
+  cp -a "$sams_npm_source/." /usr/local/lib/sams-node/lib/node_modules/npm/
+fi
 chown -R root:root /usr/local/lib/sams-node
 sams_npm=/usr/local/lib/sams-node/lib/node_modules/npm/bin/npm-cli.js
 cd "$sams_release/backend"
