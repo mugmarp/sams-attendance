@@ -124,3 +124,7 @@ Old open clients need one ordinary reload to obtain the new code; the new client
 ### Page-loading visibility fix — 13 November 2026
 
 Release `f7626bfac94f7a24a3c3c35c950ccc6470474006` is live. The frontend now gates static page bodies behind neutral loading until workspace/login initialization is ready; a compatibility helper handles older cached modules. No database or API behavior changed. All 39 browser cases and frontend syntax checks passed locally. Native activation saved `before-release-20261113T101944Z.dump`; HTTPS role and ten health/database checks passed. The service was active with zero automatic restarts, approximately 106 MiB at the sampled time. Codex-browser acceptance confirmed the new markup and completed account workspace without altering account settings.
+
+## Student class-loading release — 13 November 2026
+
+Native release `916a7524ec149f758e2d4834639713d7dfd2a63e` activated after private dump `/var/backups/sams/before-release-20261113T110706Z.dump`. No pending migrations. Three role smoke checks and ten bounded HTTPS health checks passed; service active, zero automatic restarts, memory 117,952,512 bytes. Codex browser acceptance used the existing synthetic student and installed-client update notice; no attendance was submitted. See [class-loading correction](CHECKIN_LOADING_FIX_2026-11-13.md) for the cache transition, full 42-case browser result and remaining audit scope.

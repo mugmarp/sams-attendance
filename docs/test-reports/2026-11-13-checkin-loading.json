@@ -24,5 +24,29 @@
     "held class response to HTTP failure; no false empty day"
   ],
   "backendAndPostman": "Not rerun: runtime changes limited to frontend",
-  "deployment": "Pending at source commit; see correction report for follow-up"
+  "deployment": {
+    "release": "916a7524ec149f758e2d4834639713d7dfd2a63e",
+    "backup": "/var/backups/sams/before-release-20261113T110706Z.dump",
+    "pendingMigrations": 0,
+    "roleSmokeChecks": "ADMIN, EXAMINER, STUDENT passed",
+    "healthChecks": {
+      "passed": 10,
+      "medianMs": 24,
+      "maxMs": 33,
+      "scope": "server-origin HTTPS smoke checks; not navigation latency"
+    },
+    "serviceActive": true,
+    "automaticRestarts": 0,
+    "memoryBytes": 117952512,
+    "browserAcceptance": {
+      "browser": "Codex in-app browser",
+      "account": "Existing synthetic BSE practice student",
+      "installedClientUpdate": "Reload application selected after v11 update notice",
+      "classLoadingHidden": true,
+      "codeFormHidden": true,
+      "ariaBusy": "false",
+      "attendanceSubmitted": false
+    },
+    "limits": "No physical-device or capacity test; transient states covered by local held-response browser cases"
+  }
 }

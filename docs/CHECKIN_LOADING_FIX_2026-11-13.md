@@ -25,3 +25,11 @@ The existing static-markup test now includes `/student/checkin`. All seven focus
 The first full-suite launch omitted `SAMS_E2E_DATABASE_URL`: database-backed suites correctly refused to run against an unspecified database (7 setup failures, 16 cases not run, 19 passed). The corrected launch explicitly selects the isolated local `sams_test` database. This was a test invocation error, not a product failure.
 
 The corrected full browser run passed **42/42 tests** in 2.9 minutes, including the three new loading cases and all earlier attendance, account, offline-register, queue, course-plan and timetable journeys. Frontend syntax and diff whitespace checks passed. Backend/API code was unchanged; the prior backend/Postman totals are not a new execution claim.
+
+## Live deployment and installed-client acceptance
+
+Release `916a7524ec149f758e2d4834639713d7dfd2a63e` is deployed on the native VPS. The activator created `/var/backups/sams/before-release-20261113T110706Z.dump`; all ten existing migrations were already applied. Activation passed administrator, lecturer and student HTTPS sign-in/scoped-read smoke checks and ten health checks (server-origin median 24 ms, maximum 33 ms). The service was active, with zero automatic restarts and approximately 112.5 MiB process memory at acceptance. These health measurements are separate from the earlier client-origin navigation benchmark and are not a capacity test.
+
+In the Codex in-app browser, an existing installed student tab initially received new HTML while retaining its older cached module and displayed the application-update notice. Its old module left the new class-loading message visible after rendering; selecting **Reload application** loaded the updated client. The resulting page had the code form hidden, the loading status hidden and `aria-busy="false"`, with the correct personal timetable rendered. Existing installed tabs should use the update notice to pick up this release. No storage clearing or attendance submission was performed. The controlled delayed-response tests establish the transient-state behavior; the live final-state check alone does not measure every rendered frame.
+
+Live acceptance screenshot is saved on the operator PC as `sams-audit-output/checkin-loading-fixed-live-20261113.png`. The wider navigation optimizations remain open.
