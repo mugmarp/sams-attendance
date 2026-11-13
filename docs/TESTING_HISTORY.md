@@ -56,3 +56,7 @@ Full Newman JSON reports contain working test tokens and request bodies; they ar
 ## Focused attendance/code-sharing audit — 13 November 2026
 
 [Workflow audit](ATTENDANCE_WORKFLOW_AUDIT_2026-11-13.md) records live read-only observations and isolated middleware/pure-function checks. [Sanitized evidence](test-reports/2026-11-13-attendance-workflow-audit.json) confirms the shared-IP limits and Next up selection defect. This did not rerun the full regression baseline or write live attendance. Findings remain open.
+
+## Executed attendance fixes
+
+[Fix evidence](test-reports/2026-11-13-attendance-fixes.json) records 65 backend tests, 35 browser tests and the reverified 135-request/351-assertion Postman collection. The audit's original findings remain historical; its later remediation section identifies what was fixed and the policy/teaching setup still pending. Live acceptance used the Codex browser without recording attendance.

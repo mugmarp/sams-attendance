@@ -5,5 +5,5 @@
   "assertions": 351,
   "failures": 0,
   "database": "isolated PostgreSQL, synthetic records only",
-  "note": "Course setup response and invalid request cases included; full publishing and elective flow also covered by browser and backend integration tests."
+  "note": "Reverified after attendance workflow fixes; no live mutating collection run."
 }

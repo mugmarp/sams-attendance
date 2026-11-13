@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-13",
+  "timeZone": "Africa/Kampala",
+  "applicationCommit": "11a5e18302e32ae903d4779e95d14ebe5d082431",
+  "reviewedSchedulingHelperCommit": "4583289d1db492d2df7459c363c68fc4b8592b43",
+  "backend": {
+    "tests": 65,
+    "failures": 0
+  },
+  "browser": {
+    "tests": 35,
+    "failures": 0
+  },
+  "postman": {
+    "requests": 135,
+    "assertions": 351,
+    "failures": 0
+  },
+  "live": {
+    "roleSmokeChecks": "passed",
+    "healthRequests": 10,
+    "automaticRestarts": 0,
+    "scheduledSessionsAdded": 2,
+    "scheduledDates": [
+      "2026-11-20",
+      "2026-11-27"
+    ],
+    "kampalaInterval": "11:00\u201313:00",
+    "futureCheckinButtonDisabled": true,
+    "counts": {
+      "User": 61,
+      "Course": 91,
+      "Enrollment": 381,
+      "Session": 5,
+      "Attendance": 2,
+      "AttendanceChange": 1
+    },
+    "restoreVerified": true
+  },
+  "limits": [
+    "Shared-code possession is not physical-presence proof",
+    "No unapproved late-arrival policy applied",
+    "Only the two confirmed Friday sessions were added",
+    "Old browser tabs require one normal reload",
+    "Remaining unrelated audit issues stay open"
+  ],
+  "intermediateFailure": "Account recovery test raced a debounced scoped response; repeated selection now preserves fields and the test waits for the response. Final full browser run passed."
+}

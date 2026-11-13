@@ -187,7 +187,7 @@ Saved records remain on the browser after sign-out. Reconcile pending work befor
 
 Import `postman/SAMS.postman_collection.json` and `postman/SAMS.local.postman_environment.json`. The collection contains descriptions, response examples and assertions, and captures tokens and record IDs automatically.
 
-The verified regression baseline is **61 backend tests, 34 browser tests, 135 Postman requests and 351 assertions**. The latest course-setup and Kampala-date cases are included. Passing these checks does not establish that all remaining audit findings are covered. See the [testing-history index](docs/TESTING_HISTORY.md) for dated evidence and limits.
+The verified regression baseline is **65 backend tests, 35 browser tests, 135 Postman requests and 351 assertions**. The latest course-setup and Kampala-date cases are included. Passing these checks does not establish that all remaining audit findings are covered. See the [testing-history index](docs/TESTING_HISTORY.md) for dated evidence and limits.
 
 Run mutating tests and the full collection only against a separate disposable database named `sams_test`. The backend API tests clear its fixtures. Never point them at the hosted pilot or real attendance records.
 
