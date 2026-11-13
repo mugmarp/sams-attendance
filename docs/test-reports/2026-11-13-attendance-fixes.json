@@ -42,7 +42,20 @@
     "No unapproved late-arrival policy applied",
     "Only the two confirmed Friday sessions were added",
     "Old browser tabs require one normal reload",
-    "Remaining unrelated audit issues stay open"
+    "Remaining unrelated audit issues stay open",
+    "One early hosted offline replay timed out; subsequent full CI passed. Retain as an intermittent reliability observation."
   ],
-  "intermediateFailure": "Account recovery test raced a debounced scoped response; repeated selection now preserves fields and the test waits for the response. Final full browser run passed."
+  "intermediateFailure": "Account recovery test raced a debounced scoped response; repeated selection now preserves fields and the test waits for the response. Final full browser run passed.",
+  "hostedChecks": {
+    "initialFeatureRun": {
+      "id": 43400193112,
+      "result": "failure",
+      "detail": "Prepared-register replay remained pending beyond the 15-second browser assertion."
+    },
+    "subsequentRun": {
+      "id": 43403078199,
+      "result": "success",
+      "detail": "Same application code plus the separate operator scheduling helper. Full hosted verification passed."
+    }
+  }
 }
