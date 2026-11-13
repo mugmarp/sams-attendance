@@ -1,5 +1,9 @@
 # SAMS testing history and API evidence
 
+## Student class-loading correction — 13 November 2026
+
+[Check-in loading fix](CHECKIN_LOADING_FIX_2026-11-13.md) records the correction to the code form appearing before class state was known. Three new delayed-response tests cover empty, active and failed class loads while reviews remain pending. All seven focused loading tests and frontend syntax checks passed. Broader verification and live release evidence are recorded in the linked report; prior API totals are not a new API execution claim.
+
 ## Navigation and class-loading audit — 13 November 2026
 
 [Navigation audit](NAVIGATION_PERFORMANCE_AUDIT_2026-11-13.md) reproduces the check-in form appearing before class data resolves. The [local held-response evidence](test-reports/2026-11-13-navigation-reproduction.json) uses artificial delays and is not a live benchmark. [Bounded live HTTPS samples](test-reports/2026-11-13-navigation-live-api.json) record three requests per endpoint; [partial Codex browser evidence](test-reports/2026-11-13-navigation-browser-partial.json) explicitly records event-buffer truncation. No attendance was submitted; live course setup inserted zero links. This is an audit, not a runtime fix, full regression run or capacity test. The report lists remaining defects and acceptance checks.

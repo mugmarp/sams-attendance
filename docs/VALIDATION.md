@@ -104,3 +104,7 @@ Hosted evidence: the [initial feature CI run](https://github.com/mugmarp/sams-at
 ## Initial page flash correction — 13 November 2026
 
 All **39 browser tests** passed after adding four startup/cache-transition cases; frontend syntax checks passed. Before correction, initial static HTML exposed account forms and headings while authentication/layout initialization was pending. Pages now remain behind a neutral loading state until the intended workspace is ready. The older cached module transition is explicitly tested. No API/database changes were made, so the existing 65 backend tests and 135 Postman requests / 351 assertions remain the prior API baseline rather than a new execution claim. See [page-loading audit](PAGE_LOADING_AUDIT_2026-11-13.md) and [sanitized result](test-reports/2026-11-13-page-loading.json).
+
+## Student Check in class-loading correction — 13 November 2026
+
+The form now starts hidden until class data determines the correct state; explicit loading and initial error states prevent a false code form or empty day. Handlers bind before actions appear, and reviews load independently. All **42 browser tests** and frontend syntax checks passed, including three new held-response cases. The first full-suite invocation omitted the isolated database variable and was rejected by setup guards; the corrected run passed. See [correction report](CHECKIN_LOADING_FIX_2026-11-13.md) for deployment evidence and limits. No API/schema changes were made.

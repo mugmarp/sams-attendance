@@ -19,6 +19,7 @@ test("initial HTML keeps every page behind a neutral loading state before script
       "/student/courses",
       "/examiner/dashboard",
       "/student/summary",
+      "/student/checkin",
       "/admin/courses",
     ]) {
       await page.goto(route);
@@ -29,6 +30,77 @@ test("initial HTML keeps every page behind a neutral loading state before script
     await context.close();
   }
 });
+
+for (const outcome of ["empty", "active", "failed"]) {
+  test(`student check-in waits for class data before showing ${outcome} state`, async ({
+    page,
+    request,
+  }) => {
+    await seedSession(page, request, "student@demo.sams.test");
+    let releaseDay, releaseReviews;
+    const dayPending = new Promise((resolve) => (releaseDay = resolve));
+    const reviewsPending = new Promise((resolve) => (releaseReviews = resolve));
+    const now = Date.now();
+    const classes = outcome === "active" ? [{
+      id: "loading-test-class",
+      courseCode: "TEST101",
+      courseTitle: "Loading verification",
+      startTime: new Date(now - 60000).toISOString(),
+      endTime: new Date(now + 3600000).toISOString(),
+      hasActiveCode: true,
+      checkedIn: false,
+    }] : [];
+    await page.route("**/api/student/attendance-claims", async (route) => {
+      await reviewsPending;
+      await route.fulfill({ json: [] });
+    });
+    await page.route("**/api/student/sessions/upcoming", (route) =>
+      route.fulfill({ json: classes }),
+    );
+    await page.route("**/api/student/day", async (route) => {
+      await dayPending;
+      await route.fulfill(outcome === "failed" ? {
+        status: 503,
+        json: { error: { message: "Class data unavailable" } },
+      } : {
+        json: {
+          profile: { name: "Loading test student", regNo: "2025/BSE/999/PS" },
+          classes,
+          weekly: { events: [] },
+        },
+      });
+    });
+    try {
+      const dayRequested = page.waitForRequest("**/api/student/day");
+      await page.goto("/student/checkin");
+      // A slow review panel must not prevent the primary request or loading UI.
+      await dayRequested;
+      await expect(page.locator("#class-loading")).toBeVisible();
+      await expect(page.locator("#checkin-view")).toHaveAttribute("aria-busy", "true");
+      await expect(page.locator("#checkin-form")).toBeHidden();
+      await expect(page.getByRole("heading", { name: "No class in progress", exact: true })).toHaveCount(0);
+      releaseDay();
+      await expect(page.locator("#checkin-view")).toHaveAttribute("aria-busy", "false");
+      if (outcome === "active") {
+        await expect(page.locator("#checkin-form")).toBeVisible();
+        await expect(page.locator("#checkin-target")).toContainText("TEST101");
+        expect(await page.locator("#checkin-form").evaluate((form) => typeof form.onsubmit)).toBe("function");
+      } else {
+        await expect(page.locator("#checkin-form")).toBeHidden();
+        if (outcome === "empty")
+          await expect(page.getByRole("heading", { name: "No class in progress", exact: true })).toBeVisible();
+        else {
+          await expect(page.locator("#class-loading")).toContainText("Could not load your classes");
+          await expect(page.getByRole("heading", { name: "No class in progress", exact: true })).toHaveCount(0);
+        }
+      }
+      if (outcome !== "failed") await expect(page.locator("#class-loading")).toBeHidden();
+    } finally {
+      releaseDay();
+      releaseReviews();
+    }
+  });
+}
 async function seedSession(page, request, email) {
   const response = await request.post(apiURL + "/api/auth/login", {
     data: { email, password: "SamsDemo2026!" },

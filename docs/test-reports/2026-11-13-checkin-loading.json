@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-13",
+  "change": "Student Check in initial class-data readiness",
+  "frontendSyntax": "passed",
+  "focusedLoadingTests": {
+    "passed": 7,
+    "failed": 0
+  },
+  "browserRegression": {
+    "passed": 42,
+    "failed": 0,
+    "duration": "2.9m",
+    "database": "isolated local sams_test"
+  },
+  "initialIncorrectInvocation": {
+    "cause": "SAMS_E2E_DATABASE_URL omitted; setup guards rejected database-dependent suites",
+    "passed": 19,
+    "setupFailures": 7,
+    "notRun": 16
+  },
+  "newCases": [
+    "held class response to empty day",
+    "held class response to active class with handler ready",
+    "held class response to HTTP failure; no false empty day"
+  ],
+  "backendAndPostman": "Not rerun: runtime changes limited to frontend",
+  "deployment": "Pending at source commit; see correction report for follow-up"
+}

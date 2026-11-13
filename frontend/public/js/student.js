@@ -115,9 +115,17 @@ async function loadClasses() {
     dayData = context.data;
     dayCached = result.cached || context.cached;
     renderDay();
+    $("#class-loading").hidden = true;
     if (!dayCached) showError(null);
   } catch (error) {
+    if (!dayData) {
+      $("#class-loading").textContent =
+        "Could not load your classes. Check your connection and try again.";
+      $("#checkin-form").hidden = true;
+    }
     showError(error);
+  } finally {
+    $("#checkin-view").setAttribute("aria-busy", "false");
   }
 }
 async function renderQueue() {
@@ -224,7 +232,7 @@ async function loadReviewRequests() {
 }
 if (user) {
   $("#review-section").hidden = false;
-  await loadReviewRequests();
+  void loadReviewRequests();
   setInterval(loadReviewRequests, 15000);
   addEventListener("sams:operations", () => {
     void loadReviewRequests();
@@ -267,8 +275,6 @@ if (user) {
     setInterval(loadSummary, 15000);
   } else {
     $("#checkin-view").hidden = false;
-    await loadClasses();
-    await renderQueue();
     setInterval(() => {
       if (!document.hidden) void loadClasses();
     }, 10000);
@@ -284,7 +290,6 @@ if (user) {
       void sync(user.id).catch(showError);
     }, 3000);
     $("#send-pending").onclick = flush;
-    void flush();
     $("#code").oninput = () => {
       $("#code").value = $("#code").value.toUpperCase();
     };
@@ -329,5 +334,9 @@ if (user) {
         button.disabled = false;
       }
     };
+    // Bind actions before class data can reveal the form.
+    await loadClasses();
+    await renderQueue();
+    void flush();
   }
 }
