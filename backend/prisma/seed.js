@@ -85,7 +85,8 @@ export async function seedDemo() {
   ]) {
     const course = await prisma.course.upsert({
       where: {
-        code_academicYear_semester: {
+        code_academicYear_semester_offeringKey: {
+          offeringKey: "MAIN",
           code,
           academicYear: "2026/2027",
           semester: 1,

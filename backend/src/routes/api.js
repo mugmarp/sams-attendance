@@ -1,3 +1,4 @@
+import coursePlanRoutes from "./course-plans.js";
 import catalogueRoutes from "./catalogue.js";
 import {
   filters,
@@ -107,6 +108,7 @@ router.use((req, _res, next) => {
 router.use(syncRoutes);
 router.use(academicRoutes);
 router.use(catalogueRoutes);
+router.use(coursePlanRoutes);
 router.get(
   "/student/sessions/upcoming",
   requireStudent,

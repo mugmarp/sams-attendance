@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0369a1" />
+    <title>SAMS · My courses</title>
+    <link rel="icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header id="site-header" hidden></header>
+    <div class="header-inner" id="offline" role="status" hidden>
+      You’re offline. Course setup requires a connection.
+    </div>
+    <main class="stack narrow">
+      <h1>My courses</h1>
+      <p id="error" class="alert" role="alert" hidden></p>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <section class="card stack">
+        <div id="course-placement"></div>
+        <p id="course-status" role="status">Loading your course list…</p>
+        <form id="course-confirm" class="stack" hidden>
+          <div id="course-list"></div>
+          <p class="small muted">
+            Compulsory courses are assigned automatically. Choose any applicable
+            electives. To correct your programme, study year or a withdrawal,
+            contact the registrar. Confirming this list does not record
+            attendance.
+          </p>
+          <button class="primary">Confirm my courses</button>
+        </form>
+        <button id="course-reload" type="button">Refresh course list</button>
+      </section>
+    </main>
+    <script type="module" src="/js/courses.js"></script>
+  </body>
+</html>

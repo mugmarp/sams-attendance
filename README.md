@@ -8,7 +8,7 @@ The application uses **HTML, CSS and JavaScript**, a **Node.js/Express API**, an
 
 **Current status, 12 November 2026:** a controlled pilot is hosted at [sams.tirallab.page](https://sams.tirallab.page). Core workflows and account-management features are implemented, but the latest audit identified unresolved defects. See [known issues](#known-issues-and-adoption-boundaries) before relying on the system for operational attendance.
 
-[Proposal](docs/PROPOSAL.md) · [API reference](docs/API_SPEC.md) · [Postman walkthrough](docs/POSTMAN_DEMO.md) · [Validation record](docs/VALIDATION.md) · [Native deployment](docs/NATIVE_DEPLOYMENT.md)
+[Proposal](docs/PROPOSAL.md) · [API reference](docs/API_SPEC.md) · [Postman walkthrough](docs/POSTMAN_DEMO.md) · [Testing history and API evidence](docs/TESTING_HISTORY.md) · [Validation record](docs/VALIDATION.md) · [Native deployment](docs/NATIVE_DEPLOYMENT.md)
 
 ## Users and workflow
 
@@ -18,7 +18,7 @@ The application uses **HTML, CSS and JavaScript**, a **Node.js/Express API**, an
 | Lecturer (`EXAMINER` in the API) | Create assigned class sessions, open check-in, review/correct attendance and prepare offline registers. |
 | Registrar (`ADMIN` in the API) | Manage accounts, academic placement, offerings, enrollment, timetable review and reports. |
 
-1. The registrar creates an offering for a particular academic year/semester, assigns a lecturer and explicitly enrolls students.
+1. The registrar prepares offerings for an academic year/semester, assigns lecturers and publishes each programme group’s course plan. Matching students receive its compulsory courses automatically; electives are confirmed in My courses. Manual enrollment remains available for reviewed exceptions.
 2. The lecturer creates a dated class and opens a ten-minute check-in window during that class. Its code rotates every two minutes; the window cannot extend past class end.
 3. The student signs in using an email or registration number. A single current enrolled class is targeted automatically. A class choice appears only when enrolled classes overlap; a weekly reference entry cannot authorize check-in.
 4. The student submits the lecturer's current code. The server checks identity, enrollment and time. A repeated accepted check-in returns the same record.
@@ -147,7 +147,7 @@ Open [localhost:3000](http://localhost:3000). `npm run dev --prefix backend` ena
 
 ## Academic records and timetable
 
-[Registration-based automatic course setup and Kampala-time review](docs/AUTO_ENROLLMENT_AND_KAMPALA_REVIEW.md) records the proposed enrollment workflow, inspected gaps and rollout checks. Automatic course setup is not yet implemented.
+[Registration-based automatic course setup and Kampala-time review](docs/AUTO_ENROLLMENT_AND_KAMPALA_REVIEW.md) records the proposed enrollment workflow, inspected gaps and rollout checks. Course setup is implemented through published programme plans: registrars prepare offerings and publish compulsory/elective lists at **Course setup**, and students receive matching compulsory courses on sign-in or workspace entry. **My courses** allows list confirmation and permitted elective selection. Existing withdrawal decisions are preserved. New links start on the Kampala setup date; existing dates are not backfilled.
 
 Faculties, programmes, study years and timetable tracks are stored separately from course offerings and enrollment. The registrar uses dependent filters to work within an academic scope. A registration such as `2025/BSE/108/PS` supplies an intake year, programme token, sequence and sponsorship token; the sequence is not a class number. Academic placement is suggested, then confirmed, with recorded reasons for later changes.
 
@@ -155,7 +155,7 @@ Institutional-looking emails can be derived using the supplied registration conv
 
 The timetable distinguishes **dated SAMS classes** from **weekly source references**. Staff review source versions, times, teaching dates and exceptions before applying future timetable entries. Refreshing a source does not automatically change classes or create attendance. The audit found calendar and scheduling defects in these paths; their correction is still pending.
 
-The five-programme sample covers BSE, BCS, BIT, BBA and BME. User-supplied records and synthetic records are distinguished; neither programme membership nor importing a student creates enrollment. Separate hosted practice offerings use `-P` course codes. The supplied group-member roster is not enrolled or marked by the practice walkthrough.
+The five-programme sample covers BSE, BCS, BIT, BBA and BME. User-supplied records and synthetic records are distinguished; importing a student alone does not create enrollment. Automatic setup requires a matching published plan for the single current reviewed term. Separate hosted practice offerings use `-P` course codes. The supplied group-member roster is not enrolled or marked by the practice walkthrough.
 
 [Academic structure and source decisions](docs/ACADEMIC_STRUCTURE_AND_DAY.md) · [Timetable and saved reports](docs/TIMETABLE_AND_RECORDS.md) · [Private import guide](docs/IMPORT_GUIDE.md)
 
@@ -187,7 +187,7 @@ Saved records remain on the browser after sign-out. Reconcile pending work befor
 
 Import `postman/SAMS.postman_collection.json` and `postman/SAMS.local.postman_environment.json`. The collection contains descriptions, response examples and assertions, and captures tokens and record IDs automatically.
 
-The verified regression baseline is **54 backend tests, 33 browser tests, 129 Postman requests and 337 assertions**. These results predate correction of the latest audit findings; passing them does not establish that the newly found cases are covered.
+The verified regression baseline is **61 backend tests, 34 browser tests, 135 Postman requests and 351 assertions**. The latest course-setup and Kampala-date cases are included. Passing these checks does not establish that all remaining audit findings are covered. See the [testing-history index](docs/TESTING_HISTORY.md) for dated evidence and limits.
 
 Run mutating tests and the full collection only against a separate disposable database named `sams_test`. The backend API tests clear its fixtures. Never point them at the hosted pilot or real attendance records.
 
@@ -237,7 +237,7 @@ SAMS implements the relevant concepts in JavaScript for the web workflow. It doe
 
 ## Known issues and adoption boundaries
 
-The 12 November audit confirmed open issues in privileged-account creation, scheduling conflict checks, old-year timetable projection, new-offering academic validation and long-title PDF layout. These findings have **not yet been fixed**. The separate multibyte initial-password validation issue is fixed by the shared 8-character/72-byte password schema. Detailed reproduction evidence is kept locally rather than included in this public README.
+The 12 November audit confirmed open issues in privileged-account creation, scheduling conflict checks, new-offering academic validation and long-title PDF layout. These findings remain open. Old-year timetable projection and UTC-to-Kampala report date boundaries have been corrected in source; consult deployment records for the running release. The separate multibyte initial-password validation issue is fixed by the shared 8-character/72-byte password schema. Detailed reproduction evidence is kept locally rather than included in this public README.
 
 Keep the pilot to controlled project use while these defects are corrected and tested. Operational adoption also requires confirmed teaching assignments/dates/exceptions, approved attendance policy, physical-device acceptance, recurring external backups and measured workload testing. Institutional approval, SSO, automatic email recovery, fee/coursework clearance and HoD approval workflows are not implemented.
 

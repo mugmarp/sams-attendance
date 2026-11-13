@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "SAMS — Assignment demonstration and validation",
+    "name": "SAMS \u2014 Assignment demonstration and validation",
     "description": "Run in order against a disposable seeded database. Creates synthetic accounts, an offering, enrollments and dated classes. Includes success/invalid requests, assertions and saved sample responses. Duplicate attendance retries are deliberately idempotent (200); duplicate account/offering/enrollment creation returns 409. Do not run on real university records.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -402,6 +402,250 @@
             }
           ],
           "body": "{\n  \"accessToken\": \"<accessToken>\",\n  \"refreshToken\": \"<refreshToken>\",\n  \"user\": {\n    \"id\": \"<id>\",\n    \"email\": \"student@demo.sams.test\",\n    \"name\": \"Alice Nakato\",\n    \"role\": \"STUDENT\",\n    \"regNo\": \"DEMO/BSE/001\",\n    \"program\": \"BSE\",\n    \"year\": 2\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Resolve the signed-in student course setup",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/student/course-setup",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Automatically assign published compulsory courses for the authenticated student. Existing sample identities may return PLACEMENT_REVIEW or PLAN_PENDING until a valid registration and published plan exist. No accepted attendance is created.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "pm.test(\"Course setup state\",()=>{const r=pm.response.json();pm.expect(r.status).to.be.oneOf([\"READY\",\"PLACEMENT_REVIEW\",\"PLAN_PENDING\",\"TERM_PENDING\"]);pm.expect(r.courses).to.be.an(\"array\");});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Course confirmation requires a plan and version",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/student/course-setup",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Reject confirmation without a current plan identity and version.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"confirm\": true,\n  \"electives\": []\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\",()=>pm.response.to.have.status(400));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Course setup rejects a client-selected student identity",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/student/course-setup",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Only the authenticated identity is used. Unknown fields cannot choose another student.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"{{studentId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\",()=>pm.response.to.have.status(400));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student cannot inspect registrar course-plan options",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/course-plans/options",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Course-plan administration is restricted to registrars."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\",()=>pm.response.to.have.status(403));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registrar loads reviewed course-plan options",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/course-plans/options",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Returns reviewed terms and active lecturer accounts. Add termId and groupKey to fetch eligible offerings and the published version."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+              "pm.test(\"Plan options\",()=>{const r=pm.response.json();pm.expect(r.terms).to.be.an(\"array\");pm.expect(r.lecturers).to.be.an(\"array\");});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Course-plan preview rejects missing scope and offerings",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/course-plans/preview",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "description": "Require an existing term, specific group and distinct eligible offerings before publication.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"items\": [],\n  \"expectedVersion\": 0,\n  \"reason\": \"Reject incomplete published plan\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\",()=>pm.response.to.have.status(400));",
+              "pm.test(\"JSON response\",()=>pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));"
+            ]
+          }
         }
       ]
     },

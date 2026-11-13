@@ -26,6 +26,7 @@ if (user) {
   }
   async function load() {
     const current = ++generation;
+    const previousSelection = $("#target-account").value;
     $("#action-card").hidden = true;
     $("#target-account").disabled = true;
     try {
@@ -46,6 +47,7 @@ if (user) {
               `<option value="${r.id}">${escape(r.name)} · ${escape(r.regNo || r.email)} · ${r.isActive ? "Active" : "Disabled"}</option>`,
           )
           .join("");
+      if (rows.some(row => row.id === previousSelection)) $("#target-account").value = previousSelection;
       $("#account-count").textContent = rows.length
         ? `Accounts ${offset + 1}–${offset + rows.length}. Refine the filters or search to find a person.`
         : "No accounts in this scope.";

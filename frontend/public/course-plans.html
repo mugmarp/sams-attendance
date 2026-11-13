@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0369a1" />
+    <title>SAMS · Course setup</title>
+    <link rel="icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header id="site-header" hidden></header>
+    <div class="header-inner" id="offline" role="status" hidden>
+      Course setup requires an online connection.
+    </div>
+    <main class="stack">
+      <h1>Programme course setup</h1>
+      <p>
+        Prepare offerings and publish the course list once for a programme group
+        and semester. Students receive its compulsory courses automatically on
+        sign-in. Existing enrollments and withdrawals are preserved.
+      </p>
+      <p id="error" class="alert" role="alert" hidden></p>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <section class="card stack">
+        <h2>Choose academic scope</h2>
+        <div class="grid">
+          <div>
+            <label for="plan-term">Reviewed term</label
+            ><select id="plan-term"></select>
+          </div>
+          <div>
+            <label for="plan-faculty">Faculty</label
+            ><select id="plan-faculty"></select>
+          </div>
+          <div>
+            <label for="plan-programme">Programme</label
+            ><select id="plan-programme"></select>
+          </div>
+          <div>
+            <label for="plan-group">Study year / track</label
+            ><select id="plan-group"></select>
+          </div>
+        </div>
+        <p class="small">
+          If the term is missing, configure it in
+          <a href="/admin/timetable">Timetable setup</a>.
+        </p>
+      </section>
+      <section class="card stack">
+        <h2>1. Prepare course offerings</h2>
+        <p class="small">
+          Review the timetable labels and assign lecturer accounts. Activities
+          are excluded. This creates offerings, not dated class sessions.
+        </p>
+        <button id="source-load">Load timetable courses</button>
+        <div id="source-courses"></div>
+        <button id="source-preview" hidden>Preview offering setup</button>
+        <div id="source-review"></div>
+      </section>
+      <section class="card stack">
+        <h2>2. Publish the programme course list</h2>
+        <p id="plan-version"></p>
+        <div id="plan-courses"></div>
+        <label for="plan-note"
+          >Course-list notes or unresolved source entries</label
+        ><textarea id="plan-note" maxlength="1000"></textarea>
+        <button id="plan-preview">Preview course list</button>
+        <div id="plan-review"></div>
+      </section>
+      <section class="card stack">
+        <h2>3. Set up existing students together</h2>
+        <p>
+          First sign-in sets up courses automatically. Use this batch action to
+          prepare the current group now. New enrollment dates begin today in
+          Kampala.
+        </p>
+        <button id="batch-preview">Preview student assignments</button>
+        <div id="batch-review"></div>
+      </section>
+      <section class="card stack">
+        <h2>Confirm a reviewed action</h2>
+        <label for="plan-reason">Reason</label
+        ><textarea id="plan-reason" minlength="5" maxlength="500"></textarea
+        ><label for="registrar-password">Your current password</label
+        ><input
+          id="registrar-password"
+          type="password"
+          autocomplete="current-password"
+        />
+        <p class="small">
+          Preview an action, then use its confirmation button. Changes to scope
+          or selection require a new preview.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="/js/course-plans.js"></script>
+  </body>
+</html>

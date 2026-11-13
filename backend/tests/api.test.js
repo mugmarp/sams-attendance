@@ -28,6 +28,9 @@ before(async () => {
   process.env.JWT_SECRET = "test-access-secret-at-least-32-characters";
   process.env.JWT_REFRESH_SECRET = "test-refresh-secret-at-least-32-characters";
   app = (await import("../src/app.js")).default;
+  await db.studentCourseSetup.deleteMany();
+  await db.coursePlanItem.deleteMany();
+  await db.coursePlan.deleteMany();
   await db.auditEvent.deleteMany();
   await db.reportSnapshot.deleteMany();
   await db.timetableReview.deleteMany();
@@ -2034,4 +2037,380 @@ test("concurrent password changes cannot overwrite a newer credential", async ()
     (await db.user.findUniqueOrThrow({ where: { id: user.id } })).authVersion,
     1,
   );
+});
+
+test("published programme plans automate compulsory enrollment, constrain electives and preserve withdrawals", async () => {
+  const year = new Date().getUTCFullYear(),
+    academicYear = `${year}/${year + 1}`;
+  const startsOn = new Date(Date.now() - 86400000 * 2),
+    endsOn = new Date(Date.now() + 86400000 * 20);
+  // Earlier timetable tests use future terms; this fixture supplies a current one.
+  const existingTerms = await db.academicTerm.findMany();
+  for (const t of existingTerms)
+    await db.academicTerm.update({
+      where: { id: t.id },
+      data: {
+        startsOn: new Date(Date.now() + 86400000 * 90),
+        endsOn: new Date(Date.now() + 86400000 * 100),
+      },
+    });
+  const term = await db.academicTerm.create({
+    data: {
+      academicYear: `${year + 10}/${year + 11}`,
+      semester: 2,
+      startsOn,
+      endsOn,
+      excludedDates: [],
+      sourceUrl: "https://example.test/approved",
+      sourceNote: "Isolated course-plan test",
+    },
+  });
+  // Use an independent academic year to avoid pre-existing timetable term uniqueness.
+  const intake = year + 9;
+  const teacher = await db.user.findUniqueOrThrow({
+    where: { email: "teacher@test.example" },
+  });
+  const adminUser = await db.user.findUniqueOrThrow({
+    where: { email: "admin@test.example" },
+  });
+  const passwordHash = await bcrypt.hash("TestPassword2026!", 4);
+  const learner = await db.user.create({
+    data: {
+      name: "Course Plan Learner",
+      email: "plan-learner@test.example",
+      regNo: `${intake}/BCS/9001/PS`,
+      programmeCode: "BCS",
+      role: "STUDENT",
+      passwordHash,
+    },
+  });
+  const peer = await db.user.create({
+    data: {
+      name: "Course Plan Peer",
+      email: "plan-peer@test.example",
+      regNo: `${intake}/BCS/9002/PS`,
+      programmeCode: "BCS",
+      role: "STUDENT",
+      passwordHash,
+    },
+  });
+  const outsider = await db.user.create({
+    data: {
+      name: "Other Programme",
+      email: "plan-other@test.example",
+      regNo: `${intake}/BSE/9003/PS`,
+      programmeCode: "BSE",
+      role: "STUDENT",
+      passwordHash,
+    },
+  });
+  const createCourse = async (code, group = "BCS II", isPractice = false) =>
+    db.course.create({
+      data: {
+        code,
+        title: code + " Course",
+        academicYear: term.academicYear,
+        semester: 2,
+        program: group.split(" ")[0],
+        programmeCode: group.split(" ")[0],
+        year: 2,
+        examinerId: teacher.id,
+        isPractice,
+        audiences: { create: { groupKey: group } },
+      },
+    });
+  const required = await createCourse("PLANREQ"),
+    elective = await createCourse("PLANELEC"),
+    otherCourse = await createCourse("PLANOTHER", "BSE II"),
+    practice = await createCourse("PLAN-P");
+  const adminToken = await login(adminUser.email);
+  const headers = auth(adminToken);
+  const input = {
+    termId: term.id,
+    groupKey: "BCS II",
+    expectedVersion: 0,
+    reason: "Publish approved test curriculum",
+    items: [
+      { courseId: required.id, compulsory: true },
+      { courseId: elective.id, compulsory: false },
+    ],
+  };
+  let plan;
+  try {
+    assert.equal(
+      (
+        await request(app)
+          .post("/api/admin/course-plans/preview")
+          .set(headers)
+          .send({
+            ...input,
+            items: [{ courseId: otherCourse.id, compulsory: true }],
+          })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await request(app)
+          .post("/api/admin/course-plans/preview")
+          .set(headers)
+          .send({
+            ...input,
+            items: [{ courseId: practice.id, compulsory: true }],
+          })
+      ).status,
+      400,
+    );
+    const preview = await request(app)
+      .post("/api/admin/course-plans/preview")
+      .set(headers)
+      .send(input);
+    assert.equal(preview.status, 200, JSON.stringify(preview.body));
+    const bad = await request(app)
+      .post("/api/admin/course-plans/publish")
+      .set(headers)
+      .send({
+        ...input,
+        previewHash: preview.body.previewHash,
+        currentPassword: "incorrect",
+      });
+    assert.equal(bad.status, 401);
+    const published = await request(app)
+      .post("/api/admin/course-plans/publish")
+      .set(headers)
+      .send({
+        ...input,
+        previewHash: preview.body.previewHash,
+        currentPassword: "TestPassword2026!",
+      });
+    assert.equal(published.status, 201, JSON.stringify(published.body));
+    plan = published.body;
+    assert.equal(
+      await db.enrollment.count({ where: { studentId: learner.id } }),
+      0,
+    );
+    const studentToken = await login(learner.email);
+    let enrollments = await db.enrollment.findMany({
+      where: { studentId: learner.id },
+    });
+    assert.equal(enrollments.length, 1);
+    assert.equal(enrollments[0].courseId, required.id);
+    assert.equal(enrollments[0].origin, "COURSE_PLAN");
+    const { kampalaDay } = await import("../src/services/rules.js");
+    assert.equal(
+      enrollments[0].effectiveFrom.toISOString().slice(0, 10),
+      kampalaDay(),
+    );
+    const learnerProfile = await db.user.findUnique({
+      where: { id: learner.id },
+    });
+    assert.equal(learnerProfile.studyGroupKey, "BCS II");
+    await Promise.all([login(learner.email), login(learner.email)]);
+    assert.equal(
+      await db.enrollment.count({ where: { studentId: learner.id } }),
+      1,
+    );
+    assert.equal(
+      (
+        await request(app)
+          .post("/api/admin/course-plans/preview")
+          .set(auth(studentToken))
+          .send(input)
+      ).status,
+      403,
+    );
+    const body = {
+      confirm: true,
+      planId: plan.id,
+      version: plan.version,
+      electives: [elective.id],
+    };
+    assert.equal(
+      (
+        await request(app)
+          .post("/api/student/course-setup")
+          .set(auth(studentToken))
+          .send({ ...body, electives: [otherCourse.id] })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await request(app)
+          .post("/api/student/course-setup")
+          .set(auth(studentToken))
+          .send({ ...body, version: 99 })
+      ).status,
+      409,
+    );
+    const confirmed = await request(app)
+      .post("/api/student/course-setup")
+      .set(auth(studentToken))
+      .send(body);
+    assert.equal(confirmed.status, 200);
+    assert.ok(confirmed.body.confirmedAt);
+    assert.equal(confirmed.body.courses.filter((c) => c.enrolled).length, 2);
+    const withdrawnAt = new Date(Date.now() - 86400000);
+    withdrawnAt.setUTCHours(0, 0, 0, 0);
+    await db.enrollment.update({
+      where: { id: enrollments[0].id },
+      data: { effectiveUntil: withdrawnAt },
+    });
+    const reloaded = await request(app)
+      .post("/api/student/course-setup")
+      .set(auth(studentToken))
+      .send({});
+    assert.equal(reloaded.status, 200);
+    assert.equal(
+      reloaded.body.courses.find((c) => c.id === required.id).enrolled,
+      false,
+    );
+    await login(learner.email);
+    assert.equal(
+      (
+        await db.enrollment.findUnique({ where: { id: enrollments[0].id } })
+      ).effectiveUntil.getTime(),
+      withdrawnAt.getTime(),
+    );
+    const outsideToken = await login(outsider.email);
+    const pending = await request(app)
+      .post("/api/student/course-setup")
+      .set(auth(outsideToken))
+      .send({});
+    assert.equal(pending.body.status, "PLAN_PENDING");
+    assert.equal(
+      await db.enrollment.count({ where: { studentId: outsider.id } }),
+      0,
+    );
+    const batch = await request(app)
+      .post("/api/admin/course-plans/batch-preview")
+      .set(headers)
+      .send({ planId: plan.id });
+    assert.equal(batch.status, 200, JSON.stringify(batch.body));
+    assert.equal(batch.body.rows.length, 2);
+    assert.ok(batch.body.rows.find((r) => r.id === peer.id).newCourses === 1);
+    const applied = await request(app)
+      .post("/api/admin/course-plans/batch-apply")
+      .set(headers)
+      .send({
+        planId: plan.id,
+        previewHash: batch.body.previewHash,
+        currentPassword: "TestPassword2026!",
+        reason: "Assign reviewed cohort courses",
+      });
+    assert.equal(applied.status, 200, JSON.stringify(applied.body));
+    assert.equal(applied.body.inserted, 1);
+    const stale = await request(app)
+      .post("/api/admin/course-plans/batch-apply")
+      .set(headers)
+      .send({
+        planId: plan.id,
+        previewHash: batch.body.previewHash,
+        currentPassword: "TestPassword2026!",
+        reason: "Retry stale cohort preview",
+      });
+    assert.equal(stale.status, 409);
+    const auditEvents = await db.auditEvent.findMany({
+      where: {
+        kind: "COURSE_PLAN_ENROLLMENT",
+        entityId: {
+          in: (
+            await db.enrollment.findMany({
+              where: { studentId: { in: [learner.id, peer.id] } },
+            })
+          ).map((e) => e.id),
+        },
+      },
+    });
+    assert.equal(auditEvents.length, 3);
+    assert.ok(!JSON.stringify(auditEvents).includes("TestPassword2026!"));
+  } finally {
+    await db.studentCourseSetup.deleteMany({
+      where: { studentId: { in: [learner.id, peer.id, outsider.id] } },
+    });
+    if (plan) {
+      await db.coursePlanItem.deleteMany({ where: { planId: plan.id } });
+      await db.coursePlan.delete({ where: { id: plan.id } });
+    }
+    await db.enrollment.deleteMany({
+      where: { studentId: { in: [learner.id, peer.id, outsider.id] } },
+    });
+    await db.courseAudience.deleteMany({
+      where: {
+        courseId: {
+          in: [required.id, elective.id, otherCourse.id, practice.id],
+        },
+      },
+    });
+    await db.course.deleteMany({
+      where: {
+        id: { in: [required.id, elective.id, otherCourse.id, practice.id] },
+      },
+    });
+    await db.user.deleteMany({
+      where: { id: { in: [learner.id, peer.id, outsider.id] } },
+    });
+    await db.academicTerm.delete({ where: { id: term.id } });
+    for (const t of existingTerms)
+      await db.academicTerm.update({
+        where: { id: t.id },
+        data: { startsOn: t.startsOn, endsOn: t.endsOn },
+      });
+  }
+});
+
+test("report enrollment boundaries use Kampala dates independently of the PostgreSQL session timezone", async () => {
+  const teacher = await db.user.findUniqueOrThrow({
+    where: { email: "teacher@test.example" },
+  });
+  const c = await db.course.create({
+    data: {
+      code: "EAT" + randomUUID().slice(0, 6),
+      title: "Kampala midnight boundary",
+      program: "BSE",
+      year: 2,
+      academicYear: "2026/2027",
+      semester: 1,
+      examinerId: teacher.id,
+      enrollments: {
+        create: {
+          studentId,
+          effectiveFrom: new Date("2026-11-13T00:00:00Z"),
+          effectiveUntil: new Date("2026-11-14T00:00:00Z"),
+        },
+      },
+    },
+  });
+  try {
+    for (const instant of [
+      "2026-11-12T20:30:00Z",
+      "2026-11-12T22:00:00Z",
+      "2026-11-13T22:00:00Z",
+    ])
+      await db.session.create({
+        data: {
+          courseId: c.id,
+          naturalKey: "eat:" + randomUUID(),
+          startTime: new Date(instant),
+          endTime: new Date(Date.parse(instant) + 1800000),
+          status: "COMPLETED",
+        },
+      });
+    const { courseReport, getStudentAttendanceSummary } = await import(
+      "../src/services/eligibility.js"
+    );
+    for (const tz of ["UTC", "Africa/Kampala", "America/New_York"]) {
+      const report = await db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT set_config('TimeZone',${tz},true)`;
+        return courseReport(tx, c.id);
+      });
+      assert.equal(report.students[0].totalSessions, 1, tz);
+    }
+    const summary = await getStudentAttendanceSummary(studentId);
+    assert.equal(summary.find((r) => r.courseId === c.id).totalSessions, 1);
+  } finally {
+    await db.session.deleteMany({ where: { courseId: c.id } });
+    await db.enrollment.deleteMany({ where: { courseId: c.id } });
+    await db.course.delete({ where: { id: c.id } });
+  }
 });

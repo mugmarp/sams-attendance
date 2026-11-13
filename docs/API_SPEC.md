@@ -116,3 +116,24 @@ Enrollment creation now accepts optional effectiveFrom, defaulting to the curren
 - Registrar course/student/user lists support faculty, programme, group, year, academicYear, semester, search, limit (1–200, default 100) and offset as applicable. Cross-programme course audiences participate in course filters. Query filters never replace role/ownership checks. Student reference requests use the student's confirmed group instead of browsing an unrestricted all-programme feed.
 
 See [ACADEMIC_STRUCTURE_AND_DAY.md](ACADEMIC_STRUCTURE_AND_DAY.md) for source evidence, boundaries and data decisions.
+
+## Programme course setup
+
+All routes require a current authenticated account and are subject to mandatory temporary-password replacement. Publication, source import and cohort application additionally require the registrar's current password, a reason of 5–500 characters and a matching preview hash. IDs are CUIDs, unknown body fields are rejected and lists are bounded. These actions are separate from recording attendance.
+
+| Method and path (under `/api`) | Role | Behavior |
+| --- | --- | --- |
+| POST `/student/course-setup` | STUDENT | `{}` resolves the current term and placement and assigns missing published compulsory courses. Returns READY, TERM_PENDING, PLAN_PENDING or PLACEMENT_REVIEW with a useful message. |
+| POST `/student/course-setup` | STUDENT | `{confirm:true,planId,version,electives:[courseId]}` confirms the latest list and adds only permitted elective enrollments; 409 if stale. Existing withdrawals are retained. |
+| GET `/admin/course-plans/options` | ADMIN | List reviewed terms and active lecturers. Optional `termId` and `groupKey` scope courses and the current plan. |
+| POST `/admin/course-plans/source` | ADMIN | `{termId,groupKey}` returns distinct source labels, source lecturers and interval issues. Activities MUCOSA and BM-REP are excluded from course import. |
+| POST `/admin/course-plans/import-preview` | ADMIN | `{termId,groupKey,items:[{code,examinerId}],reason}` previews eligible offerings, shared audiences and changes; returns previewHash. |
+| POST `/admin/course-plans/import` | ADMIN | Same input plus previewHash and currentPassword creates/reuses offerings and adds the reviewed audience. Conflicting teaching details return 409. Does not create sessions. |
+| POST `/admin/course-plans/preview` | ADMIN | `{termId,groupKey,items:[{courseId,compulsory}],expectedVersion,reason}` previews a full plan. Use expectedVersion 0 for first publication. |
+| POST `/admin/course-plans/publish` | ADMIN | Same input plus previewHash/currentPassword publishes the reviewed plan transactionally; rejects stale versions and invalid programme/term/practice matches. |
+| POST `/admin/course-plans/batch-preview` | ADMIN | `{planId}` previews matching active students in the current term, new compulsory links and placement-review count. |
+| POST `/admin/course-plans/batch-apply` | ADMIN | `{planId,previewHash,currentPassword,reason}` applies the same setup service atomically to the previewed cohort, rejecting changed records. Maximum 500 programme candidates. |
+
+New automatic links have effectiveFrom equal to the Kampala setup date and effectiveUntil equal to the day after the term ends. Existing links, effective dates and withdrawals are preserved. The batch does not override exceptional placement or create historical attendance. Publishing a revised plan requires renewed confirmation but does not delete previous enrollment or marks. Course confirmation cannot remove courses; corrections use registrar review.
+
+Offerings now have `offeringKey` (default `MAIN` for existing/manual records). The identity is code + academicYear + semester + offeringKey, allowing programme-specific subjects to reuse a code safely. Source imports use the programme code as the offering key. Manual course creation accepts an optional uppercase alphanumeric/hyphen key of at most 40 characters. Course-plan preview/publication accepts an optional `reviewNote` of at most 1,000 characters, returned to students with the list. Source import also rejects conflicting titles within a group, staff/activity labels and malformed course codes.

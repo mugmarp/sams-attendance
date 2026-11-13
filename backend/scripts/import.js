@@ -127,7 +127,8 @@ export async function importDataset(db, input, initialPassword) {
         const { key, examinerEmail, ...fields } = c;
         const existing = await tx.course.findUnique({
           where: {
-            code_academicYear_semester: {
+            code_academicYear_semester_offeringKey: {
+              offeringKey: "MAIN",
               code: c.code,
               academicYear: c.academicYear,
               semester: c.semester,

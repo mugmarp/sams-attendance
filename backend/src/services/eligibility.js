@@ -20,6 +20,8 @@ export async function courseReport(tx, courseId) {
     select,
   });
   if (!course) throw new NotFoundError("Course not found");
+  // Prisma timestamp(3) values use the UTC convention. First attach UTC, then
+  // convert to a Kampala wall-clock date, independent of the SQL session zone.
   // Aggregate in PostgreSQL rather than loading every attendance row into Node.
   const rows = await tx.$queryRaw`
     SELECT e.id AS "enrollmentId", e."studentId", u.name, u."regNo", e."effectiveFrom", e."effectiveUntil",
@@ -27,8 +29,8 @@ export async function courseReport(tx, courseId) {
       count(a.id) FILTER (WHERE a.status = 'PRESENT' OR (a.status = 'LATE' AND c."countLate") OR (a.status = 'EXCUSED' AND c."countExcused"))::int AS "presentCount"
     FROM "Enrollment" e JOIN "User" u ON u.id=e."studentId" JOIN "Course" c ON c.id=e."courseId"
     LEFT JOIN "Session" s ON s."courseId"=c.id AND s.status='COMPLETED'
-      AND (e."effectiveFrom" IS NULL OR (s."startTime" AT TIME ZONE 'Africa/Kampala')::date >= e."effectiveFrom")
-      AND (e."effectiveUntil" IS NULL OR (s."startTime" AT TIME ZONE 'Africa/Kampala')::date < e."effectiveUntil")
+      AND (e."effectiveFrom" IS NULL OR (s."startTime" AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Kampala')::date >= e."effectiveFrom")
+      AND (e."effectiveUntil" IS NULL OR (s."startTime" AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Kampala')::date < e."effectiveUntil")
     LEFT JOIN "Attendance" a ON a."sessionId"=s.id AND a."studentId"=e."studentId"
     WHERE c.id=${courseId}
     GROUP BY e.id,u.id ORDER BY u."regNo",u.id`;
@@ -62,8 +64,8 @@ export async function getStudentAttendanceSummary(studentId) {
       count(a.id) FILTER (WHERE a.status='PRESENT' OR (a.status='LATE' AND c."countLate") OR (a.status='EXCUSED' AND c."countExcused"))::int AS "presentCount"
     FROM "Enrollment" e JOIN "Course" c ON c.id=e."courseId"
     LEFT JOIN "Session" s ON s."courseId"=c.id AND s.status='COMPLETED'
-      AND (e."effectiveFrom" IS NULL OR (s."startTime" AT TIME ZONE 'Africa/Kampala')::date >= e."effectiveFrom")
-      AND (e."effectiveUntil" IS NULL OR (s."startTime" AT TIME ZONE 'Africa/Kampala')::date < e."effectiveUntil")
+      AND (e."effectiveFrom" IS NULL OR (s."startTime" AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Kampala')::date >= e."effectiveFrom")
+      AND (e."effectiveUntil" IS NULL OR (s."startTime" AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Kampala')::date < e."effectiveUntil")
     LEFT JOIN "Attendance" a ON a."sessionId"=s.id AND a."studentId"=e."studentId"
     WHERE e."studentId"=${studentId} GROUP BY e.id,c.id ORDER BY c.code,c.id`;
   return rows.map((row) => ({

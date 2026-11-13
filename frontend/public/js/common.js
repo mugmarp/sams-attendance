@@ -87,11 +87,23 @@ export async function init(roles) {
   } catch {
     /* Keep saved views available offline. */
   }
+  if (
+    user.role === "STUDENT" &&
+    location.pathname !== "/student/courses" &&
+    location.pathname !== "/account"
+  ) {
+    try {
+      await api("/student/course-setup", { method: "POST", body: {}, session });
+    } catch {
+      /* Keep the existing workspace available; My courses shows setup errors. */
+    }
+  }
   const links =
     user.role === "STUDENT"
       ? [
           ["/student/checkin", "Check in"],
           ["/student/summary", "My attendance"],
+          ["/student/courses", "My courses"],
         ]
       : user.role === "ADMIN"
         ? [
@@ -103,8 +115,12 @@ export async function init(roles) {
   if (user.role === "ADMIN")
     links.push(["/admin/timetable", "Timetable setup"]);
   if (user.role === "ADMIN") links.push(["/admin/accounts", "Accounts"]);
+  if (user.role === "ADMIN")
+    links.push(["/admin/course-plans", "Course setup"]);
   links.push(["/account", "My account"]);
   const icons = {
+    "/student/courses": '<path d="M4 4h7v16H4zM13 4h7v16h-7z"/>',
+    "/admin/course-plans": '<path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h4"/>',
     "/account":
       '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
     "/admin/accounts":

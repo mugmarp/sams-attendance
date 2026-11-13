@@ -69,3 +69,13 @@ A concrete calendar defect was fixed in this review: student-day previously acce
 ## Technical references
 
 [Node.js TZ configuration](https://nodejs.org/api/cli.html#tz) explains process timezone configuration. [PostgreSQL date/time types](https://www.postgresql.org/docs/current/datatype-datetime.html) explains the important difference between timestamp types and timezone conversion. These references support the time-handling design; local source inspection supplies the project-specific findings.
+
+## Implementation update — 13 November 2026
+
+The implementation now includes reviewed course-plan publication, source offering import with assigned active lecturer accounts, student automatic compulsory-course assignment, constrained elective confirmation and registrar batch preview/apply. The My courses and Course setup pages provide these workflows. Additive schema changes retain existing enrollment dates and add origin, practice classification, plan versions and confirmation records. Login resolves courses after temporary-password replacement; existing signed-in students reconcile when opening the workspace.
+
+The report query had another concrete date bug: Prisma stores Session startTime as UTC-convention timestamp(3), but SQL interpreted it directly as Kampala wall time. It now attaches UTC before converting to the Kampala date. The service unit declares TZ=Africa/Kampala for implicit operations; explicit conversions remain authoritative. This is a code/configuration change, not a claim that the current VPS clock was inspected or corrected. No timestamp column type or existing stored instant is changed.
+
+Course publication still requires review; source labels alone cannot establish an approved curriculum or real lecturer assignment. Dated class generation uses the existing timetable review workflow, with its recorded remaining conflict-validation limitations. Deployment and programme data publication must be distinguished from implementation completion.
+
+Programme-specific offering keys now permit the same course code to refer to different subjects in different programmes without overwriting titles or lecturers. Legacy/manual offerings keep key MAIN; source imports use the programme code. Explicit CourseAudience links still support reviewed shared offerings. Contradictory titles within the same programme group, non-course labels and malformed repeated codes are blocked. Plan review notes are visible to students. The five project lecturer accounts are authorized synthetic pilot identities; they are not verified institutional lecturer accounts. The pilot treats unambiguous timetabled academic subjects as compulsory for the project, with institutional curriculum/elective review explicitly pending.
