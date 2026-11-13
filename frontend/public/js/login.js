@@ -2,6 +2,10 @@ import { api, cachedUser, saveSession } from "./api.js";
 import { $, home, showError } from "./common.js";
 const existing = cachedUser();
 if (existing) location.replace(home(existing.role));
+else {
+  document.querySelector("[data-page-content]").hidden = false;
+  $("#page-loading").hidden = true;
+}
 $("#login-form").onsubmit = async (event) => {
   event.preventDefault();
   const button = $("#submit");
@@ -14,7 +18,9 @@ $("#login-form").onsubmit = async (event) => {
       body: { identifier: $("#email").value, password: $("#password").value },
     });
     saveSession(data);
-    location.assign(data.user.mustChangePassword ? "/account" : home(data.user.role));
+    location.assign(
+      data.user.mustChangePassword ? "/account" : home(data.user.role),
+    );
   } catch (error) {
     showError(error);
   } finally {

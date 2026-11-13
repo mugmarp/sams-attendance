@@ -10,11 +10,17 @@
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
+    <p id="page-loading" class="page-loading" role="status">Loading SAMS…</p>
+    <noscript
+      ><p class="page-loading">
+        JavaScript is required to use SAMS. Enable it and reload this page.
+      </p></noscript
+    >
     <header id="site-header" hidden></header>
     <div class="header-inner" id="offline" role="status" hidden>
       You’re offline. Saved check-ins are pending until the server accepts them.
     </div>
-    <main class="stack narrow">
+    <main hidden data-page-content class="stack narrow">
       <p id="error" class="alert" role="alert" hidden></p>
       <p id="notice" class="notice" role="status" hidden></p>
       <section id="checkin-view" class="stack" hidden>
@@ -115,5 +121,6 @@
     </main>
     <footer>Mbarara University of Science and Technology · SAMS</footer>
     <script type="module" src="/js/student.js"></script>
+    <script type="module" src="/js/page-loading.js"></script>
   </body>
 </html>

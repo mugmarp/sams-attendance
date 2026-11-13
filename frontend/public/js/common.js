@@ -225,5 +225,9 @@ export async function init(roles) {
     });
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   }
+  const content = document.querySelector("[data-page-content]");
+  if (content) content.hidden = false;
+  const loading = document.querySelector("#page-loading");
+  if (loading) loading.hidden = true;
   return user;
 }

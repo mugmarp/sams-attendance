@@ -10,11 +10,17 @@
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
+    <p id="page-loading" class="page-loading" role="status">Loading SAMS…</p>
+    <noscript
+      ><p class="page-loading">
+        JavaScript is required to use SAMS. Enable it and reload this page.
+      </p></noscript
+    >
     <header id="site-header" hidden></header>
     <div class="header-inner" id="offline" role="status" hidden>
       Course setup requires an online connection.
     </div>
-    <main class="stack">
+    <main hidden data-page-content class="stack">
       <h1>Programme course setup</h1>
       <p>
         Prepare offerings and publish the course list once for a programme group
@@ -96,5 +102,6 @@
       </section>
     </main>
     <script type="module" src="/js/course-plans.js"></script>
+    <script type="module" src="/js/page-loading.js"></script>
   </body>
 </html>
