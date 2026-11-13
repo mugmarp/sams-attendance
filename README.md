@@ -147,6 +147,8 @@ Open [localhost:3000](http://localhost:3000). `npm run dev --prefix backend` ena
 
 ## Academic records and timetable
 
+[Registration-based automatic course setup and Kampala-time review](docs/AUTO_ENROLLMENT_AND_KAMPALA_REVIEW.md) records the proposed enrollment workflow, inspected gaps and rollout checks. Automatic course setup is not yet implemented.
+
 Faculties, programmes, study years and timetable tracks are stored separately from course offerings and enrollment. The registrar uses dependent filters to work within an academic scope. A registration such as `2025/BSE/108/PS` supplies an intake year, programme token, sequence and sponsorship token; the sequence is not a class number. Academic placement is suggested, then confirmed, with recorded reasons for later changes.
 
 Institutional-looking emails can be derived using the supplied registration convention. A derived address is not evidence of mailbox ownership, and no automatic email delivery or verification is implemented.

@@ -8,7 +8,7 @@ import {
   profileData,
   selectableGroup,
 } from "../src/services/catalogue.js";
-import { weeklyEvents } from "../src/services/student-day.js";
+import { weeklyEvents, referenceInTerm } from "../src/services/student-day.js";
 import { dayModel, eventProgress } from "../../frontend/public/js/day-model.js";
 test("registration preserves zeroes, derives student email and suggests academic-year placement without promoting records", () => {
   const reg = registration(" 2025/bse/080/ps ");
@@ -109,4 +109,32 @@ test("current target is automatic at inclusive start and exclusive end; overlap 
     null,
   );
   assert.equal(eventProgress(row, start + 3600000).percent, 50);
+});
+
+test("BCS intake placement respects its three-year duration", () => {
+  assert.equal(suggestedYear(registration("2025/BCS/199/PS"), "2026/2027"), 2);
+  assert.equal(suggestedYear(registration("2024/BCS/199/PS"), "2026/2027"), 3);
+  assert.equal(
+    suggestedYear(registration("2023/BCS/199/PS"), "2026/2027"),
+    null,
+  );
+});
+test("weekly references require matching academic year and in-term Kampala date", () => {
+  const term = {
+    academicYear: "2026/2027",
+    lecturesBegin: "2026-08-17",
+    semesterEnds: "2026-12-12",
+  };
+  assert.equal(
+    referenceInTerm({ academic_year: "2026/2027" }, term, "2026-11-13"),
+    true,
+  );
+  assert.equal(
+    referenceInTerm({ academic_year: "2025/2026" }, term, "2026-11-13"),
+    false,
+  );
+  assert.equal(
+    referenceInTerm({ academic_year: "2026/2027" }, term, "2026-12-13"),
+    false,
+  );
 });
