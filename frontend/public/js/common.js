@@ -80,13 +80,34 @@ export async function init(roles) {
     location.replace(home(user.role));
     return null;
   }
-  try {
-    const health = await api("/health");
-    const timestamp = Date.parse(health.now);
-    if (Number.isFinite(timestamp)) serverOffset = timestamp - Date.now();
-  } catch {
-    /* Keep saved views available offline. */
-  }
+  let clockFlight = null,
+    lastClockSync = -Infinity;
+  const refreshClock = () => {
+    if (clockFlight || performance.now() - lastClockSync < 15000)
+      return clockFlight;
+    const started = Date.now();
+    clockFlight = api("/health")
+      .then((health) => {
+        const timestamp = Date.parse(health.now);
+        if (Number.isFinite(timestamp))
+          serverOffset = timestamp - (started + Date.now()) / 2;
+        lastClockSync = performance.now();
+      })
+      .catch(() => {})
+      .finally(() => {
+        clockFlight = null;
+      });
+    return clockFlight;
+  };
+  await refreshClock();
+  addEventListener("online", refreshClock);
+  addEventListener("focus", refreshClock);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshClock();
+  });
+  setInterval(() => {
+    if (!document.hidden) refreshClock();
+  }, 300000);
   if (
     user.role === "STUDENT" &&
     location.pathname !== "/student/courses" &&
@@ -185,7 +206,24 @@ export async function init(roles) {
   online();
   addEventListener("online", online);
   addEventListener("offline", online);
-  if ("serviceWorker" in navigator)
+  if ("serviceWorker" in navigator) {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController || document.querySelector("#application-update"))
+        return;
+      const banner = document.createElement("aside");
+      banner.id = "application-update";
+      banner.className = "notice";
+      banner.setAttribute("role", "status");
+      banner.textContent =
+        "An application update is ready. Save any unfinished form before reloading. Saved attendance attempts remain on this device. ";
+      const button = document.createElement("button");
+      button.textContent = "Reload application";
+      button.onclick = () => location.reload();
+      banner.append(button);
+      document.querySelector("main").prepend(banner);
+    });
     navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
   return user;
 }

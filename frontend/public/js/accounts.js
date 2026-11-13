@@ -3,6 +3,7 @@ import { $, escape, init, showError, notice } from "./common.js";
 import { filterPanel, getCatalogue } from "./academic-ui.js";
 const user = await init(["ADMIN"]);
 if (user) {
+  let lastSelectedId = "";
   let rows = [],
     offset = 0,
     generation = 0;
@@ -47,7 +48,8 @@ if (user) {
               `<option value="${r.id}">${escape(r.name)} · ${escape(r.regNo || r.email)} · ${r.isActive ? "Active" : "Disabled"}</option>`,
           )
           .join("");
-      if (rows.some(row => row.id === previousSelection)) $("#target-account").value = previousSelection;
+      if (rows.some((row) => row.id === previousSelection))
+        $("#target-account").value = previousSelection;
       $("#account-count").textContent = rows.length
         ? `Accounts ${offset + 1}–${offset + rows.length}. Refine the filters or search to find a person.`
         : "No accounts in this scope.";
@@ -75,7 +77,11 @@ if (user) {
     void load();
   };
   $("#target-account").onchange = () => {
-    $("#account-action-form").reset();
+    const id = $("#target-account").value;
+    if (id !== lastSelectedId) {
+      $("#account-action-form").reset();
+      lastSelectedId = id;
+    }
     action();
     target();
   };

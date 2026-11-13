@@ -94,3 +94,13 @@ These controls were confirmed through source review, the local focused checks an
 5. Run the full isolated API/browser/Postman suites, then conduct a bounded lecturer/two-student walkthrough in designated practice classes with recorded operator approval. Do not mark the supplied student roster merely for testing.
 
 Stronger presence verification is a policy/product decision after the basic workflow is reliable. The findings above remain open; this audit changed documentation and retained evidence only.
+
+## Remediation update
+
+The follow-up implementation replaces the 600/minute shared-IP ceiling with a broader 6,000/minute network guard and a separate 600/minute verified-account budget. Login retains an IP guard of 120 unsuccessful/in-flight requests per minute and a normalized, hashed identity limit of ten unsuccessful requests per minute; successful requests do not consume those failed-login budgets. These are pilot budgets, not a throughput guarantee.
+
+Next up compares dated and reference occurrences chronologically, preferring a dated occurrence on a tied start. The lecturer refreshes at code expiry with single-flight loading and an explicit open-window refresh state. Window open/close and newly accepted CODE attendance now write non-secret audit events; repeated start/accepted replay does not manufacture another window/attendance event. Completion audit records whether the class ended early, and its confirmation warns before scheduled end.
+
+The client resynchronizes clock offset after online/focus/resume and periodically while visible. A service-worker update notice offers an explicit reload without clearing saved attendance. Tabs running the older client still need a normal reload once before this new notice handler exists. Code display reminds the lecturer to show the code in the room and verify the register.
+
+F1, F4, F5 and F6 have code corrections and new regression checks. F8 has reload/clock improvements; release acceptance must still check long-lived tabs. F2 requires reviewed dated sessions. F3 remains a physical-presence limitation. F7 remains a policy decision: CODE submissions still mean PRESENT at the supervised check moment, with early-completion warning/audit context rather than an unapproved lateness policy. No historical marks are rewritten.

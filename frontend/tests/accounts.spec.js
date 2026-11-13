@@ -38,7 +38,13 @@ async function login(page, identifier, value = password) {
   await expect(page).not.toHaveURL(/\/login(?:\?.*)?$/);
 }
 async function choose(page) {
+  const filtered = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/admin/accounts?") &&
+      new URL(response.url()).searchParams.get("search") === learner.name,
+  );
   await page.getByLabel("Search courses or students").fill(learner.name);
+  await filtered;
   await expect(
     page.locator("#target-account option", { hasText: learner.name }),
   ).toHaveCount(1);

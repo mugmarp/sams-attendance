@@ -15,7 +15,11 @@ export function dayModel(classes, weekly, now) {
       ? active
       : planned.filter((s) => Date.parse(s.startTime) <= now),
     next:
-      future[0] || planned.find((s) => Date.parse(s.startTime) > now) || null,
+      [...future, ...planned.filter((s) => Date.parse(s.startTime) > now)].sort(
+        (a, b) =>
+          Date.parse(a.startTime) - Date.parse(b.startTime) ||
+          (a.kind === "REFERENCE" ? 1 : 0) - (b.kind === "REFERENCE" ? 1 : 0),
+      )[0] || null,
   };
 }
 export function eventProgress(event, now) {

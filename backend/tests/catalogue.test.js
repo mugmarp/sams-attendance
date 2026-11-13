@@ -138,3 +138,29 @@ test("weekly references require matching academic year and in-term Kampala date"
     false,
   );
 });
+
+test("next up is chronological and a matching dated class wins over its reference", () => {
+  const now = Date.parse("2026-11-13T07:30:00Z");
+  const reference = {
+    id: "reference",
+    kind: "REFERENCE",
+    startTime: "2026-11-13T08:00:00Z",
+    endTime: "2026-11-13T10:00:00Z",
+  };
+  const later = {
+    id: "later",
+    kind: "DATED",
+    startTime: "2026-11-19T07:00:00Z",
+    endTime: "2026-11-19T10:00:00Z",
+  };
+  assert.equal(dayModel([later], [reference], now).next.id, "reference");
+  assert.equal(
+    dayModel(
+      [{ ...reference, id: "dated", kind: "DATED" }, later],
+      [reference],
+      now,
+    ).next.id,
+    "dated",
+  );
+  assert.equal(dayModel([], [reference], now).target, null);
+});

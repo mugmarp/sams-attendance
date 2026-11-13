@@ -2414,3 +2414,62 @@ test("report enrollment boundaries use Kampala dates independently of the Postgr
     await db.course.delete({ where: { id: c.id } });
   }
 });
+
+test("code windows and accepted submissions are audited without plaintext codes or secrets", async () => {
+  const teacher = await db.user.findUniqueOrThrow({
+    where: { email: "teacher@test.example" },
+  });
+  const c = await db.course.create({
+    data: {
+      code: "AUD" + randomUUID().slice(0, 6),
+      title: "Window audit verification",
+      program: "BSE",
+      year: 2,
+      academicYear: "2026/2027",
+      semester: 1,
+      examinerId: teacher.id,
+      enrollments: { create: { studentId } },
+    },
+  });
+  const s = await db.session.create({
+    data: {
+      courseId: c.id,
+      naturalKey: "audit:" + randomUUID(),
+      startTime: new Date(Date.now() - 60000),
+      endTime: new Date(Date.now() + 3600000),
+    },
+  });
+  const actor = { userId: teacher.id, role: "EXAMINER" };
+  const { manageSession, submitCheckin } = await import(
+    "../src/services/attendance.js"
+  );
+  try {
+    const code = await manageSession(actor, s.id, "start");
+    await manageSession(actor, s.id, "start");
+    assert.equal(
+      await db.auditEvent.count({
+        where: { entityId: s.id, kind: "CHECKIN_WINDOW_OPEN" },
+      }),
+      1,
+    );
+    const first = await submitCheckin(studentId, s.id, code.code);
+    await submitCheckin(studentId, s.id, code.code);
+    await manageSession(actor, s.id, "stop");
+    const events = await db.auditEvent.findMany({
+      where: { entityId: { in: [s.id, first.attendance.id] } },
+    });
+    assert.deepEqual(events.map((e) => e.kind).sort(), [
+      "CHECKIN_WINDOW_CLOSE",
+      "CHECKIN_WINDOW_OPEN",
+      "CODE_ATTENDANCE_RECORDED",
+    ]);
+    const saved = JSON.stringify(events);
+    assert.ok(!saved.includes(code.code));
+    assert.ok(!saved.includes("checkinSecret"));
+  } finally {
+    await db.attendance.deleteMany({ where: { sessionId: s.id } });
+    await db.enrollment.deleteMany({ where: { courseId: c.id } });
+    await db.session.delete({ where: { id: s.id } });
+    await db.course.delete({ where: { id: c.id } });
+  }
+});
