@@ -28,3 +28,7 @@ The original 35 browser workflows plus four loading checks form the final 39-cas
 - Simulated older cached login/common modules still reveal the correct page with the new loading helper.
 
 The backend/API behavior is unchanged. Consult VALIDATION.md and the dated machine-readable evidence for final run results and deployment status. The first pre-helper regression run passed 38 tests; final cache-transition verification is recorded separately after execution.
+
+## Executed result
+
+The final **39 browser tests** and frontend syntax checks passed. Release `f7626bfac94f7a24a3c3c35c950ccc6470474006` is deployed after a private pre-release backup. HTTPS role smoke checks and ten bounded health checks passed, with zero automatic restarts. In the Codex browser, My account had the new gated markup, visible content only in the initialized workspace and a hidden loading status after completion. No account settings or attendance were changed during acceptance. Existing open tabs need a normal reload to pick up the updated page.

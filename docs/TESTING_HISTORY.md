@@ -60,3 +60,7 @@ Full Newman JSON reports contain working test tokens and request bodies; they ar
 ## Executed attendance fixes
 
 [Fix evidence](test-reports/2026-11-13-attendance-fixes.json) records 65 backend tests, 35 browser tests and the reverified 135-request/351-assertion Postman collection. The audit's original findings remain historical; its later remediation section identifies what was fixed and the policy/teaching setup still pending. Live acceptance used the Codex browser without recording attendance.
+
+## Initial page-content flash
+
+[Page-loading audit](PAGE_LOADING_AUDIT_2026-11-13.md) and [39-case browser result](test-reports/2026-11-13-page-loading.json) document the neutral startup state, delayed identity responses, wrong-role redirects and compatibility with cached older modules. Backend/API baselines were not rerun for this frontend-only patch.
