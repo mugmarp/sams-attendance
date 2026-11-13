@@ -6,7 +6,7 @@ SAMS digitizes **class attendance**, an Academic Registrar workflow. Students se
 
 The application uses **HTML, CSS and JavaScript**, a **Node.js/Express API**, and **PostgreSQL** through Prisma's JavaScript client. Express serves both the frontend and `/api` from one origin. No frontend compilation or separate frontend server is needed.
 
-**Current status, 12 November 2026:** a controlled pilot is hosted at [sams.tirallab.page](https://sams.tirallab.page). Core workflows and account-management features are implemented, but the latest audit identified unresolved defects. See [known issues](#known-issues-and-adoption-boundaries) before relying on the system for operational attendance.
+**Current status, 13 November 2026:** a controlled pilot is hosted at [sams.tirallab.page](https://sams.tirallab.page). Core workflows and account-management features are implemented, but the latest audit identified unresolved defects. See [known issues](#known-issues-and-adoption-boundaries) before relying on the system for operational attendance.
 
 [Proposal](docs/PROPOSAL.md) · [API reference](docs/API_SPEC.md) · [Postman walkthrough](docs/POSTMAN_DEMO.md) · [Testing history and API evidence](docs/TESTING_HISTORY.md) · [Validation record](docs/VALIDATION.md) · [Native deployment](docs/NATIVE_DEPLOYMENT.md)
 
@@ -155,7 +155,7 @@ Institutional-looking emails can be derived using the supplied registration conv
 
 The timetable distinguishes **dated SAMS classes** from **weekly source references**. Staff review source versions, times, teaching dates and exceptions before applying future timetable entries. Refreshing a source does not automatically change classes or create attendance. The audit found calendar and scheduling defects in these paths; their correction is still pending.
 
-The five-programme sample covers BSE, BCS, BIT, BBA and BME. User-supplied records and synthetic records are distinguished; importing a student alone does not create enrollment. Automatic setup requires a matching published plan for the single current reviewed term. Separate hosted practice offerings use `-P` course codes. The supplied group-member roster is not enrolled or marked by the practice walkthrough.
+The five-programme sample covers BSE, BCS, BIT, BBA and BME. Thirteen published programme/year/track plans now cover 53 students, using five synthetic project lecturer accounts and 89 programme-specific offerings alongside the two original practice offerings. Source activities and contradictory entries are excluded with visible review notes; institutional curriculum classification remains pending. User-supplied records and synthetic records are distinguished; importing a student alone does not create enrollment. Automatic setup requires a matching published plan for the single current reviewed term. Separate hosted practice offerings use `-P` course codes. The supplied group-member roster is not enrolled or marked by the practice walkthrough.
 
 [Academic structure and source decisions](docs/ACADEMIC_STRUCTURE_AND_DAY.md) · [Timetable and saved reports](docs/TIMETABLE_AND_RECORDS.md) · [Private import guide](docs/IMPORT_GUIDE.md)
 

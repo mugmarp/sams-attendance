@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-13",
+  "timeZone": "Africa/Kampala",
+  "implementationCommit": "5be403c24f9f70a3083e0a17fb18a9a95bf21508",
+  "provisioningFixCommit": "cbcc946c6b65988f3eac931d93e8fbf384234a6d",
+  "environment": {
+    "node": "v22.22.1",
+    "database": "isolated local PostgreSQL 18; CI/VPS PostgreSQL 16",
+    "browser": "installed Google Chrome, headless"
+  },
+  "backend": {
+    "tests": 61,
+    "failures": 0
+  },
+  "browser": {
+    "tests": 34,
+    "failures": 0
+  },
+  "postman": {
+    "requests": 135,
+    "assertions": 351,
+    "failures": 0
+  },
+  "intermediateFailures": [
+    "Account recovery browser selection was cleared by delayed search reload; fixed by retaining selection if still in results. Final full browser suite passed.",
+    "Initial pilot term creation omitted reviewed:true; API rejected before provisioning. Corrected in separate commit."
+  ],
+  "limits": [
+    "No physical Android acceptance or attendance-burst capacity claim",
+    "Remaining audit findings remain open",
+    "Full token-bearing Newman report is private"
+  ]
+}

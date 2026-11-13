@@ -129,3 +129,7 @@ The timetable and academic-catalogue ideas were informed by the Android reposito
 Choose a module using the README allocation. Trace one complete action from page to database and back. Run it locally, explain one invalid case, inspect its relevant test and identify a useful improvement. Review a neighboring module with another member. A PR should explain actual changes, their purpose and verification.
 
 Every member should be able to explain why enrollment is separate from programme placement, why timetable references are separate from dated sessions, how access is restricted, when attendance becomes accepted, how reports count classes and what offline operation cannot guarantee.
+
+## Latest course-setup snapshot — 13 November 2026
+
+The pilot now contains 61 accounts, including five project lecturers. Thirteen plans cover 53 students across five programmes, with 376 automatically assigned links alongside five preserved manual links. There are 91 offerings; only three dated sessions and two attendance records existed at rollout. Publishing or enrolling does not manufacture classes or attendance. See TESTING_HISTORY.md for 61 backend tests, 34 browser tests and 135 Postman requests / 351 assertions, and SERVER_READINESS.md for live evidence.
