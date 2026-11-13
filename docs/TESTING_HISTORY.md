@@ -52,3 +52,7 @@ README documents browser configuration and complete environment setup. Credentia
 Passing suites do not close every audit finding. Privileged account creation, scheduling-conflict validation, academic offering validation and long-title PDF layout still require their recorded fixes. Physical Android installation/offline acceptance and measured attendance-burst capacity are not established by these runs. A simulated offline browser journey is not a physical-phone acceptance test.
 
 Full Newman JSON reports contain working test tokens and request bodies; they are kept private. The committed summary excludes them. Test durations and local PostgreSQL versions may differ from the VPS; record the actual environment rather than claiming production capacity. Failed intermediate local runs are not erased by a later pass, but only retained failure evidence can be inspected retrospectively.
+
+## Focused attendance/code-sharing audit — 13 November 2026
+
+[Workflow audit](ATTENDANCE_WORKFLOW_AUDIT_2026-11-13.md) records live read-only observations and isolated middleware/pure-function checks. [Sanitized evidence](test-reports/2026-11-13-attendance-workflow-audit.json) confirms the shared-IP limits and Next up selection defect. This did not rerun the full regression baseline or write live attendance. Findings remain open.
