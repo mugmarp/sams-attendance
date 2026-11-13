@@ -227,7 +227,7 @@ The pilot runs on an **Azure Student Subscription virtual machine** with native 
 
 Daily local backups and a verified manual off-VPS recovery copy exist. A recurring off-site backup destination and retention schedule still need arranging. Restore checks use a separate disposable database; they do not overwrite accepted attendance.
 
-[Native setup and recovery](docs/NATIVE_DEPLOYMENT.md) · [Measured deployment record](docs/SERVER_READINESS.md) · [Optional Compose setup](docs/DEPLOYMENT.md)
+[Server setup and management](docs/SERVER_SETUP_AND_MANAGEMENT.md) · [Native setup and recovery](docs/NATIVE_DEPLOYMENT.md) · [Measured deployment record](docs/SERVER_READINESS.md) · [Optional Compose setup](docs/DEPLOYMENT.md)
 
 ## Reference application
 
