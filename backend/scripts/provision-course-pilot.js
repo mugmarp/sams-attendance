@@ -125,6 +125,7 @@ try {
         startsOn: reference.lecturesBegin,
         endsOn: reference.semesterEnds,
         excludedDates: [],
+        reviewed: true,
         sourceUrl: reference.sources[0],
         sourceNote:
           "Project calendar reference: semester end is not a verified teaching end. No historical classes are generated.",
