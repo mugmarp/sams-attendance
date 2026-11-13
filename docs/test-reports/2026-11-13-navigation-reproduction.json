@@ -1,0 +1,79 @@
+{
+  "scope": "Isolated local seeded app; artificial 200ms delay per startup API except held class response. No attendance submission. Not a live latency benchmark.",
+  "before": {
+    "workspaceVisible": true,
+    "checkinFormVisible": true,
+    "noClassMessageVisible": false
+  },
+  "after": {
+    "checkinFormVisible": false,
+    "noClassMessageVisible": true
+  },
+  "requests": [
+    {
+      "path": "/api/auth/me",
+      "atMs": 139,
+      "event": "request"
+    },
+    {
+      "path": "/api/auth/me",
+      "atMs": 365,
+      "event": "finished"
+    },
+    {
+      "path": "/api/health",
+      "atMs": 366,
+      "event": "request"
+    },
+    {
+      "path": "/api/health",
+      "atMs": 576,
+      "event": "finished"
+    },
+    {
+      "path": "/api/student/course-setup",
+      "atMs": 579,
+      "event": "request"
+    },
+    {
+      "path": "/api/student/course-setup",
+      "atMs": 815,
+      "event": "finished"
+    },
+    {
+      "path": "/api/student/attendance-claims",
+      "atMs": 910,
+      "event": "request"
+    },
+    {
+      "path": "/api/student/attendance-claims",
+      "atMs": 1138,
+      "event": "finished"
+    },
+    {
+      "path": "/api/student/sessions/upcoming",
+      "atMs": 1145,
+      "event": "request"
+    },
+    {
+      "path": "/api/student/day",
+      "atMs": 1154,
+      "event": "request"
+    },
+    {
+      "path": "/api/student/sessions/upcoming",
+      "atMs": 1195,
+      "event": "finished"
+    },
+    {
+      "path": "/api/student/day",
+      "atMs": 1645,
+      "event": "finished"
+    },
+    {
+      "path": "/api/student/attendance-claims",
+      "atMs": 1688,
+      "event": "request"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-13",
+  "scope": "Partial live Codex in-app browser capture: lecturer Timetable to My classes; no class or attendance actions. Event buffer was truncated; not a complete navigation trace.",
+  "truncated": true,
+  "requests": [
+    {
+      "path": "/api/auth/me",
+      "durationMs": 160
+    },
+    {
+      "path": "/api/health",
+      "durationMs": 257
+    },
+    {
+      "path": "/api/examiner/sessions/today",
+      "durationMs": 706
+    },
+    {
+      "path": "/api/examiner/courses",
+      "durationMs": 192
+    },
+    {
+      "path": "/api/examiner/sessions/today",
+      "durationMs": 153
+    },
+    {
+      "path": "/api/examiner/sessions/today",
+      "durationMs": 263
+    }
+  ]
+}
