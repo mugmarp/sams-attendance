@@ -1,0 +1,183 @@
+{
+  "date": "2026-11-15",
+  "scope": "Bounded client-origin HTTPS timings; not a load test",
+  "samples": {
+    "/student/checkin": [
+      {
+        "ms": 2545,
+        "status": 200,
+        "bytes": 4999,
+        "encoding": "gzip",
+        "cacheControl": "public, max-age=0"
+      },
+      {
+        "ms": 245,
+        "status": 200,
+        "bytes": 4999,
+        "encoding": "gzip",
+        "cacheControl": "public, max-age=0"
+      },
+      {
+        "ms": 517,
+        "status": 200,
+        "bytes": 4999,
+        "encoding": "gzip",
+        "cacheControl": "public, max-age=0"
+      }
+    ],
+    "/js/common.js": [
+      {
+        "ms": 1764,
+        "status": 200,
+        "bytes": 8535,
+        "encoding": null,
+        "cacheControl": "public, max-age=0"
+      },
+      {
+        "ms": 1622,
+        "status": 200,
+        "bytes": 8535,
+        "encoding": null,
+        "cacheControl": "public, max-age=0"
+      },
+      {
+        "ms": 324,
+        "status": 200,
+        "bytes": 8535,
+        "encoding": null,
+        "cacheControl": "public, max-age=0"
+      }
+    ],
+    "/api/health": [
+      {
+        "ms": 262,
+        "status": 200,
+        "bytes": 76,
+        "encoding": null,
+        "cacheControl": null
+      },
+      {
+        "ms": 233,
+        "status": 200,
+        "bytes": 76,
+        "encoding": null,
+        "cacheControl": null
+      },
+      {
+        "ms": 223,
+        "status": 200,
+        "bytes": 76,
+        "encoding": null,
+        "cacheControl": null
+      }
+    ],
+    "/sw.js": [
+      {
+        "ms": 281,
+        "status": 200,
+        "bytes": 2580,
+        "encoding": null,
+        "cacheControl": "public, max-age=0"
+      },
+      {
+        "ms": 233,
+        "status": 200,
+        "bytes": 2580,
+        "encoding": null,
+        "cacheControl": "public, max-age=0"
+      },
+      {
+        "ms": 246,
+        "status": 200,
+        "bytes": 2580,
+        "encoding": null,
+        "cacheControl": "public, max-age=0"
+      }
+    ],
+    "/auth/me": [
+      {
+        "ms": 227,
+        "status": 200,
+        "bytes": 355
+      },
+      {
+        "ms": 253,
+        "status": 200,
+        "bytes": 355
+      },
+      {
+        "ms": 550,
+        "status": 200,
+        "bytes": 355
+      }
+    ],
+    "/student/day": [
+      {
+        "ms": 621,
+        "status": 200,
+        "bytes": 9409
+      },
+      {
+        "ms": 303,
+        "status": 200,
+        "bytes": 9409
+      },
+      {
+        "ms": 2259,
+        "status": 200,
+        "bytes": 9409
+      }
+    ],
+    "/student/sessions/upcoming": [
+      {
+        "ms": 269,
+        "status": 200,
+        "bytes": 3593
+      },
+      {
+        "ms": 263,
+        "status": 200,
+        "bytes": 3593
+      },
+      {
+        "ms": 362,
+        "status": 200,
+        "bytes": 3593
+      }
+    ],
+    "/student/attendance-claims": [
+      {
+        "ms": 1968,
+        "status": 200,
+        "bytes": 2
+      },
+      {
+        "ms": 270,
+        "status": 200,
+        "bytes": 2
+      },
+      {
+        "ms": 237,
+        "status": 200,
+        "bytes": 2
+      }
+    ],
+    "/student/course-setup": [
+      {
+        "ms": 1507,
+        "status": 200,
+        "bytes": 2228
+      },
+      {
+        "ms": 278,
+        "status": 200,
+        "bytes": 2228
+      },
+      {
+        "ms": 236,
+        "status": 200,
+        "bytes": 2228
+      }
+    ]
+  }
+}
