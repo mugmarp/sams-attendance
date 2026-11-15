@@ -1,0 +1,84 @@
+{
+  "truncated": false,
+  "hasMore": false,
+  "responses": [
+    {
+      "path": "/api/student/attendance-claims",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    },
+    {
+      "path": "/api/student/day",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    },
+    {
+      "path": "/api/student/day",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    },
+    {
+      "path": "/student/summary",
+      "type": "Document",
+      "status": 200,
+      "fromServiceWorker": true
+    },
+    {
+      "path": "/api/auth/me",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    },
+    {
+      "path": "/api/health",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    },
+    {
+      "path": "/api/student/course-setup",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    },
+    {
+      "path": "/api/student/attendance-claims",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    },
+    {
+      "path": "/api/student/attendance/summary",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    },
+    {
+      "path": "/api/student/attendance-claims",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    },
+    {
+      "path": "/api/student/attendance/summary",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    },
+    {
+      "path": "/api/student/attendance-claims",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    },
+    {
+      "path": "/api/student/attendance/summary",
+      "type": "Fetch",
+      "status": 200,
+      "fromServiceWorker": false
+    }
+  ]
+}

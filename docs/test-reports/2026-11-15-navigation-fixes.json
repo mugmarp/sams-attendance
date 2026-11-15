@@ -15,6 +15,38 @@
     "failures": 0
   },
   "syntax": "frontend and backend passed",
-  "deployment": "Pending source commit; see fix report for follow-up",
-  "database": "isolated local sams_test"
+  "deployment": {
+    "release": "4e821b7625717d9f68fb9cb7b1bd935637d2409c",
+    "backup": "/var/backups/sams/before-release-20261115T034743Z.dump",
+    "pendingMigrations": 0,
+    "roleSmokeChecks": "ADMIN, EXAMINER, STUDENT passed",
+    "healthChecks": {
+      "passed": 10,
+      "medianMs": 49,
+      "maxMs": 91,
+      "scope": "server-origin HTTPS smoke checks"
+    },
+    "serviceActive": true,
+    "automaticRestarts": 0,
+    "memoryBytes": 97165312,
+    "browserAcceptance": {
+      "summaryDocumentFromServiceWorker": true,
+      "protectedAPIsFromServiceWorker": false,
+      "attendanceSubmitted": false
+    },
+    "limits": "Response-only browser capture includes periodic reads; no live click-to-render or capacity claim"
+  },
+  "database": "isolated local sams_test",
+  "controlledComparison": {
+    "samplesPerVariant": 3,
+    "shellMedianMs": {
+      "prior": 2530,
+      "revised": 207
+    },
+    "primaryMedianMs": {
+      "prior": 2792,
+      "revised": 1511
+    },
+    "scope": "Artificial latency; common.js startup comparison only; not live mobile timings"
+  }
 }

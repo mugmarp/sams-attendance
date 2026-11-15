@@ -42,4 +42,8 @@ New v12 clients use cached shells immediately; already-open older clients retain
 
 ## Deployment
 
-Pending at the source commit. The follow-up entry records the exact release, backup and live acceptance after activation.
+Release `4e821b7625717d9f68fb9cb7b1bd935637d2409c` is live on the native VPS. Activation created private backup `/var/backups/sams/before-release-20261115T034743Z.dump`; no migrations were pending. Registrar, lecturer and student HTTPS scoped smoke checks passed, as did ten health checks (server-origin median 49 ms, maximum 91 ms). The service was active with zero automatic restarts and memory 97,165,312 bytes. Health timings are not browser navigation timings or capacity results.
+
+Codex in-app browser acceptance used the existing synthetic practice student, reloaded the installed client, and navigated Check in → My attendance. The captured document response for `/student/summary` was HTTP 200 with `fromServiceWorker: true`; identity, clock, reconciliation and summary API responses remained network requests with `fromServiceWorker: false`. The response-only capture was not truncated and also includes periodic reads before/after the transition, so it is not an initial-request count or complete click-to-render timing trace. No attendance was submitted. See [sanitized browser evidence](test-reports/2026-11-15-navigation-live-browser.json).
+
+Existing installed tabs should reload to obtain v12; use **Reload application** when the update notice appears. No forced reload or queue clearing is performed. The acceptance screenshot is saved on the PC in `sams-audit-output/navigation-fixed-live-20261115.png`.
