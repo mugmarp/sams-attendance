@@ -6,6 +6,7 @@ import {
   time,
   day,
   init,
+  coursesReady,
   showError,
   notice,
   currentDate,
@@ -48,6 +49,7 @@ function renderCalendar() {
 }
 async function loadDated() {
   try {
+    await coursesReady;
     const date = $("#schedule-date").value;
     const result = await cachedGet(
       user.id,
@@ -273,6 +275,7 @@ if (user) {
     await loadReference();
     if (setup) await loadAdmin();
   };
+  const datedFlight = loadDated();
   try {
     calendar = (await cachedGet(user.id, "/timetable/calendar")).data;
     renderCalendar();
@@ -280,7 +283,7 @@ if (user) {
     showError(error);
   }
   await loadReference();
-  if (user.program && user.year) {
+  if (user.program && user.year && !$("#program-group").value) {
     const roman = ["", "I", "II", "III", "IV", "V", "VI"][user.year];
     const group = reference?.groups.find(
       (g) => g === `${user.program} ${roman}`,
@@ -290,7 +293,7 @@ if (user) {
       await loadReference();
     }
   }
-  await loadDated();
+  await datedFlight;
   setInterval(() => {
     if (!document.hidden) void loadDated();
   }, 15000);

@@ -72,3 +72,7 @@ Full Newman JSON reports contain working test tokens and request bodies; they ar
 ## Initial page-content flash
 
 [Page-loading audit](PAGE_LOADING_AUDIT_2026-11-13.md) and [39-case browser result](test-reports/2026-11-13-page-loading.json) document the neutral startup state, delayed identity responses, wrong-role redirects and compatibility with cached older modules. Backend/API baselines were not rerun for this frontend-only patch.
+
+## Navigation responsiveness — 15 November 2026
+
+[Fix report](NAVIGATION_PERFORMANCE_FIXES_2026-11-15.md): 65 backend tests, 44 browser tests, 135 Postman requests and 351 assertions passed. Two added cases cover primary-view dependency ordering/refresh coalescing and cached-shell navigation under a stalled fetch. [Controlled startup samples](test-reports/2026-11-15-navigation-controlled.json) explicitly identify artificial delays and the limited before/after comparison.

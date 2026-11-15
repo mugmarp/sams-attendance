@@ -122,7 +122,6 @@ export async function studentDay(studentId) {
       attendances: { where: { studentId }, select: { status: true } },
     },
     orderBy: { startTime: "asc" },
-    take: 100,
   });
   const group =
     user.studyGroupKey ||

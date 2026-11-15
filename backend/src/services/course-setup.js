@@ -223,13 +223,17 @@ export async function setupStudent(tx, studentId, options = {}) {
   );
   const effectiveFrom = new Date(kampalaDay(now) + "T00:00:00Z");
   const effectiveUntil = new Date(term.endsOn.getTime() + 86400000);
+  // Read existing decisions once, including retained withdrawals. The user row
+  // lock above still serializes competing setup/confirmation transactions.
+  const retained = await tx.enrollment.findMany({
+    where: { studentId, courseId: { in: selected.map((i) => i.courseId) } },
+    select: { courseId: true },
+  });
+  const retainedIds = new Set(retained.map((e) => e.courseId));
   let inserted = 0;
   for (const item of selected) {
     // An existing row, including a withdrawal, is an explicit retained decision.
-    const existing = await tx.enrollment.findUnique({
-      where: { studentId_courseId: { studentId, courseId: item.courseId } },
-    });
-    if (existing) continue;
+    if (retainedIds.has(item.courseId)) continue;
     const enrollment = await tx.enrollment.create({
       data: {
         studentId,

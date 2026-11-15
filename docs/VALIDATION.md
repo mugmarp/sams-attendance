@@ -108,3 +108,7 @@ All **39 browser tests** passed after adding four startup/cache-transition cases
 ## Student Check in class-loading correction — 13 November 2026
 
 The form now starts hidden until class data determines the correct state; explicit loading and initial error states prevent a false code form or empty day. Handlers bind before actions appear, and reviews load independently. All **42 browser tests** and frontend syntax checks passed, including three new held-response cases. The first full-suite invocation omitted the isolated database variable and was rejected by setup guards; the corrected run passed. See [correction report](CHECKIN_LOADING_FIX_2026-11-13.md) for deployment evidence and limits. No API/schema changes were made.
+
+## Navigation responsiveness — 15 November 2026
+
+All **65 backend tests, 44 browser tests and 135 Postman requests / 351 assertions** passed for the navigation performance changes. [Release report](NAVIGATION_PERFORMANCE_FIXES_2026-11-15.md) records delayed-response and worker-shell coverage, controlled timing samples, offline behavior and deployment status. No live capacity guarantee is inferred from the local benchmark.

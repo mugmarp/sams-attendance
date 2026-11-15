@@ -25,6 +25,11 @@ export const time = (value) =>
     minute: "2-digit",
   });
 let serverOffset = 0;
+try {
+  const saved = JSON.parse(sessionStorage.getItem("sams.clock") || "null");
+  if (saved && Date.now() - saved.savedAt >= 0 && Date.now() - saved.savedAt < 300000 && Number.isFinite(saved.offset))
+    serverOffset = saved.offset;
+} catch { /* Storage can be unavailable. Server still validates attendance time. */ }
 export const currentDate = () => new Date(Date.now() + serverOffset);
 export const day = () =>
   new Intl.DateTimeFormat("en-CA", {
@@ -51,6 +56,7 @@ export function notice(text) {
     node.hidden = !text;
   }
 }
+export let coursesReady = Promise.resolve();
 export async function init(roles) {
   let user = cachedUser();
   if (!user) {
@@ -63,7 +69,7 @@ export async function init(roles) {
   };
   addEventListener("sams:session", checkIdentity);
   try {
-    user = await api("/auth/me", { session });
+    if (navigator.onLine) user = await api("/auth/me", { session });
     updateUser(user, session);
   } catch (error) {
     if (!retryable(error)) {
@@ -89,8 +95,11 @@ export async function init(roles) {
     clockFlight = api("/health")
       .then((health) => {
         const timestamp = Date.parse(health.now);
-        if (Number.isFinite(timestamp))
+        if (Number.isFinite(timestamp)) {
           serverOffset = timestamp - (started + Date.now()) / 2;
+          try { sessionStorage.setItem("sams.clock", JSON.stringify({ offset: serverOffset, savedAt: Date.now() })); } catch {}
+          dispatchEvent(new Event("sams:clock"));
+        }
         lastClockSync = performance.now();
       })
       .catch(() => {})
@@ -99,7 +108,7 @@ export async function init(roles) {
       });
     return clockFlight;
   };
-  await refreshClock();
+  if (navigator.onLine) void refreshClock();
   addEventListener("online", refreshClock);
   addEventListener("focus", refreshClock);
   document.addEventListener("visibilitychange", () => {
@@ -113,11 +122,10 @@ export async function init(roles) {
     location.pathname !== "/student/courses" &&
     location.pathname !== "/account"
   ) {
-    try {
-      await api("/student/course-setup", { method: "POST", body: {}, session });
-    } catch {
-      /* Keep the existing workspace available; My courses shows setup errors. */
-    }
+    coursesReady = navigator.onLine
+      ? api("/student/course-setup", { method: "POST", body: {}, session })
+        .catch(() => { /* My courses presents reconciliation errors. */ })
+      : Promise.resolve();
   }
   const links =
     user.role === "STUDENT"
@@ -193,8 +201,18 @@ export async function init(roles) {
     }).format(date);
   };
   renderDate();
+  addEventListener("sams:clock", renderDate);
   setInterval(renderDate, 30000);
   $("#site-header").hidden = false;
+  $("#site-header").addEventListener("click", (event) => {
+    const link = event.target.closest("a[href]");
+    if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || link.target || link.hasAttribute("download")) return;
+    const target = new URL(link.href);
+    if (target.origin !== location.origin || target.href === location.href) return;
+    const titleNode = $(".workspace-title");
+    titleNode.setAttribute("role", "status");
+    titleNode.textContent = "Opening " + (link.textContent.trim() || "page") + "…";
+  });
   $("#logout").onclick = () => {
     clearSession(session);
     location.assign("/login");

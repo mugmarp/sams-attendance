@@ -193,3 +193,72 @@ test("new loading markup remains usable with older cached login and workspace mo
   ).toBeVisible();
   await expect(page.locator("#page-loading")).toBeHidden();
 });
+
+test("student navigation reveals its workspace before slow clock/setup and coalesces class refreshes", async ({ page, request }) => {
+  await seedSession(page, request, "student@demo.sams.test");
+  let releaseSetup, releaseDay, releaseClock;
+  const setupPending = new Promise((r) => (releaseSetup = r));
+  const dayPending = new Promise((r) => (releaseDay = r));
+  const clockPending = new Promise((r) => (releaseClock = r));
+  let days = 0, legacyReads = 0;
+  await page.route("**/api/health", async (route) => {
+    await clockPending;
+    await route.continue();
+  });
+  await page.route("**/api/student/course-setup", async (route) => {
+    await setupPending;
+    await route.continue();
+  });
+  await page.route("**/api/student/sessions/upcoming", async (route) => {
+    legacyReads++;
+    await route.continue();
+  });
+  await page.route("**/api/student/day", async (route) => {
+    days++;
+    await dayPending;
+    await route.fulfill({ json: { profile: { name: "Navigation test student" }, classes: [], weekly: { events: [] } } });
+  });
+  try {
+    await page.goto("/student/checkin");
+    await expect(page.getByRole("link", { name: "My attendance", exact: true })).toBeVisible();
+    await expect(page.locator("#class-loading")).toBeVisible();
+    expect(days).toBe(0);
+    releaseSetup();
+    await expect.poll(() => days).toBe(1);
+    await page.evaluate(() => { dispatchEvent(new Event("focus")); dispatchEvent(new Event("online")); });
+    // No second request may start while the first is still unresolved.
+    await page.waitForTimeout(300);
+    expect(days).toBe(1);
+    releaseDay();
+    await expect(page.locator("#class-loading")).toBeHidden();
+    await page.waitForTimeout(300);
+    expect(days).toBe(1);
+    expect(legacyReads).toBe(0);
+  } finally {
+    releaseClock(); releaseSetup(); releaseDay();
+  }
+});
+
+test("installed navigation uses a versioned shell without waiting for a stalled network", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { runInNewContext } = await import("node:vm");
+  const handlers = {};
+  let networkRequests = 0, cacheName;
+  const saved = { shell: true };
+  runInNewContext(readFileSync(new URL("../public/sw.js", import.meta.url), "utf8"), {
+    URL,
+    self: { location: { origin: "https://sams.test" }, addEventListener: (name, handler) => (handlers[name] = handler) },
+    caches: { open: async (name) => { cacheName = name; return { match: async (path) => path === "/student.html" ? saved : undefined }; } },
+    fetch: () => { networkRequests++; return new Promise(() => {}); },
+  });
+  let response;
+  handlers.fetch({ request: { method: "GET", mode: "navigate", url: "https://sams.test/student/checkin" }, respondWith: (value) => (response = value) });
+  expect(await Promise.race([response, new Promise((resolve) => setTimeout(() => resolve("timeout"), 300))])).toBe(saved);
+  expect(cacheName).toBe("sams-workspace-v12");
+  expect(networkRequests).toBe(0);
+  for (const path of ["/api/student/day", "/student/not-a-route"]) {
+    let intercepted = false;
+    handlers.fetch({ request: { method: "GET", mode: "navigate", url: "https://sams.test" + path }, respondWith: () => (intercepted = true) });
+    expect(intercepted).toBe(false);
+  }
+});

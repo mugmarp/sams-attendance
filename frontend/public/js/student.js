@@ -4,6 +4,7 @@ import {
   escape,
   time,
   init,
+  coursesReady,
   showError,
   notice,
   currentDate,
@@ -104,16 +105,18 @@ function renderDay() {
         .join("")
     : "<li>No published classes for today.</li>";
 }
-async function loadClasses() {
+let classFlight = null;
+function loadClasses() {
+  if (!classFlight) classFlight = readClasses().finally(() => { classFlight = null; });
+  return classFlight;
+}
+async function readClasses() {
   try {
-    // Retain the established snapshot/queue endpoint across this additive client update.
-    const [result, context] = await Promise.all([
-      studentData(user.id, "/student/sessions/upcoming"),
-      studentData(user.id, "/student/day"),
-    ]);
-    classes = result.data;
+    await coursesReady;
+    const context = await studentData(user.id, "/student/day");
+    classes = context.data.classes;
     dayData = context.data;
-    dayCached = result.cached || context.cached;
+    dayCached = context.cached;
     renderDay();
     $("#class-loading").hidden = true;
     if (!dayCached) showError(null);
@@ -173,17 +176,19 @@ async function renderQueue() {
 }
 async function flush() {
   try {
+    const pending = (await attempts(user.id)).some((a) => a.state === "PENDING") ||
+      (await operations(user.id)).some((o) => o.state === "PENDING");
+    if (!pending) return;
     await sync(user.id);
     await syncOperations(user.id);
-    await loadReviewRequests();
-    await loadClasses();
-    await renderQueue();
+    await Promise.all([loadReviewRequests(), loadClasses(), renderQueue()]);
   } catch (error) {
     showError(error);
   }
 }
 async function loadSummary() {
   try {
+    await coursesReady;
     const { data, cached } = await studentData(
       user.id,
       "/student/attendance/summary",
@@ -233,7 +238,7 @@ async function loadReviewRequests() {
 if (user) {
   $("#review-section").hidden = false;
   void loadReviewRequests();
-  setInterval(loadReviewRequests, 15000);
+  setInterval(() => { if (!document.hidden) void loadReviewRequests(); }, 15000);
   addEventListener("sams:operations", () => {
     void loadReviewRequests();
     if (!summaryView) void renderQueue();

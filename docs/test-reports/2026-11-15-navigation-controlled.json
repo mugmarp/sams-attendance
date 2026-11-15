@@ -1,0 +1,41 @@
+{
+  "scope": "Local controlled common.js startup comparison; worker blocked. Same new student module for both variants. Artificial 800ms health/setup and 300ms day delays; not live mobile timings.",
+  "rows": [
+    {
+      "version": "before",
+      "sample": 0,
+      "shellMs": 2602,
+      "primaryMs": 2792
+    },
+    {
+      "version": "before",
+      "sample": 1,
+      "shellMs": 2530,
+      "primaryMs": 2819
+    },
+    {
+      "version": "before",
+      "sample": 2,
+      "shellMs": 2038,
+      "primaryMs": 2339
+    },
+    {
+      "version": "after",
+      "sample": 0,
+      "shellMs": 207,
+      "primaryMs": 1511
+    },
+    {
+      "version": "after",
+      "sample": 1,
+      "shellMs": 223,
+      "primaryMs": 1533
+    },
+    {
+      "version": "after",
+      "sample": 2,
+      "shellMs": 204,
+      "primaryMs": 1507
+    }
+  ]
+}

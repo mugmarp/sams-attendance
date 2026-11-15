@@ -1,4 +1,4 @@
-const CACHE = "sams-workspace-v11";
+const CACHE = "sams-workspace-v12";
 const FILES = [
   "/login",
   "/login.html",
@@ -63,6 +63,12 @@ self.addEventListener("fetch", (event) => {
   )
     return;
   if (event.request.mode === "navigate") {
+    const known = ["/login", "/login.html", "/account", "/admin/accounts",
+      "/admin/course-plans", "/student/courses", "/timetable", "/admin/timetable",
+      "/examiner/dashboard", "/student/checkin", "/student/summary", "/admin/courses"]
+      .includes(url.pathname) || /^\/examiner\/(session|report)\/[^/]+$/.test(url.pathname)
+      || /^\/admin\/eligibility\/[^/]+$/.test(url.pathname);
+    if (!known) return;
     const page =
       url.pathname === "/student/courses"
         ? "/courses.html"
@@ -85,15 +91,15 @@ self.addEventListener("fetch", (event) => {
                         ? "/admin.html"
                         : "/login.html";
     event.respondWith(
-      fetch(event.request).catch(() =>
-        caches.match(page, { ignoreVary: true }),
+      caches.open(CACHE).then(async (cache) =>
+        (await cache.match(page, { ignoreVary: true })) || fetch(event.request),
       ),
     );
     return;
   }
   event.respondWith(
-    caches
-      .match(event.request, { ignoreVary: true })
-      .then((saved) => saved || fetch(event.request)),
+    caches.open(CACHE).then(async (cache) =>
+      (await cache.match(event.request, { ignoreVary: true })) || fetch(event.request),
+    ),
   );
 });
