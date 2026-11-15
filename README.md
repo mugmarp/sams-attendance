@@ -6,9 +6,9 @@ SAMS digitizes **class attendance**, an Academic Registrar workflow. Students se
 
 The application uses **HTML, CSS and JavaScript**, a **Node.js/Express API**, and **PostgreSQL** through Prisma's JavaScript client. Express serves both the frontend and `/api` from one origin. No frontend compilation or separate frontend server is needed.
 
-**Current status, 12 November 2026:** a controlled pilot is hosted at [sams.tirallab.page](https://sams.tirallab.page). Core workflows and account-management features are implemented, but the latest audit identified unresolved defects. See [known issues](#known-issues-and-adoption-boundaries) before relying on the system for operational attendance.
+**Current status, 15 November 2026:** a controlled pilot is hosted at [sams.tirallab.page](https://sams.tirallab.page). Core workflows and account-management features are implemented, but the latest audit identified unresolved defects. See [known issues](#known-issues-and-adoption-boundaries) before relying on the system for operational attendance.
 
-[Proposal](docs/PROPOSAL.md) · [API reference](docs/API_SPEC.md) · [Postman walkthrough](docs/POSTMAN_DEMO.md) · [Validation record](docs/VALIDATION.md) · [Native deployment](docs/NATIVE_DEPLOYMENT.md)
+[Proposal](docs/PROPOSAL.md) · [API reference](docs/API_SPEC.md) · [Postman walkthrough](docs/POSTMAN_DEMO.md) · [Testing history and API evidence](docs/TESTING_HISTORY.md) · [Validation record](docs/VALIDATION.md) · [Native deployment](docs/NATIVE_DEPLOYMENT.md)
 
 ## Users and workflow
 
@@ -18,7 +18,7 @@ The application uses **HTML, CSS and JavaScript**, a **Node.js/Express API**, an
 | Lecturer (`EXAMINER` in the API) | Create assigned class sessions, open check-in, review/correct attendance and prepare offline registers. |
 | Registrar (`ADMIN` in the API) | Manage accounts, academic placement, offerings, enrollment, timetable review and reports. |
 
-1. The registrar creates an offering for a particular academic year/semester, assigns a lecturer and explicitly enrolls students.
+1. The registrar prepares offerings for an academic year/semester, assigns lecturers and publishes each programme group’s course plan. Matching students receive its compulsory courses automatically; electives are confirmed in My courses. Manual enrollment remains available for reviewed exceptions.
 2. The lecturer creates a dated class and opens a ten-minute check-in window during that class. Its code rotates every two minutes; the window cannot extend past class end.
 3. The student signs in using an email or registration number. A single current enrolled class is targeted automatically. A class choice appears only when enrolled classes overlap; a weekly reference entry cannot authorize check-in.
 4. The student submits the lecturer's current code. The server checks identity, enrollment and time. A repeated accepted check-in returns the same record.
@@ -89,23 +89,23 @@ Edit application code in `backend/src/` and `frontend/public/`. Dependency folde
 
 Start with the [team system guide](docs/TEAM_SYSTEM_GUIDE.md) for an explanation of the workflow, code, database, offline behavior and hosting.
 
-The following allocation gives each member a starting area for code review, improvements and explanation. It is flexible: folders are shared, members can assist one another, and an API change may need a corresponding page or test change. These are working areas, not exclusive ownership or team-lead appointments.
+The allocation below gives each member a specific starting module. It is flexible, and related tests belong with each feature. Shared files need coordination rather than whole-folder replacement. The [verified allocation and PR review](docs/GROUP_B_FOLDER_ALLOCATION_AND_PR_REVIEW.md) records existing contributions, path conflicts, shared-file coordination and proposed follow-up messages. These areas are not exclusive ownership or team-lead appointments. Existing PR numbers below refer to the [Group B educational repository](https://github.com/mugmarp/Group_B_Etivity_5_WEB).
 
-| Member | Main folders | Starting focus |
+| Member | Starting module / files | Coordination |
 | --- | --- | --- |
-| Wokwaba Charles | `backend/src/controllers/`, `backend/src/middleware/` | Login, authentication and access checks; coordinate changes to frontend login behavior. |
-| Kanyesigye Brian | `data/`, `backend/prisma/` | Faculties, programmes, student placement and database relationships; coordinate catalogue-service changes. |
-| Kwesiga Lewis | `backend/src/services/`, `frontend/public/` | Timetable processing and its page, especially `timetable.js`. |
-| Akatuwijuka Annibow | `frontend/public/` | Student pages, check-in feedback and shared styling where needed. |
-| Natweta Cyril | `backend/src/services/`, `backend/src/routes/` | Attendance processing, check-in validation and attendance rules. |
-| Wawangula Generous | `frontend/public/` | Lecturer pages, class controls and register display, especially `examiner.html` and `js/examiner.js`. |
-| Mugendawala Mark Paul | `backend/src/config/`, `deploy/native/`, `.github/workflows/` | API integration, environment configuration, hosting and recovery; coordinate changes to `app.js` and `server.js`. |
-| Katto Andrew | `frontend/public/js/`, `backend/src/services/` | Offline storage and synchronization; coordinate service-worker changes. |
-| Nabaweesi Patricia Mirembe | `backend/src/services/`, `docs/` | Attendance summaries, report calculations and PDF output. |
-| Matovu Edwine Levi | `backend/src/routes/`, `frontend/public/` | Account-management endpoints and pages, including password changes and resets. |
-| Amen Joel Osuta | `postman/`, `backend/tests/`, `frontend/tests/` | API examples, invalid-request checks, workflow testing and documentation accuracy. |
+| Wokwaba Charles | Authentication: `backend/src/controllers/auth.js`, `backend/src/middleware/auth.js`, `frontend/public/js/login.js` | Coordinate JWT/password helpers and shared middleware; reconcile [#8](https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/8), [#9](https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/9) and [#14](https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/14) into canonical paths. |
+| Kanyesigye Brian | Academic records and course plans: `data/academic_catalogue.json`, `backend/src/services/catalogue.js`, `course-setup.js`, `backend/src/routes/course-plans.js` | Coordinate `backend/prisma/`, seeds and course-plan pages; narrow future changes beyond the broad [#13](https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/13) import. |
+| Kwesiga Lewis | Timetable and personal schedule: `backend/src/services/timetable.js`, `timetable-source.js`, `student-day.js`, `frontend/public/timetable.html`, `js/timetable.js` | Coordinate academic calendar/reference data with Brian and student schedule rendering with Annibow; [#10](https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/10) imported other services too. |
+| Akatuwijuka Annibow | Student interface: `frontend/public/student.html`, `courses.html`, `js/student.js`, `js/courses.js`, `js/day-model.js` | Coordinate shared CSS sections; retain [#15](https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/15) history while correcting its deleted lecturer page through integration. |
+| Natweta Cyril | Attendance rules and class actions: `backend/src/services/attendance.js`, `rules.js`; check-in/session handlers in `backend/src/routes/api.js` | Coordinate shared route edits with Mark, Charles and Edwine; keep reporting changes separate from attendance mutation. |
+| Wawangula Generous | Lecturer interface: `frontend/public/examiner.html`, `frontend/public/js/examiner.js` | [#6](https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/6) is a duplicate-path import of an already present identical module. Agree on its disposition before submitting new lecturer improvements. |
+| Mugendawala Mark Paul | Integration and hosting: `backend/src/config/`, `backend/src/app.js`, `backend/src/server.js`, `deploy/native/`, `.github/workflows/` | Coordinate package/lock files, release baseline and CI. Preserve module contributions while assembling a runnable shared tree; [#5](https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/5) covers config only. |
+| Katto Andrew | Offline storage and synchronization: `frontend/public/js/offline.js`, `register-offline.js`, `frontend/public/sw.js`, `backend/src/services/sync.js`, `backend/src/routes/sync.js` | Coordinate API/session storage with Charles and Mark, prepared registers with Generous, pending student attempts with Annibow. |
+| Nabaweesi Patricia Mirembe | Attendance reports: `backend/src/services/eligibility.js`, `pdf.js`, `frontend/public/admin.html`, `js/admin.js` | Coordinate the common counting helpers in `academic.js`; [#11](https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/11) added a duplicate attendance service, so reporting needs a correctly scoped follow-up. |
+| Matovu Edwine Levi | Account management: `backend/src/routes/accounts.js`, `frontend/public/account.html`, `accounts.html`, `js/account.js`, `js/accounts.js` | Coordinate authentication helpers with Charles and migrations with Brian. [#7](https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/7) is a broad integration draft, not an isolated account-only diff. |
+| Amen Joel Osuta | API and workflow verification: `postman/`, `backend/tests/`, `frontend/tests/` | Preserve the five validated checks and response examples from [#12](https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/12). No general `docs/` assignment; feature owners maintain their own explanations. |
 
-Keep one clear task in each PR and describe what changed, why and how it was checked. Before editing shared files such as `schema.prisma`, `styles.css`, route files or the main API test file, coordinate with anyone already changing them. Include related tests with the feature rather than leaving verification entirely to one member. A member's PR should record their actual changes to the shared baseline.
+Abbreviated filenames stay in the preceding directory; `js/` means `frontend/public/js/`. Keep existing module paths and accepted contribution history. Before changing shared routes, schema/migrations, CSS, API/session helpers, the service worker, package files or test fixtures, agree on the small affected scope. Each PR must distinguish imported baseline files from new changes and state which checks actually ran. Joel’s assignment remains `postman/`, `backend/tests/` and `frontend/tests/`; general `docs/` ownership is not restored.
 
 ## Run locally
 
@@ -147,13 +147,15 @@ Open [localhost:3000](http://localhost:3000). `npm run dev --prefix backend` ena
 
 ## Academic records and timetable
 
+[Registration-based automatic course setup and Kampala-time review](docs/AUTO_ENROLLMENT_AND_KAMPALA_REVIEW.md) records the proposed enrollment workflow, inspected gaps and rollout checks. Course setup is implemented through published programme plans: registrars prepare offerings and publish compulsory/elective lists at **Course setup**, and students receive matching compulsory courses on sign-in or workspace entry. **My courses** allows list confirmation and permitted elective selection. Existing withdrawal decisions are preserved. New links start on the Kampala setup date; existing dates are not backfilled.
+
 Faculties, programmes, study years and timetable tracks are stored separately from course offerings and enrollment. The registrar uses dependent filters to work within an academic scope. A registration such as `2025/BSE/108/PS` supplies an intake year, programme token, sequence and sponsorship token; the sequence is not a class number. Academic placement is suggested, then confirmed, with recorded reasons for later changes.
 
 Institutional-looking emails can be derived using the supplied registration convention. A derived address is not evidence of mailbox ownership, and no automatic email delivery or verification is implemented.
 
 The timetable distinguishes **dated SAMS classes** from **weekly source references**. Staff review source versions, times, teaching dates and exceptions before applying future timetable entries. Refreshing a source does not automatically change classes or create attendance. The audit found calendar and scheduling defects in these paths; their correction is still pending.
 
-The five-programme sample covers BSE, BCS, BIT, BBA and BME. User-supplied records and synthetic records are distinguished; neither programme membership nor importing a student creates enrollment. Separate hosted practice offerings use `-P` course codes. The supplied group-member roster is not enrolled or marked by the practice walkthrough.
+The five-programme sample covers BSE, BCS, BIT, BBA and BME. Thirteen published programme/year/track plans now cover 53 students, using five synthetic project lecturer accounts and 89 programme-specific offerings alongside the two original practice offerings. Source activities and contradictory entries are excluded with visible review notes; institutional curriculum classification remains pending. User-supplied records and synthetic records are distinguished; importing a student alone does not create enrollment. Automatic setup requires a matching published plan for the single current reviewed term. Separate hosted practice offerings use `-P` course codes. The supplied group-member roster is not enrolled or marked by the practice walkthrough.
 
 [Academic structure and source decisions](docs/ACADEMIC_STRUCTURE_AND_DAY.md) · [Timetable and saved reports](docs/TIMETABLE_AND_RECORDS.md) · [Private import guide](docs/IMPORT_GUIDE.md)
 
@@ -185,7 +187,7 @@ Saved records remain on the browser after sign-out. Reconcile pending work befor
 
 Import `postman/SAMS.postman_collection.json` and `postman/SAMS.local.postman_environment.json`. The collection contains descriptions, response examples and assertions, and captures tokens and record IDs automatically.
 
-The verified regression baseline is **54 backend tests, 33 browser tests, 129 Postman requests and 337 assertions**. These results predate correction of the latest audit findings; passing them does not establish that the newly found cases are covered.
+The verified regression baseline is **65 backend tests, 44 browser tests, 135 Postman requests and 351 assertions**. The 15 November navigation release includes the latest delayed-response and cached-shell checks; see [performance fixes and executed evidence](docs/NAVIGATION_PERFORMANCE_FIXES_2026-11-15.md). Passing these checks does not establish that all remaining audit findings are covered. See the [testing-history index](docs/TESTING_HISTORY.md) for dated evidence and limits.
 
 Run mutating tests and the full collection only against a separate disposable database named `sams_test`. The backend API tests clear its fixtures. Never point them at the hosted pilot or real attendance records.
 
@@ -225,7 +227,7 @@ The pilot runs on an **Azure Student Subscription virtual machine** with native 
 
 Daily local backups and a verified manual off-VPS recovery copy exist. A recurring off-site backup destination and retention schedule still need arranging. Restore checks use a separate disposable database; they do not overwrite accepted attendance.
 
-[Native setup and recovery](docs/NATIVE_DEPLOYMENT.md) · [Measured deployment record](docs/SERVER_READINESS.md) · [Optional Compose setup](docs/DEPLOYMENT.md)
+[Server setup and management](docs/SERVER_SETUP_AND_MANAGEMENT.md) · [Native setup and recovery](docs/NATIVE_DEPLOYMENT.md) · [Measured deployment record](docs/SERVER_READINESS.md) · [Optional Compose setup](docs/DEPLOYMENT.md)
 
 ## Reference application
 
@@ -235,7 +237,7 @@ SAMS implements the relevant concepts in JavaScript for the web workflow. It doe
 
 ## Known issues and adoption boundaries
 
-The 12 November audit confirmed open issues in privileged-account creation, scheduling conflict checks, old-year timetable projection, new-offering academic validation and long-title PDF layout. These findings have **not yet been fixed**. The separate multibyte initial-password validation issue is fixed by the shared 8-character/72-byte password schema. Detailed reproduction evidence is kept locally rather than included in this public README.
+The 12 November audit confirmed open issues in privileged-account creation, scheduling conflict checks, new-offering academic validation and long-title PDF layout. These findings remain open. Old-year timetable projection and UTC-to-Kampala report date boundaries have been corrected in source; consult deployment records for the running release. The separate multibyte initial-password validation issue is fixed by the shared 8-character/72-byte password schema. Detailed reproduction evidence is kept locally rather than included in this public README.
 
 Keep the pilot to controlled project use while these defects are corrected and tested. Operational adoption also requires confirmed teaching assignments/dates/exceptions, approved attendance policy, physical-device acceptance, recurring external backups and measured workload testing. Institutional approval, SSO, automatic email recovery, fee/coursework clearance and HoD approval workflows are not implemented.
 

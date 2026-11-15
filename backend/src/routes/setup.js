@@ -131,6 +131,11 @@ router.post(
         .toUpperCase()
         .regex(/^[A-Z0-9][A-Z0-9-]{1,19}$/),
       title: z.string().trim().min(3).max(180),
+      offeringKey: z
+        .string()
+        .trim()
+        .regex(/^[A-Z0-9-]{1,40}$/)
+        .default("MAIN"),
       program: z.string().trim().min(1).max(30),
       year: z.number().int().min(1).max(10),
       semester: z.number().int().min(1).max(2),

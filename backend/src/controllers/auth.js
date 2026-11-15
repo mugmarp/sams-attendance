@@ -1,3 +1,4 @@
+import { ensureStudentCourses } from "../services/course-setup.js";
 import bcrypt from "bcryptjs";
 import { prisma } from "../config/db.js";
 import {
@@ -47,6 +48,8 @@ export const login = asyncHandler(async (req, res) => {
     !(await bcrypt.compare(req.body.password, user.passwordHash))
   )
     throw new UnauthorizedError("Invalid sign-in or password");
+  if (user.role === "STUDENT" && !user.mustChangePassword)
+    await ensureStudentCourses(user.id);
   const safe = await prisma.user.findUniqueOrThrow({
     where: { id: user.id },
     select: publicUser,

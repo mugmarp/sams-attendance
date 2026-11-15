@@ -86,3 +86,29 @@ The backend suite now passes **53 tests**. The initial-password generator uses c
 The generator contract now requires 12 ASCII characters. A shared password schema accepts 8 characters, rejects 7, and checks the 72-byte UTF-8 boundary as well as character length. It is used for initial account creation, general import, password changes and registrar resets. Earlier 16-character results above describe the previous release.
 
 The revised local backend suite passed all **54 tests**, including API account lifecycle regressions and the new password-policy boundaries. Syntax checks passed. Live rollout verified all 51 rotated cohort passwords against bcrypt, rejected their previous values, checked sign-in version increments, preserved core record counts and confirmed a temporary-password login plus the HTTPS 8-character form minimum.
+
+## Course plans, automatic setup and Kampala reporting — 13 November 2026
+
+Final local checks passed **61 backend tests, 34 browser tests and 135 Postman requests with 351 assertions**, plus both JavaScript syntax checks. Coverage includes registration-based placement, current-year overrides, duration limits, concurrent login idempotency, programme separation, compulsory/elective validation, withdrawal preservation, stale cohort previews and audited enrollment. The browser journey prepares source offerings, publishes a plan, applies cohort assignment and confirms electives. SQL report boundaries and weekly instants were checked under UTC, Kampala and New York timezones. Programme-specific offering keys preserve distinct subjects with reused codes.
+
+An intermediate browser failure exposed delayed account-search reload clearing selection; preserving an eligible selection fixed it, and the full suite then passed. A separate pilot term-request validation omission was fixed before successful provisioning. The sanitized [run summary](test-reports/2026-11-13-course-setup.json) and [testing-history index](TESTING_HISTORY.md) retain this distinction; raw token-bearing Newman output remains private. Live deployment and recovery evidence appears in SERVER_READINESS.md. Existing audit issues outside this change remain open.
+
+## Attendance workflow fixes — 13 November 2026
+
+All **65 backend tests, 35 browser tests and 135 Postman requests / 351 assertions** pass. New coverage verifies shared-IP successful sign-ins, failed-identity throttling, per-account budgets, chronological Next up selection, non-secret window/submission audit events and a delayed replacement-code response. The original offline/account/course-plan journeys still pass. An intermediate account test failure was corrected by preserving same-identity form state and waiting for the scoped search response. Full token-bearing Newman output remains private.
+
+See [sanitized fix evidence](test-reports/2026-11-13-attendance-fixes.json). Browser live acceptance in the Codex in-app browser confirmed the new future Friday class's Kampala interval and disabled premature check-in. Attendance was not submitted during live acceptance.
+
+Hosted evidence: the [initial feature CI run](https://github.com/mugmarp/sams-attendance/actions/runs/43400193112) had one prepared-register replay still pending at its 15-second assertion. The [subsequent full CI run](https://github.com/mugmarp/sams-attendance/actions/runs/43403078199), with identical application code plus the separate operator helper, passed. The queue engine was not changed to mask this timeout; retain it as an intermittent reliability observation requiring follow-up if repeated.
+
+## Initial page flash correction — 13 November 2026
+
+All **39 browser tests** passed after adding four startup/cache-transition cases; frontend syntax checks passed. Before correction, initial static HTML exposed account forms and headings while authentication/layout initialization was pending. Pages now remain behind a neutral loading state until the intended workspace is ready. The older cached module transition is explicitly tested. No API/database changes were made, so the existing 65 backend tests and 135 Postman requests / 351 assertions remain the prior API baseline rather than a new execution claim. See [page-loading audit](PAGE_LOADING_AUDIT_2026-11-13.md) and [sanitized result](test-reports/2026-11-13-page-loading.json).
+
+## Student Check in class-loading correction — 13 November 2026
+
+The form now starts hidden until class data determines the correct state; explicit loading and initial error states prevent a false code form or empty day. Handlers bind before actions appear, and reviews load independently. All **42 browser tests** and frontend syntax checks passed, including three new held-response cases. The first full-suite invocation omitted the isolated database variable and was rejected by setup guards; the corrected run passed. See [correction report](CHECKIN_LOADING_FIX_2026-11-13.md) for deployment evidence and limits. No API/schema changes were made.
+
+## Navigation responsiveness — 15 November 2026
+
+All **65 backend tests, 44 browser tests and 135 Postman requests / 351 assertions** passed for the navigation performance changes. [Release report](NAVIGATION_PERFORMANCE_FIXES_2026-11-15.md) records delayed-response and worker-shell coverage, controlled timing samples, offline behavior and deployment status. No live capacity guarantee is inferred from the local benchmark.

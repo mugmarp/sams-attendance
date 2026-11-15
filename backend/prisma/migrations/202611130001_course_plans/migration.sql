@@ -1,0 +1,27 @@
+ALTER TABLE "Course" ADD COLUMN "isPractice" BOOLEAN NOT NULL DEFAULT false;
+UPDATE "Course" SET "isPractice"=true WHERE "code" LIKE '%-P';
+ALTER TABLE "Enrollment" ADD COLUMN "origin" TEXT NOT NULL DEFAULT 'MANUAL';
+CREATE TABLE "CoursePlan" (
+ "id" TEXT NOT NULL PRIMARY KEY,
+ "termId" TEXT NOT NULL REFERENCES "AcademicTerm"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+ "groupKey" TEXT NOT NULL REFERENCES "ProgrammeGroup"("key") ON DELETE RESTRICT ON UPDATE CASCADE,
+ "version" INTEGER NOT NULL DEFAULT 1,
+ "published" BOOLEAN NOT NULL DEFAULT true,
+ "publishedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX "CoursePlan_termId_groupKey_key" ON "CoursePlan"("termId","groupKey");
+CREATE TABLE "CoursePlanItem" (
+ "planId" TEXT NOT NULL REFERENCES "CoursePlan"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+ "courseId" TEXT NOT NULL REFERENCES "Course"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+ "compulsory" BOOLEAN NOT NULL DEFAULT true,
+ PRIMARY KEY ("planId","courseId")
+);
+CREATE TABLE "StudentCourseSetup" (
+ "id" TEXT NOT NULL PRIMARY KEY,
+ "studentId" TEXT NOT NULL REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+ "planId" TEXT NOT NULL REFERENCES "CoursePlan"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+ "planVersion" INTEGER NOT NULL,
+ "confirmedAt" TIMESTAMP(3),
+ "updatedAt" TIMESTAMP(3) NOT NULL
+);
+CREATE UNIQUE INDEX "StudentCourseSetup_studentId_planId_key" ON "StudentCourseSetup"("studentId","planId");

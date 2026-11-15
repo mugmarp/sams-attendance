@@ -1,3 +1,4 @@
+import coursePlanRoutes from "./course-plans.js";
 import catalogueRoutes from "./catalogue.js";
 import {
   filters,
@@ -18,7 +19,12 @@ import {
   requireAdmin,
   requireExaminerOrAdmin,
 } from "../middleware/auth.js";
-import { authRateLimit, checkinRateLimit } from "../middleware/rateLimit.js";
+import {
+  authRateLimit,
+  checkinRateLimit,
+  loginIdentityRateLimit,
+  authenticatedRateLimit,
+} from "../middleware/rateLimit.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { login, refresh, me } from "../controllers/auth.js";
 import {
@@ -82,6 +88,7 @@ router.post(
         message: "Email or registration number is required",
       }),
   ),
+  loginIdentityRateLimit,
   login,
 );
 router.post(
@@ -92,6 +99,7 @@ router.post(
 );
 router.get("/auth/me", authenticate, me);
 router.use(authenticate);
+router.use(authenticatedRateLimit);
 router.use(accountRoutes);
 router.use((req, _res, next) => {
   if (req.user.mustChangePassword)
@@ -107,6 +115,7 @@ router.use((req, _res, next) => {
 router.use(syncRoutes);
 router.use(academicRoutes);
 router.use(catalogueRoutes);
+router.use(coursePlanRoutes);
 router.get(
   "/student/sessions/upcoming",
   requireStudent,

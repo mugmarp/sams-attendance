@@ -71,6 +71,19 @@ export async function manageSession(actor, id, action) {
         },
         include: { course: true },
       });
+      await audit(
+        tx,
+        actor.userId,
+        "CHECKIN_WINDOW_OPEN",
+        "Session",
+        id,
+        null,
+        {
+          windowStartedAt: now.toISOString(),
+          closesAt: updated.checkinClosesAt.toISOString(),
+        },
+        "Lecturer opened a supervised attendance window",
+      );
       return sessionDTO(updated, true).activeCode;
     }
     if (action === "COMPLETED" && now < session.startTime)
@@ -91,6 +104,20 @@ export async function manageSession(actor, id, action) {
       },
       include: { course: true },
     });
+    if (action === "stop")
+      await audit(
+        tx,
+        actor.userId,
+        "CHECKIN_WINDOW_CLOSE",
+        "Session",
+        id,
+        {
+          windowStartedAt: session.checkinStartedAt,
+          closesAt: session.checkinClosesAt,
+        },
+        { closedAt: now.toISOString() },
+        "Lecturer closed the attendance window",
+      );
     if (action !== "stop")
       await audit(
         tx,
@@ -99,7 +126,11 @@ export async function manageSession(actor, id, action) {
         "Session",
         id,
         { status: session.status, version: session.version },
-        { status: updated.status, version: updated.version },
+        {
+          status: updated.status,
+          version: updated.version,
+          endedEarly: action === "COMPLETED" && now < session.endTime,
+        },
       );
     return sessionDTO(updated, true);
   });
@@ -153,6 +184,23 @@ export async function submitCheckin(studentId, sessionId, code) {
     const attendance = await tx.attendance.create({
       data: { studentId, sessionId, status: "PRESENT", method: "CODE" },
     });
+    await audit(
+      tx,
+      studentId,
+      "CODE_ATTENDANCE_RECORDED",
+      "Attendance",
+      attendance.id,
+      null,
+      {
+        sessionId,
+        windowStartedAt: session.checkinStartedAt,
+        rotationSlot: Math.floor(
+          (now.getTime() - session.checkinStartedAt.getTime()) / 120000,
+        ),
+        recordedAt: now.toISOString(),
+      },
+      "Server accepted an enrolled student's current-window check-in",
+    );
     return {
       success: true,
       duplicate: false,

@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-13",
+  "scope": "Isolated in-process Express middleware and pure functions. No live load, password attempts or attendance writes.",
+  "authPerSharedIP": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    429
+  ],
+  "globalPerSharedIP": {
+    "accepted": 600,
+    "rejected": 1,
+    "requests": 601
+  },
+  "nextUp": {
+    "selected": "dated-next-week",
+    "earlierReferenceExists": true
+  },
+  "codeRules": {
+    "rotates": true,
+    "closedAtBoundary": true
+  }
+}

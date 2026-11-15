@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-13",
+  "timeZone": "Africa/Kampala",
+  "sourceCommit": "f7626bfac94f7a24a3c3c35c950ccc6470474006",
+  "browser": {
+    "tests": 39,
+    "failures": 0
+  },
+  "frontendSyntax": "passed",
+  "checks": [
+    "All pages start hidden before scripts execute",
+    "Delayed identity response keeps forms hidden",
+    "Wrong-role page remains hidden before redirect",
+    "Older cached modules remain usable with new loading markup"
+  ],
+  "scope": "Frontend-only change. Backend 65-test and Postman 135-request/351-assertion baselines are retained, not rerun in this patch.",
+  "live": {
+    "deployedRelease": "f7626bfac94f7a24a3c3c35c950ccc6470474006",
+    "httpsRoleSmokeChecks": "passed",
+    "healthRequests": 10,
+    "automaticRestarts": 0,
+    "codexBrowser": {
+      "route": "/account",
+      "gatedMarkup": true,
+      "contentVisibleAfterInitialization": true,
+      "loadingHiddenAfterInitialization": true
+    }
+  }
+}

@@ -10,7 +10,13 @@
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
-    <main class="login">
+    <p id="page-loading" class="page-loading" role="status">Loading SAMS…</p>
+    <noscript
+      ><p class="page-loading">
+        JavaScript is required to use SAMS. Enable it and reload this page.
+      </p></noscript
+    >
+    <main hidden data-page-content class="login">
       <section class="card stack">
         <div>
           <p class="eyebrow">MUST · STUDENT ATTENDANCE</p>
@@ -47,5 +53,6 @@
       </section>
     </main>
     <script type="module" src="/js/login.js"></script>
+    <script type="module" src="/js/page-loading.js"></script>
   </body>
 </html>

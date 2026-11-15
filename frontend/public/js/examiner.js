@@ -20,6 +20,8 @@ import {
   keepServer,
 } from "./register-offline.js";
 const user = await init(["EXAMINER", "ADMIN"]);
+let sessionFlight = null,
+  rotationRefreshAfter = 0;
 let current = null,
   roster = [],
   cached = false,
@@ -84,12 +86,24 @@ function renderCode() {
     current.status === "SCHEDULED" &&
     now >= new Date(current.startTime).getTime() &&
     now < new Date(current.endTime).getTime();
+  const windowOpen =
+    !cached &&
+    current.status === "SCHEDULED" &&
+    now < new Date(current.endTime).getTime() &&
+    current.activeCode &&
+    now < new Date(current.activeCode.closesAt).getTime();
+  if (windowOpen && !code && navigator.onLine && now >= rotationRefreshAfter) {
+    rotationRefreshAfter = now + 5000;
+    void loadSession().catch(showError);
+  }
   $("#checkin-panel").innerHTML = code
-    ? `<div class="code-panel"><p>Current code</p><p class="large-code" aria-label="Current check-in code">${escape(code.code)}</p><p class="small">Changes in ${Math.max(0, Math.ceil((new Date(code.expiresAt).getTime() - now) / 1000))}s · window closes ${time(code.closesAt)}</p></div>`
-    : `<p>${cached ? "Saved roster available. Live check-in and class actions need a server connection." : inProgress ? "Check-in is closed. Open a ten-minute window when students are ready." : "Check-in can only open while this scheduled class is in progress."}</p>`;
-  $("#start").hidden = !!code;
+    ? `<div class="code-panel"><p>Current code</p><p class="small">Show this code to students in the room. Verify the register before completing the class.</p><p class="large-code" aria-label="Current check-in code">${escape(code.code)}</p><p class="small">Changes in ${Math.max(0, Math.ceil((new Date(code.expiresAt).getTime() - now) / 1000))}s · window closes ${time(code.closesAt)}</p></div>`
+    : windowOpen
+      ? `<p>Attendance window is open. ${navigator.onLine ? "Refreshing the rotating code…" : "Reconnect to retrieve the current code."}</p>`
+      : `<p>${cached ? "Saved roster available. Live check-in and class actions need a server connection." : inProgress ? "Check-in is closed. Open a ten-minute window when students are ready." : "Check-in can only open while this scheduled class is in progress."}</p>`;
+  $("#start").hidden = !!windowOpen;
   $("#start").disabled = !inProgress;
-  $("#stop").hidden = !code;
+  $("#stop").hidden = !windowOpen;
   $("#complete").hidden = current.status !== "SCHEDULED";
   $("#complete").disabled =
     cached || !storageAvailable || now < new Date(current.startTime).getTime();
@@ -306,7 +320,14 @@ async function loadClaims() {
     $("#claims").textContent = "Review requests require a server connection.";
   }
 }
-async function loadSession() {
+function loadSession() {
+  if (!sessionFlight)
+    sessionFlight = fetchSession().finally(() => {
+      sessionFlight = null;
+    });
+  return sessionFlight;
+}
+async function fetchSession() {
   try {
     [current, roster] = await Promise.all([
       api("/examiner/sessions/" + sessionId, { expectedUserId: user.id }),
@@ -407,7 +428,10 @@ if (user) {
         pendingAction = name;
         $("#confirmation-text").textContent =
           name === "complete"
-            ? "Completing this class includes it in attendance percentages. Resolve this device's saved work first. Unsynchronized marks on other devices will require review. This class cannot be reopened."
+            ? (currentDate().getTime() < new Date(current.endTime).getTime()
+                ? "This class has not reached its scheduled end. Confirm it genuinely finished early. "
+                : "") +
+              "Completing this class includes it in attendance percentages. Resolve this device's saved work first. Unsynchronized marks on other devices will require review. This class cannot be reopened."
             : "Cancelling excludes this class from attendance percentages. Saved marks cannot be accepted for a cancelled class. This class cannot be reopened.";
         $("#confirm").textContent = "Confirm " + name;
         $("#confirmation").hidden = false;

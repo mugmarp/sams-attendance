@@ -29,3 +29,5 @@ The minimum accepted password length is 8 characters; the UTF-8 limit remains 72
 ### Password length revision — 12 November 2026
 
 Generated initial passwords now contain 12 ASCII characters: two four-letter pronounceable groups around four digits. Account creation, import, password changes and registrar resets share an 8-character minimum and a maximum of 72 UTF-8 bytes. This also prevents initial-account entry from exceeding bcrypt's byte limit. Existing credentials are unchanged by a deployment; an explicit reset is required to replace them.
+
+Account selection now retains unfinished recovery fields when an unchanged selected identity emits another selection event. A genuine target change still clears the action form. Browser checks wait for the debounced scoped account response before choosing the target, so the test exercises the intended visible state rather than racing an old option list.

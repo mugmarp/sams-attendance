@@ -92,3 +92,43 @@ Release `6e92d276ccc480b8a7a4c7d69e96247350238390` is active. Generated password
 The operator-authorized cohort reset checked all 51 student identities and confirmed their passwords still matched the private initial credential file. All 51 received distinct readable 12-character temporary passwords. Each reset incremented its sign-in version, required a password change and wrote an audit event in the same database transaction. The previous private credential file was backed up; the current root-owned mode-0600 file and matching operator copy were updated. Every new password was verified against its stored hash, and every previous password was verified as invalid. Other accounts were unchanged.
 
 A bounded live check confirmed a cohort student can sign in with its new password, is asked to change it, and sees an 8-character minimum in the HTTPS account form. The database still contains 56 users, 2 courses, 4 enrollments, 3 sessions, 2 attendance records and 1 attendance change. A fresh recovery dump restored successfully with matching core counts after the reset. No credentials or private roster are included here.
+
+### Server clock verification — 13 November 2026
+
+The operator supplied a fastfetch snapshot showing `2026-11-13 04:21:26`, Ubuntu 24.04.4, 897 MiB RAM (461.47 MiB used), 6 GiB swap (144.10 MiB used) and 91% disk utilization. Termix inspection then returned `2026-11-13T04:23:04+00:00`, `Timezone=Etc/UTC` and `NTPSynchronized=yes`. The supplied 04:21:26 UTC corresponds to 07:21:26 EAT in Kampala. The clock was synchronized; the observed three-hour difference was its display timezone, not proof of clock drift.
+
+PostgreSQL `SHOW TimeZone` returned `Etc/UTC`; `Session.startTime` was verified as `timestamp without time zone`. Existing application values follow a UTC convention. The revised report query explicitly attaches UTC before converting to the Kampala calendar date. The revised SAMS service declares `TZ=Africa/Kampala`, while inputs and displays continue using explicit Kampala offsets/timeZone settings. No global three-hour adjustment or timestamp-type conversion is applied. The host timezone remains UTC.
+
+At this read-only check the running release was `6e92d276ccc480b8a7a4c7d69e96247350238390`, active with zero automatic restarts, and the live database still had only the two BSE practice offerings. Deployment and new course-plan data are recorded separately below after execution.
+
+### Programme course-plan rollout — 13 November 2026
+
+Release `cbcc946c6b65988f3eac931d93e8fbf384234a6d` is live after backup-first activation through the operator's Termix browser session. Additive migrations introduced plans, enrollment origin, practice classification and programme-specific offering keys. HTTPS role smoke checks and ten bounded health/database requests passed; the service remained active with zero automatic restarts, approximately 93 MiB measured application memory after provisioning. Both GitHub verification runs passed: [feature](https://github.com/mugmarp/sams-attendance/actions/runs/43366913183), [provisioning fix](https://github.com/mugmarp/sams-attendance/actions/runs/43367210578).
+
+The first provisioning attempt omitted the existing term API's required reviewed flag and stopped at HTTP 400 before account/course/enrollment creation. The fix was committed separately and deployed. The successful run created five synthetic project lecturer accounts, 89 programme-specific offerings and 13 published group plans, covering 53 students. It added 376 COURSE_PLAN enrollment links and preserved all five pre-existing MANUAL links. Final counts: 61 users, 91 courses, 381 enrollments, 3 sessions, 2 attendance records and 1 attendance change. No historical classes or marks were generated. The original three sessions and two marks remain intact.
+
+Plan course counts: BSE II 8; BCS I/II/III 6/7/8; BIT I/II/III 7/9/8; BBA I/II/Accounting III 6/6/3; BME I/II/III 7/7/7. Activities, malformed labels and contradictory titles within a group were excluded, with student-visible review notes. These are project curriculum/lecturer assignments, not institutional approval. Compulsory/elective classification and source anomalies remain registrar review matters. Future dated sessions still require lecturer/timetable review.
+
+The post-change daily backup restored successfully into a separate disposable database with matching core counts. Its 151,727-byte recovery copy was downloaded privately to the operator's PC and verified against SHA-256 `49a0c3c3b18fed3b99ad05ac434093df15b6832346f0a67e8725c1bbd31a0a7e`. New lecturer credentials were saved privately on the server and downloaded into the private PC credential document. No existing account password was reset during this rollout. Recurring external backup scheduling is still pending.
+
+### Attendance audit fixes and confirmed Friday sessions — 13 November 2026
+
+Release `11a5e18302e32ae903d4779e95d14ebe5d082431` is active after a private pre-release dump (`before-release-20261113T092152Z.dump`) and native activation. HTTPS role smoke checks and ten health requests passed. The service reported zero automatic restarts and approximately 135 MiB at the post-restart sample; this is not a workload-capacity result. No migration or credential reset was required for these fixes.
+
+The operator explicitly confirmed BSE II Friday Web Design 11:00–13:00 EAT. The reviewed helper at `4583289` checked the lecturer, BSE II group and room for conflicts, then used timetable preview/apply to create exactly two SCHEDULED sessions on 20 and 27 November (08:00–10:00Z). Preview had no warnings or blockers. No window was opened or attendance mark created. The lecturer page in the Codex browser showed 20 November 11:00–13:00, and Start check-in was disabled for this future class.
+
+Post-change core counts: 61 users, 91 courses, 381 enrollments, 5 sessions, 2 attendance records and 1 attendance change. A fresh daily backup restored into a disposable database with matching counts. Its private server export is `/home/myvps/SAMS-recovery-2026-11-13-094948.dump`, 153,812 bytes, SHA-256 `30fca22e6d35b18986caf44b770186ae870adae1a1e3d21c64f0c69b243280b1`. This latest export is on the server; the previously verified off-server copy predates these two new sessions. Recurring external backup remains pending.
+
+Old open clients need one ordinary reload to obtain the new code; the new client then offers future update notices without clearing pending attendance. Shared-code physical-presence assurance and institutional late rules remain policy matters. Other dated classes need their own reviewed times.
+
+### Page-loading visibility fix — 13 November 2026
+
+Release `f7626bfac94f7a24a3c3c35c950ccc6470474006` is live. The frontend now gates static page bodies behind neutral loading until workspace/login initialization is ready; a compatibility helper handles older cached modules. No database or API behavior changed. All 39 browser cases and frontend syntax checks passed locally. Native activation saved `before-release-20261113T101944Z.dump`; HTTPS role and ten health/database checks passed. The service was active with zero automatic restarts, approximately 106 MiB at the sampled time. Codex-browser acceptance confirmed the new markup and completed account workspace without altering account settings.
+
+## Student class-loading release — 13 November 2026
+
+Native release `916a7524ec149f758e2d4834639713d7dfd2a63e` activated after private dump `/var/backups/sams/before-release-20261113T110706Z.dump`. No pending migrations. Three role smoke checks and ten bounded HTTPS health checks passed; service active, zero automatic restarts, memory 117,952,512 bytes. Codex browser acceptance used the existing synthetic student and installed-client update notice; no attendance was submitted. See [class-loading correction](CHECKIN_LOADING_FIX_2026-11-13.md) for the cache transition, full 42-case browser result and remaining audit scope.
+
+## Navigation responsiveness release — 15 November 2026
+
+Release `4e821b7625717d9f68fb9cb7b1bd935637d2409c` activated after dump `/var/backups/sams/before-release-20261115T034743Z.dump`, with no pending migrations. Three role smoke checks and ten health requests passed (server-origin median 49 ms, maximum 91 ms); service active, zero restarts, memory 97,165,312 bytes. Codex browser response capture confirmed the installed student's summary document came from the service worker while protected APIs remained network requests. No attendance submitted. See [performance fix report](NAVIGATION_PERFORMANCE_FIXES_2026-11-15.md) for tests, controlled before/after timing and remaining limits.

@@ -10,12 +10,18 @@
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
+    <p id="page-loading" class="page-loading" role="status">Loading SAMS…</p>
+    <noscript
+      ><p class="page-loading">
+        JavaScript is required to use SAMS. Enable it and reload this page.
+      </p></noscript
+    >
     <header id="site-header" hidden></header>
     <div class="header-inner" id="offline" role="status" hidden>
       You’re offline. Prepared registers are available; saved marks await server
       acceptance.
     </div>
-    <main class="stack">
+    <main hidden data-page-content class="stack">
       <p id="error" class="alert" role="alert" hidden></p>
       <p id="notice" role="status" class="alert" hidden></p>
       <section id="dashboard" class="stack" hidden>
@@ -188,5 +194,6 @@
     </main>
     <footer>Mbarara University of Science and Technology · SAMS</footer>
     <script type="module" src="/js/examiner.js"></script>
+    <script type="module" src="/js/page-loading.js"></script>
   </body>
 </html>

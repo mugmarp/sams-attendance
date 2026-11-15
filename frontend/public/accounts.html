@@ -10,11 +10,17 @@
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
+    <p id="page-loading" class="page-loading" role="status">Loading SAMS…</p>
+    <noscript
+      ><p class="page-loading">
+        JavaScript is required to use SAMS. Enable it and reload this page.
+      </p></noscript
+    >
     <header id="site-header" hidden></header>
     <div class="header-inner" id="offline" role="status" hidden>
       You’re offline. Account management needs a connection.
     </div>
-    <main class="stack">
+    <main hidden data-page-content class="stack">
       <h1>Account management</h1>
       <p class="muted">
         Find an account to reset a password, end sign-ins or change access.
@@ -105,5 +111,6 @@
       </p>
     </main>
     <script type="module" src="/js/accounts.js"></script>
+    <script type="module" src="/js/page-loading.js"></script>
   </body>
 </html>

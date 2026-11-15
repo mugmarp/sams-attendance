@@ -11,7 +11,7 @@ The hosted application is https://sams.tirallab.page. This is a controlled pilot
 The registrar manages academic placement, course offerings, accounts and enrollment. The lecturer manages assigned classes and registers. Students see their own relevant classes and records.
 
 1. A faculty contains programmes. A student's confirmed placement identifies the programme, study year and academic context.
-2. The registrar creates a course offering for an academic year and semester, assigns a lecturer and enrolls students. Importing a student or matching a programme does not enroll them automatically.
+2. The registrar prepares offerings and publishes compulsory/elective course plans by programme group and term. Matching students receive compulsory courses on sign-in or workspace entry and confirm electives in My courses. Importing alone does not assign courses before a matching plan is published.
 3. A dated session represents one actual class. A weekly timetable entry is a reference until reviewed and turned into dated classes.
 4. The lecturer opens check-in during the class. The window lasts up to ten minutes and cannot extend past class end; its code rotates every two minutes.
 5. The student's current enrolled class is selected automatically when unambiguous. Overlapping enrolled classes may require a choice.
@@ -100,7 +100,7 @@ The configured threshold is a project policy example pending institutional confi
 
 The programme-cohort import contains 51 students: the 11 supplied BSE members and 40 synthetic records across BCS, BIT, BBA and BME. Two additional synthetic BSE practice students have enrollment in the existing practice offerings. The original three accounts provide registrar, lecturer and student roles.
 
-Programme-cohort membership does not imply enrollment. An account can sign in successfully and still see no courses. Resolve that by checking approved offerings and enrollment, not by creating attendance or assuming every programme shares the BSE timetable. Account totals and course history can change after this guide's dated snapshot; use the application or an authorized database check for current state.
+Programme-cohort membership needs a published plan for automatic enrollment. An account can sign in successfully and still see no courses. Resolve that by checking approved offerings and enrollment, not by creating attendance or assuming every programme shares the BSE timetable. Account totals and course history can change after this guide's dated snapshot; use the application or an authorized database check for current state.
 
 ## API verification and presentation
 
@@ -118,7 +118,7 @@ Deployment uses reviewed releases. Backups are private; restore verification use
 
 ## Limitations every member should understand
 
-The audit still identifies defects involving privileged-account creation, scheduling conflicts, old-year timetable projection, new-offering academic validation and long-title PDF layout. The multibyte initial-password boundary was corrected through shared validation. Passing tests does not close the remaining findings.
+The audit still identifies defects involving privileged-account creation, scheduling conflicts, new-offering academic validation and long-title PDF layout. The multibyte initial-password boundary was corrected through shared validation. Passing tests does not close the remaining findings.
 
 A shared attendance code cannot prove physical presence. Approved policies, confirmed teaching assignments and dates, physical-device acceptance, recurring external backups and measured workload testing remain necessary before institutional adoption. SSO, automatic email recovery and fee/coursework clearance are outside the implemented workflow.
 
@@ -129,3 +129,7 @@ The timetable and academic-catalogue ideas were informed by the Android reposito
 Choose a module using the README allocation. Trace one complete action from page to database and back. Run it locally, explain one invalid case, inspect its relevant test and identify a useful improvement. Review a neighboring module with another member. A PR should explain actual changes, their purpose and verification.
 
 Every member should be able to explain why enrollment is separate from programme placement, why timetable references are separate from dated sessions, how access is restricted, when attendance becomes accepted, how reports count classes and what offline operation cannot guarantee.
+
+## Latest course-setup snapshot — 13 November 2026
+
+The pilot now contains 61 accounts, including five project lecturers. Thirteen plans cover 53 students across five programmes, with 376 automatically assigned links alongside five preserved manual links. There are 91 offerings; only three dated sessions and two attendance records existed at rollout. Publishing or enrolling does not manufacture classes or attendance. See TESTING_HISTORY.md for 61 backend tests, 34 browser tests and 135 Postman requests / 351 assertions, and SERVER_READINESS.md for live evidence.

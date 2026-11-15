@@ -10,6 +10,7 @@ User=sams
 Group=sams
 WorkingDirectory=/opt/sams/current/backend
 EnvironmentFile=/etc/sams/sams.env
+Environment=TZ=Africa/Kampala
 Environment=NODE_OPTIONS=--max-old-space-size=160
 ExecStart=/usr/local/lib/sams-node/bin/node src/server.js
 Restart=on-failure

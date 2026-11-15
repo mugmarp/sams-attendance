@@ -1,0 +1,728 @@
+{
+  "checkedDate": "2026-11-15",
+  "groupMain": "fd8d2a46ffab2377e9677f659a0ebec949ae3677",
+  "sourceMain": "6df288a",
+  "sourceWorking": "28517d1",
+  "prs": [
+    {
+      "number": 1,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/1",
+      "title": "added XZ",
+      "body": "jshdjhjsdh",
+      "author": "lewiskwesiga-dot",
+      "head": "a6bdc7f00b93f2cefe3c5baf7c22b829679ae589",
+      "merged": true,
+      "mergedAt": "2026-11-11T10:15:48Z",
+      "mergedBy": "lewiskwesiga-dot",
+      "mergeCommit": "d345d9a24e9a759e841e93df603019b22cc68cd4",
+      "draft": false,
+      "commits": 1,
+      "additions": 0,
+      "deletions": 0,
+      "files": [
+        "ffmpeg-8.1.tar.xz"
+      ],
+      "comments": [],
+      "base": "01038966469c7253c3c8ec1085f110ea063803fb",
+      "commitMessages": [
+        {
+          "sha": "a6bdc7f00b93f2cefe3c5baf7c22b829679ae589",
+          "authorName": "lewiskwesiga-dot",
+          "subject": "added XZ"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/2",
+      "title": "the fygy",
+      "body": null,
+      "author": "2025bse120-sketch",
+      "head": "579ae44d707f368120e1a53027a5fca19c4ea571",
+      "merged": true,
+      "mergedAt": "2026-11-11T10:20:50Z",
+      "mergedBy": "2025bse120-sketch",
+      "mergeCommit": "f39ba8ea5d9bd5e836e8348acfdfb86a8b9817c6",
+      "draft": false,
+      "commits": 1,
+      "additions": 0,
+      "deletions": 0,
+      "files": [
+        "Lecture 4.ppt"
+      ],
+      "comments": [],
+      "base": "d345d9a24e9a759e841e93df603019b22cc68cd4",
+      "commitMessages": [
+        {
+          "sha": "579ae44d707f368120e1a53027a5fca19c4ea571",
+          "authorName": "2025bcs109-pixel",
+          "subject": "the fygy"
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/3",
+      "title": "hhyhyhhhhh6yhyhy",
+      "body": null,
+      "author": "brian-khan",
+      "head": "1b9ead3b0ba0fd141b2a7441c5a23f6d04052006",
+      "merged": true,
+      "mergedAt": "2026-11-11T10:21:23Z",
+      "mergedBy": "brian-khan",
+      "mergeCommit": "728a24dd0237ac7895918e400ee19ebbc87a4c18",
+      "draft": false,
+      "commits": 1,
+      "additions": 0,
+      "deletions": 0,
+      "files": [
+        "03 Lord I Need You.mp3"
+      ],
+      "comments": [],
+      "base": "d345d9a24e9a759e841e93df603019b22cc68cd4",
+      "commitMessages": [
+        {
+          "sha": "1b9ead3b0ba0fd141b2a7441c5a23f6d04052006",
+          "authorName": "KANYESIGYE BRIAN",
+          "subject": "hhyhyhhhhh6yhyhy"
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/4",
+      "title": "jshfjshfjsh",
+      "body": null,
+      "author": "wokwabacharles4-jpg",
+      "head": "192cadab402acd27a05703ec17ab307809a8347a",
+      "merged": true,
+      "mergedAt": "2026-11-11T10:46:31Z",
+      "mergedBy": "wokwabacharles4-jpg",
+      "mergeCommit": "1fd9c4b863ac7b88a1c73278ae3407fad14267ab",
+      "draft": false,
+      "commits": 1,
+      "additions": 0,
+      "deletions": 0,
+      "files": [
+        "Pre-Colonial_Uganda_Assignment.docx"
+      ],
+      "comments": [],
+      "base": "728a24dd0237ac7895918e400ee19ebbc87a4c18",
+      "commitMessages": [
+        {
+          "sha": "192cadab402acd27a05703ec17ab307809a8347a",
+          "authorName": "wokwabacharles4-jpg",
+          "subject": "jshfjshfjsh"
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/5",
+      "title": "backend: added backend config JS files",
+      "body": "backend: added backend config JS files",
+      "author": "mugmarp",
+      "head": "2d77c7554df1f49983d2e52b2059b9a99a6dfbd7",
+      "merged": true,
+      "mergedAt": "2026-11-12T17:48:15Z",
+      "mergedBy": "mugmarp",
+      "mergeCommit": "8376765e537e872491a840766e9dbe19ec8c55c4",
+      "draft": false,
+      "commits": 1,
+      "additions": 51,
+      "deletions": 0,
+      "files": [
+        "backend/src/config/db.js",
+        "backend/src/config/env.js"
+      ],
+      "comments": [
+        {
+          "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/5#pullrequestreview-5879320415",
+          "user": "copilot-pull-request-reviewer[bot]",
+          "body": "Copilot was unable to review this pull request because the user who requested the review has insufficient remaining quota. Try requesting a review at a lower effort level.",
+          "review": "COMMENTED",
+          "path": null,
+          "createdAt": "2026-11-12T17:48:06Z"
+        }
+      ],
+      "base": "33da5aae49d0fc619c2ee1f8ca4f22688b478c72",
+      "commitMessages": [
+        {
+          "sha": "2d77c7554df1f49983d2e52b2059b9a99a6dfbd7",
+          "authorName": "mugmarp",
+          "subject": "backend: added backend config JS files"
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/6",
+      "title": "My contribution to SAMS project ",
+      "body": "I am submitting my contribution to the Student Attendance Management System project, focusing on the Examiner section.",
+      "author": "wagegenerous-pixel",
+      "head": "c63944a7d35e8a5f171ef88b8c88e58e539358d5",
+      "merged": false,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": "b2fbbe393c88ae21681d95dd4eb9439090292991",
+      "draft": false,
+      "commits": 1,
+      "additions": 544,
+      "deletions": 0,
+      "files": [
+        "frontend/public/examiner.js"
+      ],
+      "comments": [],
+      "base": "e56cc19655ba983762ef3f6211a0c552039c2ecd",
+      "commitMessages": [
+        {
+          "sha": "c63944a7d35e8a5f171ef88b8c88e58e539358d5",
+          "authorName": "wagegenerous-pixel",
+          "subject": "Create examiner.js"
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/7",
+      "title": "SAMS Project Contribution \u2013 Account Management Module",
+      "body": "## Contribution Overview\n\nThis contribution focuses on the Account Management module of the Student Attendance Management System (SAMS), which was my assigned area of responsibility within Group B.\n\nThe contribution brings the existing Account Management functionality into the group's submission repository, together with its supporting frontend, backend, database and testing files.\n\n### Account Management Components\n- User account management and password changes.\n- Administrator account management.\n- Password resets and account status management.\n- Session termination and authentication controls.\n- Supporting database migrations and account management tests.\n\n### Purpose\nTo ensure that the Account Management module and its supporting components are included in the group's consolidated SAMS project for review, testing and presentation.\n\nThis contribution forms part of Group B's collaborative development of the Student Attendance Management System.",
+      "author": "Edwinelevi",
+      "head": "66950aa51fcd117cfe9851bc8e319bcb0b1e5a26",
+      "merged": false,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": "27d214411949e4f996cf8b8e7aee13d01d7dced8",
+      "draft": true,
+      "commits": 2,
+      "additions": 7604,
+      "deletions": 0,
+      "files": [
+        ".dockerignore",
+        ".env.example",
+        ".github/workflows/ci.yml",
+        ".gitignore",
+        ".nvmrc",
+        "backend/.env.example",
+        "backend/Dockerfile",
+        "backend/package-lock.json",
+        "backend/package.json",
+        "backend/scripts/bootstrap-accounts.js",
+        "backend/scripts/check-js.js",
+        "backend/scripts/generate-student-cohorts.js",
+        "backend/scripts/import-student-cohorts.js",
+        "backend/scripts/import.js",
+        "backend/src/app.js",
+        "backend/src/controllers/auth.js",
+        "backend/src/middleware/auth.js",
+        "backend/src/middleware/errorHandler.js",
+        "backend/src/middleware/rateLimit.js",
+        "backend/src/routes/academic.js",
+        "backend/src/routes/accounts.js",
+        "backend/src/routes/api.js",
+        "backend/src/routes/catalogue.js",
+        "backend/src/routes/setup.js",
+        "backend/src/routes/sync.js",
+        "backend/src/server.js",
+        "backend/src/utils/asyncHandler.js",
+        "backend/src/utils/errors.js",
+        "backend/src/utils/jwt.js",
+        "backend/src/utils/passwordPolicy.js",
+        "backend/src/utils/readablePassword.js",
+        "deploy/native/configure-database.py",
+        "deploy/native/logrotate.conf",
+        "deploy/native/nginx-http.conf",
+        "deploy/native/nginx-https.conf",
+        "deploy/native/postgresql-small.conf",
+        "deploy/native/prepare-release.sh",
+        "deploy/native/sams-backup",
+        "deploy/native/sams-backup.service",
+        "deploy/native/sams-backup.timer",
+        "deploy/native/sams.service",
+        "deploy/native/smoke-check.py",
+        "deploy/native/verify-backup.py",
+        "docker-compose.yml",
+        "docs/ACADEMIC_EXPERIENCE_PLAN.md",
+        "docs/ACADEMIC_STRUCTURE_AND_DAY.md",
+        "docs/ACCOUNT_MANAGEMENT.md",
+        "docs/API_SPEC.md",
+        "docs/DATA_DICTIONARY.md",
+        "docs/DEPLOYMENT.md",
+        "docs/FEASIBILITY_ANALYSIS.md",
+        "docs/GIT_PR_GUIDE.md",
+        "docs/HOSTING_PWA_ANDROID_REVIEW.md",
+        "docs/IMPLEMENTATION_PLAN.md",
+        "docs/IMPORT_GUIDE.md",
+        "docs/JAVASCRIPT_MIGRATION_PLAN.md",
+        "docs/MUST_SYSTEMS_INTEGRATION.md",
+        "docs/NATIVE_DEPLOYMENT.md",
+        "docs/OFFLINE_REALISM_REVIEW.md",
+        "docs/OFFLINE_REGISTER.md",
+        "docs/PROPOSAL.md",
+        "docs/PROPOSAL_ALIGNMENT.md",
+        "docs/SERVER_READINESS.md",
+        "docs/TEAM_SYSTEM_GUIDE.md",
+        "docs/TECH_ARCHITECTURE.md",
+        "docs/TIMETABLE_AND_RECORDS.md",
+        "docs/VALIDATION.md",
+        "docs/WEB_IMPROVEMENT_PHASES.md",
+        "docs/architecture.svg",
+        "frontend/package-lock.json",
+        "frontend/package.json",
+        "frontend/playwright.config.js",
+        "frontend/public/examiner.html",
+        "frontend/scripts/check-js.js"
+      ],
+      "comments": [],
+      "base": "fd8d2a46ffab2377e9677f659a0ebec949ae3677",
+      "commitMessages": [
+        {
+          "sha": "43ec8e4230d1a41477c43de3155470df23ff4cd4",
+          "authorName": "Edwinelevi",
+          "subject": "Import existing SAMS project files into submission repository"
+        },
+        {
+          "sha": "66950aa51fcd117cfe9851bc8e319bcb0b1e5a26",
+          "authorName": "Edwinelevi",
+          "subject": "Merge main and resolve Postman demonstration conflicts"
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/8",
+      "title": "Add files via upload",
+      "body": "handling annomalies",
+      "author": "wokwabacharles4-jpg",
+      "head": "1ff88006cce9e45583984b11f4791f8e95a2d512",
+      "merged": true,
+      "mergedAt": "2026-11-13T06:05:18Z",
+      "mergedBy": "wokwabacharles4-jpg",
+      "mergeCommit": "aefa23f7f280648387b6afe479b9189a92d81d68",
+      "draft": false,
+      "commits": 1,
+      "additions": 89,
+      "deletions": 0,
+      "files": [
+        "backend/errorHandler.js",
+        "backend/rateLimit.js"
+      ],
+      "comments": [
+        {
+          "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/8#issuecomment-6845573215",
+          "user": "wokwabacharles4-jpg",
+          "body": "added",
+          "review": null,
+          "path": null,
+          "createdAt": "2026-11-13T06:05:41Z"
+        }
+      ],
+      "base": "2358b4e2d88b5b013510ffa003285d6d866fe54d",
+      "commitMessages": [
+        {
+          "sha": "1ff88006cce9e45583984b11f4791f8e95a2d512",
+          "authorName": "wokwabacharles4-jpg",
+          "subject": "Add files via upload"
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/9",
+      "title": "Add files via upload",
+      "body": null,
+      "author": "wokwabacharles4-jpg",
+      "head": "1851c9b686c49409953faea0eeb1faf56ff45c60",
+      "merged": true,
+      "mergedAt": "2026-11-13T06:08:16Z",
+      "mergedBy": "wokwabacharles4-jpg",
+      "mergeCommit": "b2e6bccd7ec3f27c025c1642988d5d86ab8c41ac",
+      "draft": false,
+      "commits": 1,
+      "additions": 54,
+      "deletions": 0,
+      "files": [
+        "auth.js"
+      ],
+      "comments": [
+        {
+          "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/9#issuecomment-6845616233",
+          "user": "wokwabacharles4-jpg",
+          "body": "added",
+          "review": null,
+          "path": null,
+          "createdAt": "2026-11-13T06:08:28Z"
+        }
+      ],
+      "base": "aefa23f7f280648387b6afe479b9189a92d81d68",
+      "commitMessages": [
+        {
+          "sha": "1851c9b686c49409953faea0eeb1faf56ff45c60",
+          "authorName": "wokwabacharles4-jpg",
+          "subject": "Add files via upload"
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/10",
+      "title": "Lewis js",
+      "body": null,
+      "author": "lewiskwesiga-dot",
+      "head": "f159d5d229ed1ded6c8fe5dc867701218b37cfb1",
+      "merged": true,
+      "mergedAt": "2026-11-13T08:24:34Z",
+      "mergedBy": "lewiskwesiga-dot",
+      "mergeCommit": "8ceba79bf9c0bffb211ae7b1cbf79ac170081272",
+      "draft": false,
+      "commits": 3,
+      "additions": 2089,
+      "deletions": 0,
+      "files": [
+        "backend/src/services/academic-filters.js",
+        "backend/src/services/academic.js",
+        "backend/src/services/attendance.js",
+        "backend/src/services/catalogue.js",
+        "backend/src/services/eligibility.js",
+        "backend/src/services/pdf.js",
+        "backend/src/services/rules.js",
+        "backend/src/services/student-day.js",
+        "backend/src/services/sync.js",
+        "backend/src/services/timetable-source.js",
+        "backend/src/services/timetable.js",
+        "ffmpeg-8.1.tar.xz"
+      ],
+      "comments": [],
+      "base": "b2e6bccd7ec3f27c025c1642988d5d86ab8c41ac",
+      "commitMessages": [
+        {
+          "sha": "154d8e9d6883b9781fdcdc846339ab61a3c22b0f",
+          "authorName": "lewiskwesiga-dot",
+          "subject": "Timetable processing and its page"
+        },
+        {
+          "sha": "3ab1f6681d90d26902a7ae2e6272b0915ea8dde2",
+          "authorName": "lewiskwesiga-dot",
+          "subject": "demo"
+        },
+        {
+          "sha": "f159d5d229ed1ded6c8fe5dc867701218b37cfb1",
+          "authorName": "lewiskwesiga-dot",
+          "subject": "Timetable processing and its page"
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/11",
+      "title": "Add attendance functionality",
+      "body": "Attendance summaries, report calculations and PDF output.",
+      "author": "2025bse120-sketch",
+      "head": "f0bf82cf0a005192a696537fb6e753d445c55f11",
+      "merged": true,
+      "mergedAt": "2026-11-13T08:20:28Z",
+      "mergedBy": "2025bse120-sketch",
+      "mergeCommit": "46caba95cb157a3209038d1d2b663525cdc2434c",
+      "draft": false,
+      "commits": 1,
+      "additions": 219,
+      "deletions": 0,
+      "files": [
+        "attendance.js"
+      ],
+      "comments": [],
+      "base": "b2e6bccd7ec3f27c025c1642988d5d86ab8c41ac",
+      "commitMessages": [
+        {
+          "sha": "f0bf82cf0a005192a696537fb6e753d445c55f11",
+          "authorName": "2025bcs109-pixel",
+          "subject": "Add attendance functionality"
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/12",
+      "title": "Add SAMS test suites and improve Postman validation",
+      "body": "## Changes\n\n- Adds the SAMS Postman collection, backend tests, frontend tests, and Postman demo guide to the group assignment repository.\n- Adds five Postman checks for invalid login and password-change requests.\n- Completes the saved response examples for all 134 requests and updates the setup and demo instructions.\n\n## Verification\n\nThe updated Postman collection passed 134 requests and 362 assertions against a local SAMS test database with zero failures. The backend and frontend test suites were copied from SAMS and were not rerun for this pull request.",
+      "author": "amenosuta",
+      "head": "116142c87d445d2b4b640db7158ec5453ed73685",
+      "merged": true,
+      "mergedAt": "2026-11-13T08:37:25Z",
+      "mergedBy": "amenosuta",
+      "mergeCommit": "9d51106e8af9f4b463845ab0fe20b92fefb7fa24",
+      "draft": false,
+      "commits": 3,
+      "additions": 15311,
+      "deletions": 0,
+      "files": [
+        "backend/tests/api.test.js",
+        "backend/tests/catalogue.test.js",
+        "backend/tests/passwordPolicy.test.js",
+        "backend/tests/readablePassword.test.js",
+        "backend/tests/rules.test.js",
+        "docs/POSTMAN_DEMO.md",
+        "frontend/tests/academic.spec.js",
+        "frontend/tests/accounts.spec.js",
+        "frontend/tests/journeys.spec.js",
+        "frontend/tests/queue.spec.js",
+        "frontend/tests/register.spec.js",
+        "frontend/tests/timetable.spec.js",
+        "postman/README.md",
+        "postman/SAMS.local.postman_environment.json",
+        "postman/SAMS.postman_collection.json",
+        "postman/VALIDATION.md",
+        "postman/check-collection.cjs",
+        "postman/verification-summary.json"
+      ],
+      "comments": [],
+      "base": "8ceba79bf9c0bffb211ae7b1cbf79ac170081272",
+      "commitMessages": [
+        {
+          "sha": "00fed34390d4f14df9ec8766be04c1af58a2af25",
+          "authorName": "Osuta Amen Joel",
+          "subject": "jsahdihd eifhie"
+        },
+        {
+          "sha": "df84f447f62e03680bdc19d7406f7ea861f39bf4",
+          "authorName": "Osuta Amen Joel",
+          "subject": "delete pratice files"
+        },
+        {
+          "sha": "116142c87d445d2b4b640db7158ec5453ed73685",
+          "authorName": "Osuta Amen Joel",
+          "subject": "Add Amen SAMS verification deliverables"
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/13",
+      "title": "Brian kan",
+      "body": "Faculties, programmes, student placement and database relationships; coordinate catalogue-service changes.",
+      "author": "brian-khan",
+      "head": "64ca135af773602d73e45139306cc38fe4950bd2",
+      "merged": true,
+      "mergedAt": "2026-11-13T08:42:20Z",
+      "mergedBy": "brian-khan",
+      "mergeCommit": "a015c2252a57d102c15442d36003584ae335af5c",
+      "draft": false,
+      "commits": 3,
+      "additions": 24976,
+      "deletions": 0,
+      "files": [
+        "03 Lord I Need You.mp3",
+        "attendance.js",
+        "auth.js",
+        "backend/authenticate.js",
+        "backend/errorHandler.js",
+        "backend/prisma/migrations/202611110001_initial/migration.sql",
+        "backend/prisma/migrations/202611110002_threshold/migration.sql",
+        "backend/prisma/migrations/202611110003_offline_register/migration.sql",
+        "backend/prisma/migrations/202611110004_timetable_and_records/migration.sql",
+        "backend/prisma/migrations/202611110005_timetable_keys/migration.sql",
+        "backend/prisma/migrations/202611120006_academic_catalogue/migration.sql",
+        "backend/prisma/migrations/202611120007_academic_filter_indexes/migration.sql",
+        "backend/prisma/migrations/202611120008_account_lifecycle/migration.sql",
+        "backend/prisma/migrations/migration_lock.toml",
+        "backend/prisma/schema.prisma",
+        "backend/prisma/seed.js",
+        "backend/rateLimit.js",
+        "backend/src/config/db.js",
+        "backend/src/config/env.js",
+        "backend/src/services/academic-filters.js",
+        "backend/src/services/academic.js",
+        "backend/src/services/attendance.js",
+        "backend/src/services/catalogue.js",
+        "backend/src/services/eligibility.js",
+        "backend/src/services/pdf.js",
+        "backend/src/services/rules.js",
+        "backend/src/services/student-day.js",
+        "backend/src/services/sync.js",
+        "backend/src/services/timetable-source.js",
+        "backend/src/services/timetable.js",
+        "data/academic_calendar_reference.json",
+        "data/academic_catalogue.json",
+        "data/enrollments.csv",
+        "data/students.csv",
+        "data/timetable_export.json",
+        "data/timetable_metadata.json",
+        "frontend/public/examiner.html",
+        "frontend/public/examiner.js",
+        "frontend/public/js"
+      ],
+      "comments": [],
+      "base": "9d51106e8af9f4b463845ab0fe20b92fefb7fa24",
+      "commitMessages": [
+        {
+          "sha": "0b64666d3d3ed934b0146e736669ee96c9817530",
+          "authorName": "KANYESIGYE BRIAN",
+          "subject": "deleted practice files"
+        },
+        {
+          "sha": "137fd0942a0409dc54d4385b54eb1493e93062ae",
+          "authorName": "KANYESIGYE BRIAN",
+          "subject": "pushing backend files"
+        },
+        {
+          "sha": "64ca135af773602d73e45139306cc38fe4950bd2",
+          "authorName": "KANYESIGYE BRIAN",
+          "subject": "Faculties, programmes, student placement and database relationships; coordinate catalogue-service changes."
+        }
+      ]
+    },
+    {
+      "number": 14,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/14",
+      "title": "Add files via upload",
+      "body": "added authentiation files",
+      "author": "wokwabacharles4-jpg",
+      "head": "4c521cf0ba69972642b309317f7aa2912afa98ef",
+      "merged": true,
+      "mergedAt": "2026-11-13T08:59:11Z",
+      "mergedBy": "wokwabacharles4-jpg",
+      "mergeCommit": "61c0091c54ead35312871d7053a3092fe0f9192e",
+      "draft": false,
+      "commits": 1,
+      "additions": 222,
+      "deletions": 0,
+      "files": [
+        "backend/src/auth.js",
+        "backend/src/authenticate.js",
+        "backend/src/errorHandler.js",
+        "backend/src/rateLimit.js"
+      ],
+      "comments": [
+        {
+          "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/14#issuecomment-6848581216",
+          "user": "wokwabacharles4-jpg",
+          "body": "contributed to the SAMS internet project",
+          "review": null,
+          "path": null,
+          "createdAt": "2026-11-13T09:00:55Z"
+        }
+      ],
+      "base": "a015c2252a57d102c15442d36003584ae335af5c",
+      "commitMessages": [
+        {
+          "sha": "4c521cf0ba69972642b309317f7aa2912afa98ef",
+          "authorName": "wokwabacharles4-jpg",
+          "subject": "Add files via upload"
+        }
+      ]
+    },
+    {
+      "number": 15,
+      "url": "https://github.com/mugmarp/Group_B_Etivity_5_WEB/pull/15",
+      "title": "Student pages, check-in feedback and shared styling where needed.",
+      "body": "Student pages, check-in feedback and shared styling where needed.",
+      "author": "aannibow-wq",
+      "head": "62367d7e0fe484e3aee9d4184a2cf8468ded6caf",
+      "merged": true,
+      "mergedAt": "2026-11-13T09:49:50Z",
+      "mergedBy": "aannibow-wq",
+      "mergeCommit": "2e76eae96969df0095a016085e8deae76cede612",
+      "draft": false,
+      "commits": 1,
+      "additions": 4196,
+      "deletions": 194,
+      "files": [
+        "frontend/public/account.html",
+        "frontend/public/accounts.html",
+        "frontend/public/admin.html",
+        "frontend/public/css/styles.css",
+        "frontend/public/examiner.html",
+        "frontend/public/icon.svg",
+        "frontend/public/js",
+        "frontend/public/js/academic-ui.js",
+        "frontend/public/js/account.js",
+        "frontend/public/js/accounts.js",
+        "frontend/public/js/admin.js",
+        "frontend/public/js/api.js",
+        "frontend/public/js/common.js",
+        "frontend/public/js/day-model.js",
+        "frontend/public/js/examiner.js",
+        "frontend/public/js/login.js",
+        "frontend/public/js/offline.js",
+        "frontend/public/js/register-offline.js",
+        "frontend/public/js/student.js",
+        "frontend/public/js/timetable.js",
+        "frontend/public/login.html",
+        "frontend/public/manifest.webmanifest",
+        "frontend/public/student.html",
+        "frontend/public/sw.js",
+        "frontend/public/timetable.html"
+      ],
+      "comments": [],
+      "base": "61c0091c54ead35312871d7053a3092fe0f9192e",
+      "commitMessages": [
+        {
+          "sha": "62367d7e0fe484e3aee9d4184a2cf8468ded6caf",
+          "authorName": "@aannibow-wq",
+          "subject": "Student pages, check-in feedback and shared styling where needed."
+        }
+      ]
+    }
+  ],
+  "samsPRs": [
+    {
+      "number": 1,
+      "url": "https://github.com/mugmarp/sams-attendance/pull/1",
+      "title": "Complete SAMS attendance prototype with verified role and offline workflows",
+      "body": "Complete the unfinished SAMS prototype so a lecturer can open a dated class, an enrolled student can check in with its current code, and the registrar can review a correct attendance report. Preserve the original Hermes work in history and keep the existing React/Express/PostgreSQL stack.\n\nThe backend now owns check-in state transactionally in PostgreSQL, enforces role/enrollment/ownership rules, handles retries without duplicate attendance, and records reasoned lecturer corrections. Reports count completed classes in the selected course offering, handle zero-session cases, and distinguish attendance qualification from final examination clearance. Demo seeding and validated local imports replace silent mismatched timetable loading.\n\nThe frontend completes the three role journeys, updates codes/rosters, provides working report filters and PDF downloads, and supports a cached app shell plus user-scoped pending/failed offline attempts. Offline attempts are accepted only when the server validates the current code; device timestamps cannot backdate attendance.\n\nValidation: both applications build and pass strict TypeScript checks; 15 backend/API/import tests and 3 browser journeys pass locally against isolated PostgreSQL. Demo seeding is repeatable, the import CLI succeeds, dependency audits are clean, and all pages of a populated multi-page PDF were rendered and inspected. GitHub CI passed all checks, both container image builds, and a full Compose smoke deployment covering migrations, runtime demo seeding, health, login and safe authenticated nginx proxy responses. Local Docker execution was unavailable, so those deployment checks ran on the hosted runner.\n\nDeployment instructions, environment examples, committed migrations, API documentation, a Postman collection, implementation plan and verification record are included. This remains a classroom prototype: no official MUST approval, SSO, fee/coursework clearance, production account lifecycle, public deployment or migration of real student records is claimed. Review the documented boundaries before using institutional data.\n\nHosted verification: https://github.com/mugmarp/sams-attendance/actions/runs/43026546708 (success).\n",
+      "head": "243f8639bf9897cb9cbc774b26bc3917196d9b7e",
+      "merged": true,
+      "mergedAt": "2026-11-12T16:49:39Z",
+      "mergedBy": "mugmarp",
+      "mergeCommit": "243f8639bf9897cb9cbc774b26bc3917196d9b7e",
+      "comments": []
+    },
+    {
+      "number": 2,
+      "url": "https://github.com/mugmarp/sams-attendance/pull/2",
+      "title": "Deliver JavaScript SAMS with offline attendance, academic structure and account controls",
+      "body": "SAMS now runs as plain HTML/CSS/JavaScript served by Express with PostgreSQL, with attendance, academic filtering, timetable review, offline register synchronization and account recovery.\n\nProgramme course plans connect student registrations to the current academic term and approved compulsory/elective offerings. Students receive missing compulsory links on sign-in or workspace entry and confirm electives in My courses. Registrar preview/publish and cohort assignment preserve withdrawals and existing dates. Programme-specific offering keys keep reused course codes distinct. Report dates explicitly convert stored UTC instants to Kampala dates.\n\nValidation: 61 backend tests, 34 browser tests, 135 Postman requests and 351 assertions passed. GitHub checks passed for the feature and provisioning fix. Native release cbcc946 is deployed with 13 pilot plans covering 53 students. Existing manual enrollments, sessions and marks were preserved; a fresh recovery dump restored and its downloaded copy passed checksum verification. Testing history and sanitized totals are indexed in docs/TESTING_HISTORY.md.\n\nPilot lecturer accounts and compulsory classifications are project data requiring institutional review. Ambiguous source labels are excluded. Dated classes remain a lecturer/timetable review action. Remaining audit findings concerning privileged account creation, scheduling conflicts, offering validation and long-title PDFs are still open. Physical Android acceptance and measured workload capacity are not claimed.\n",
+      "head": "3ea80cd8c0116359f6fc053d8b02c5f748681735",
+      "merged": true,
+      "mergedAt": "2026-11-12T16:49:37Z",
+      "mergedBy": "mugmarp",
+      "mergeCommit": "e0b95992abcded5ac3f33e0ee9ed89b449f9f0e1",
+      "comments": [
+        {
+          "user": "copilot-pull-request-reviewer[bot]",
+          "body": "Copilot was unable to review this pull request because the user who requested the review has insufficient remaining quota. Try requesting a review at a lower effort level.",
+          "url": "https://github.com/mugmarp/sams-attendance/pull/2#pullrequestreview-5878461741"
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "url": "https://github.com/mugmarp/sams-attendance/pull/3",
+      "title": "docs(team): explain SAMS workflows, architecture and module reading p\u2026",
+      "body": "\u2026aths\n\nAdd a comprehensive study guide covering roles, enrollment, dated classes, request flow, code folders, data relationships, authentication, offline synchronization, reporting, testing and Azure hosting. Distinguish the 51 rotated cohort credentials from unchanged practice and original accounts without including credentials. Document remaining audit findings and presentation boundaries, link the guide from README, and provide a standalone PC copy. Validation: reviewed against current README and source layout; git diff --check passes.",
+      "head": "bc693e556a2d1bd51bffa36de3541d4d917b2397",
+      "merged": true,
+      "mergedAt": "2026-11-12T18:44:29Z",
+      "mergedBy": "mugmarp",
+      "mergeCommit": "6df288a5af28ce15169dd180b3ba1f403235eca2",
+      "comments": [
+        {
+          "user": "copilot-pull-request-reviewer[bot]",
+          "body": "Copilot was unable to review this pull request because the user who requested the review has insufficient remaining quota. Try requesting a review at a lower effort level.",
+          "url": "https://github.com/mugmarp/sams-attendance/pull/3#pullrequestreview-5879983599"
+        }
+      ]
+    }
+  ],
+  "verifiedComparisons": {
+    "generousPR6EqualsCanonicalModule": true,
+    "generousModuleBytes": 20748,
+    "rootAttendanceEqualsCanonicalService": true,
+    "groupPostmanRequests": 134,
+    "samsPostmanRequests": 135,
+    "uniqueGroupChecks": 5,
+    "uniqueSamsCoursePlanChecks": 6,
+    "structuralUnionRequests": 140,
+    "combinedCollectionExecuted": false
+  }
+}

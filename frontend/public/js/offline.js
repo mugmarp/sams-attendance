@@ -112,6 +112,13 @@ export async function snapshot(userId, path) {
   return saved && Date.now() - saved.savedAt < 86400000 ? saved.value : null;
 }
 export async function studentData(userId, path) {
+  if (!navigator.onLine) {
+    const saved = await snapshot(userId, path).catch(() => null);
+    if (saved) return { data: saved, cached: true };
+    const error = new Error("Reconnect to load this information for the first time.");
+    error.network = true;
+    throw error;
+  }
   try {
     const data = await api(path, { expectedUserId: userId });
     await saveSnapshot(userId, path, data).catch(() => {});

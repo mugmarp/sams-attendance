@@ -25,6 +25,11 @@ export const time = (value) =>
     minute: "2-digit",
   });
 let serverOffset = 0;
+try {
+  const saved = JSON.parse(sessionStorage.getItem("sams.clock") || "null");
+  if (saved && Date.now() - saved.savedAt >= 0 && Date.now() - saved.savedAt < 300000 && Number.isFinite(saved.offset))
+    serverOffset = saved.offset;
+} catch { /* Storage can be unavailable. Server still validates attendance time. */ }
 export const currentDate = () => new Date(Date.now() + serverOffset);
 export const day = () =>
   new Intl.DateTimeFormat("en-CA", {
@@ -51,6 +56,7 @@ export function notice(text) {
     node.hidden = !text;
   }
 }
+export let coursesReady = Promise.resolve();
 export async function init(roles) {
   let user = cachedUser();
   if (!user) {
@@ -63,7 +69,7 @@ export async function init(roles) {
   };
   addEventListener("sams:session", checkIdentity);
   try {
-    user = await api("/auth/me", { session });
+    if (navigator.onLine) user = await api("/auth/me", { session });
     updateUser(user, session);
   } catch (error) {
     if (!retryable(error)) {
@@ -80,18 +86,53 @@ export async function init(roles) {
     location.replace(home(user.role));
     return null;
   }
-  try {
-    const health = await api("/health");
-    const timestamp = Date.parse(health.now);
-    if (Number.isFinite(timestamp)) serverOffset = timestamp - Date.now();
-  } catch {
-    /* Keep saved views available offline. */
+  let clockFlight = null,
+    lastClockSync = -Infinity;
+  const refreshClock = () => {
+    if (clockFlight || performance.now() - lastClockSync < 15000)
+      return clockFlight;
+    const started = Date.now();
+    clockFlight = api("/health")
+      .then((health) => {
+        const timestamp = Date.parse(health.now);
+        if (Number.isFinite(timestamp)) {
+          serverOffset = timestamp - (started + Date.now()) / 2;
+          try { sessionStorage.setItem("sams.clock", JSON.stringify({ offset: serverOffset, savedAt: Date.now() })); } catch {}
+          dispatchEvent(new Event("sams:clock"));
+        }
+        lastClockSync = performance.now();
+      })
+      .catch(() => {})
+      .finally(() => {
+        clockFlight = null;
+      });
+    return clockFlight;
+  };
+  if (navigator.onLine) void refreshClock();
+  addEventListener("online", refreshClock);
+  addEventListener("focus", refreshClock);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshClock();
+  });
+  setInterval(() => {
+    if (!document.hidden) refreshClock();
+  }, 300000);
+  if (
+    user.role === "STUDENT" &&
+    location.pathname !== "/student/courses" &&
+    location.pathname !== "/account"
+  ) {
+    coursesReady = navigator.onLine
+      ? api("/student/course-setup", { method: "POST", body: {}, session })
+        .catch(() => { /* My courses presents reconciliation errors. */ })
+      : Promise.resolve();
   }
   const links =
     user.role === "STUDENT"
       ? [
           ["/student/checkin", "Check in"],
           ["/student/summary", "My attendance"],
+          ["/student/courses", "My courses"],
         ]
       : user.role === "ADMIN"
         ? [
@@ -103,8 +144,12 @@ export async function init(roles) {
   if (user.role === "ADMIN")
     links.push(["/admin/timetable", "Timetable setup"]);
   if (user.role === "ADMIN") links.push(["/admin/accounts", "Accounts"]);
+  if (user.role === "ADMIN")
+    links.push(["/admin/course-plans", "Course setup"]);
   links.push(["/account", "My account"]);
   const icons = {
+    "/student/courses": '<path d="M4 4h7v16H4zM13 4h7v16h-7z"/>',
+    "/admin/course-plans": '<path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h4"/>',
     "/account":
       '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
     "/admin/accounts":
@@ -156,8 +201,18 @@ export async function init(roles) {
     }).format(date);
   };
   renderDate();
+  addEventListener("sams:clock", renderDate);
   setInterval(renderDate, 30000);
   $("#site-header").hidden = false;
+  $("#site-header").addEventListener("click", (event) => {
+    const link = event.target.closest("a[href]");
+    if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || link.target || link.hasAttribute("download")) return;
+    const target = new URL(link.href);
+    if (target.origin !== location.origin || target.href === location.href) return;
+    const titleNode = $(".workspace-title");
+    titleNode.setAttribute("role", "status");
+    titleNode.textContent = "Opening " + (link.textContent.trim() || "page") + "…";
+  });
   $("#logout").onclick = () => {
     clearSession(session);
     location.assign("/login");
@@ -169,7 +224,28 @@ export async function init(roles) {
   online();
   addEventListener("online", online);
   addEventListener("offline", online);
-  if ("serviceWorker" in navigator)
+  if ("serviceWorker" in navigator) {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController || document.querySelector("#application-update"))
+        return;
+      const banner = document.createElement("aside");
+      banner.id = "application-update";
+      banner.className = "notice";
+      banner.setAttribute("role", "status");
+      banner.textContent =
+        "An application update is ready. Save any unfinished form before reloading. Saved attendance attempts remain on this device. ";
+      const button = document.createElement("button");
+      button.textContent = "Reload application";
+      button.onclick = () => location.reload();
+      banner.append(button);
+      document.querySelector("main").prepend(banner);
+    });
     navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
+  const content = document.querySelector("[data-page-content]");
+  if (content) content.hidden = false;
+  const loading = document.querySelector("#page-loading");
+  if (loading) loading.hidden = true;
   return user;
 }

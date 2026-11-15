@@ -651,3 +651,10 @@ input[type="checkbox"] {
 .academic-filter-fields {
   align-items: end;
 }
+
+.page-loading {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  color: #64748b;
+}

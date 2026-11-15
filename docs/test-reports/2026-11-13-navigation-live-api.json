@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-13",
+  "scope": "Bounded live HTTPS samples from this execution environment using one existing synthetic practice student. No check-in/class actions; course setup returned zero inserted links. Request timings include client/network/proxy/TLS effects; not isolated server or browser timing.",
+  "loginMs": 1070.1,
+  "endpoints": {
+    "/auth/me": {
+      "samplesMs": [
+        188.6,
+        151.7,
+        221.0
+      ],
+      "medianMs": 188.6,
+      "bytes": 355
+    },
+    "/health": {
+      "samplesMs": [
+        197.6,
+        204.5,
+        205.1
+      ],
+      "medianMs": 204.5,
+      "bytes": 76
+    },
+    "/student/course-setup": {
+      "samplesMs": [
+        226.2,
+        252.9,
+        237.5
+      ],
+      "medianMs": 237.5,
+      "bytes": 2228
+    },
+    "/student/attendance-claims": {
+      "samplesMs": [
+        204.3,
+        142.0,
+        165.4
+      ],
+      "medianMs": 165.4,
+      "bytes": 2
+    },
+    "/student/sessions/upcoming": {
+      "samplesMs": [
+        204.9,
+        204.8,
+        144.9
+      ],
+      "medianMs": 204.8,
+      "bytes": 3593
+    },
+    "/student/day": {
+      "samplesMs": [
+        265.2,
+        204.8,
+        170.2
+      ],
+      "medianMs": 204.8,
+      "bytes": 10662
+    },
+    "/student/attendance/summary": {
+      "samplesMs": [
+        648.8,
+        144.8,
+        147.1
+      ],
+      "medianMs": 147.1,
+      "bytes": 3885
+    }
+  }
+}
