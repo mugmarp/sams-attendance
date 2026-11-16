@@ -76,3 +76,7 @@ Full Newman JSON reports contain working test tokens and request bodies; they ar
 ## Navigation responsiveness — 15 November 2026
 
 [Fix report](NAVIGATION_PERFORMANCE_FIXES_2026-11-15.md): 65 backend tests, 44 browser tests, 135 Postman requests and 351 assertions passed. Two added cases cover primary-view dependency ordering/refresh coalescing and cached-shell navigation under a stalled fetch. [Controlled startup samples](test-reports/2026-11-15-navigation-controlled.json) explicitly identify artificial delays and the limited before/after comparison.
+
+## Live navigation delay — 16 November 2026
+
+[Follow-up diagnosis](LIVE_NAVIGATION_DIAGNOSIS_2026-11-16.md) records a partial live browser trace with a 4.05-second identity request (including 2.51-second connection/TLS setup), followed by course setup and class-data waits. Later loopback/HTTPS measurements on the VPS were fast and vmstat showed low pressure. These are observational checks, not a full regression run, exact request-correlated upstream trace or capacity test. The report corrects the limits of the earlier local benchmark and prioritizes the user-visible navigation gate.

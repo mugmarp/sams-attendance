@@ -1,0 +1,246 @@
+{
+  "truncated": true,
+  "hasMore": false,
+  "requests": [
+    {
+      "id": "598568.103",
+      "path": "/css/styles.css",
+      "type": "Stylesheet",
+      "status": 200,
+      "worker": true,
+      "ttfbMs": 3.08,
+      "durationMs": 6,
+      "atMs": null
+    },
+    {
+      "id": "598568.104",
+      "path": "/js/student.js",
+      "type": "Script",
+      "status": 200,
+      "worker": true,
+      "ttfbMs": 3.591,
+      "durationMs": 5,
+      "atMs": null
+    },
+    {
+      "id": "598568.105",
+      "path": "/js/page-loading.js",
+      "type": "Script",
+      "status": 200,
+      "worker": true,
+      "ttfbMs": 4.284,
+      "durationMs": 5,
+      "atMs": null
+    },
+    {
+      "id": "598568.109",
+      "path": "/js/day-model.js",
+      "type": "Script",
+      "status": 200,
+      "worker": true,
+      "ttfbMs": 4.617,
+      "durationMs": 7,
+      "atMs": null
+    },
+    {
+      "id": "598568.110",
+      "path": "/js/common.js",
+      "type": "Script",
+      "status": 200,
+      "worker": true,
+      "ttfbMs": 5.281,
+      "durationMs": 9,
+      "atMs": null
+    },
+    {
+      "id": "598568.111",
+      "path": "/js/offline.js",
+      "type": "Script",
+      "status": 200,
+      "worker": true,
+      "ttfbMs": 5.815,
+      "durationMs": 9,
+      "atMs": null
+    },
+    {
+      "id": "598568.112",
+      "path": "/js/register-offline.js",
+      "type": "Script",
+      "status": 200,
+      "worker": true,
+      "ttfbMs": 6.443,
+      "durationMs": 9,
+      "atMs": null
+    },
+    {
+      "id": "598568.113",
+      "path": "/js/api.js",
+      "type": "Script",
+      "status": 200,
+      "worker": true,
+      "ttfbMs": 7.808,
+      "durationMs": 9,
+      "atMs": null
+    },
+    {
+      "id": "598568.114",
+      "path": "/api/auth/me",
+      "type": "Fetch",
+      "status": 200,
+      "worker": false,
+      "ttfbMs": 4047.22,
+      "durationMs": 4054,
+      "atMs": null
+    },
+    {
+      "id": "598568.115",
+      "path": "/api/health",
+      "type": "Fetch",
+      "status": 200,
+      "worker": false,
+      "ttfbMs": 910.42,
+      "durationMs": 917,
+      "atMs": null
+    },
+    {
+      "id": "598568.116",
+      "path": "/api/student/course-setup",
+      "type": "Fetch",
+      "status": 200,
+      "worker": false,
+      "ttfbMs": 910.383,
+      "durationMs": 916,
+      "atMs": null
+    },
+    {
+      "id": "598568.117",
+      "path": "/api/student/attendance-claims",
+      "type": "Fetch",
+      "status": 200,
+      "worker": false,
+      "ttfbMs": 866.049,
+      "durationMs": 870,
+      "atMs": null
+    },
+    {
+      "id": "598568.118",
+      "path": "/api/student/day",
+      "type": "Fetch",
+      "status": 200,
+      "worker": false,
+      "ttfbMs": 1726.886,
+      "durationMs": 1734,
+      "atMs": null
+    },
+    {
+      "id": "598568.119",
+      "path": "/api/student/day",
+      "type": "Fetch",
+      "status": 200,
+      "worker": false,
+      "ttfbMs": 725.211,
+      "durationMs": 729,
+      "atMs": null
+    },
+    {
+      "id": "598568.120",
+      "path": "/api/student/attendance-claims",
+      "type": "Fetch",
+      "status": 200,
+      "worker": false,
+      "ttfbMs": 733.397,
+      "durationMs": 738,
+      "atMs": null
+    },
+    {
+      "id": "598568.121",
+      "path": "/api/student/day",
+      "type": "Fetch",
+      "status": 200,
+      "worker": false,
+      "ttfbMs": 667.51,
+      "durationMs": 672,
+      "atMs": null
+    }
+  ],
+  "scope": "Current Codex in-app browser, Account to Check in. Partial event buffer; document entry evicted. Durations are browser network observations, not automation tool wall time.",
+  "date": "2026-11-16",
+  "cachedCommonMatchesSource": true,
+  "identityConnection": {
+    "protocol": "http/1.1",
+    "connectionReused": false,
+    "connectStartMs": 3.617,
+    "connectEndMs": 2510.445,
+    "sslStartMs": 1593.656,
+    "sslEndMs": 2510.434,
+    "requestSendEndMs": 2511.191,
+    "responseHeadersEndMs": 4047.22,
+    "connectionAndTLSMs": 2506.828,
+    "afterSendToHeadersMs": 1536.029
+  },
+  "serverMeasurements": {
+    "scope": "Three sequential reads per endpoint from the VPS, after browser capture; not a correlated request trace or load test. One existing synthetic practice-student sign-in; no attendance submissions.",
+    "loopbackMs": {
+      "/auth/me": [
+        3.57,
+        2.29,
+        3.07
+      ],
+      "/student/day": [
+        30.17,
+        48.84,
+        27.67
+      ],
+      "/health": [
+        1.59,
+        1.33,
+        1.24
+      ]
+    },
+    "serverOriginHTTPSMs": {
+      "/auth/me": [
+        27.87,
+        65.46,
+        28.45
+      ],
+      "/student/day": [
+        61.39,
+        34.84,
+        35.11
+      ],
+      "/health": [
+        26.32,
+        121.42,
+        25.55
+      ]
+    },
+    "vmstatIntervals": {
+      "cpuIdlePercent": [
+        100,
+        96
+      ],
+      "swapIn": [
+        0,
+        0
+      ],
+      "swapOut": [
+        0,
+        0
+      ],
+      "ioWaitPercent": [
+        0,
+        0
+      ]
+    },
+    "reportedRAMMiB": 897,
+    "loginMemoryMiB": 448.66,
+    "reportedDiskUsedPercent": 94
+  },
+  "limits": [
+    "Partial browser trace: no full click-to-paint timing",
+    "Server samples were later, not correlated to the exact slow browser request",
+    "Browser connection overhead is directly measured; remaining response wait cannot be assigned exclusively to network or server without upstream timing",
+    "Execution-shell DNS lookup failed and direct SSH timed out; diagnostics used authenticated Termix",
+    "No physical-device acceptance or capacity test"
+  ]
+}
