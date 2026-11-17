@@ -15,7 +15,33 @@
   },
   "environment": "isolated PostgreSQL; synthetic records; desktop Chromium",
   "syntax": "backend and frontend passed",
-  "live": "activation pending; no hosted attendance submitted",
+  "live": {
+    "sourceCommit": "d3a59bd56f4943c0dec5a19fdc55f84d07e8e7a8",
+    "service": "active",
+    "restarts": 0,
+    "memoryBytes": 110071808,
+    "smokeRoles": [
+      "ADMIN",
+      "EXAMINER",
+      "STUDENT"
+    ],
+    "health": {
+      "requests": 10,
+      "concurrency": 5,
+      "failures": 0,
+      "medianMs": 24,
+      "maxMs": 58
+    },
+    "summaryWorkspace": {
+      "status": 200,
+      "responseHeadersMs": 326.056,
+      "controllerMs": 20.2,
+      "connection": "reused",
+      "notClickToPaint": true
+    },
+    "checkin": "Correct scoped day visible; no open-class form; trace interrupted so no duration claimed",
+    "attendanceSubmitted": false
+  },
   "limitations": [
     "No physical phone or institutional capacity measurement",
     "Fresh data remains subject to connection latency",
