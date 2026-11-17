@@ -59,9 +59,19 @@ try {
           groups.includes(g),
         ),
     );
+    // This explicit simulation rule applies only to historical practice data.
+    // It never changes the source publication or the normal timetable importer.
+    const trainingRows = candidates.map((row) => ({
+      ...row,
+      originalSessionType: row.session_type,
+      session_type:
+        row.session_type == null || row.session_type === "THEORY"
+          ? "LECTURE"
+          : row.session_type,
+    }));
     const weekly = [
       ...new Map(
-        candidates
+        trainingRows
           .filter(
             (r) =>
               !inspectRow(r).issues.some((i) =>
@@ -150,7 +160,7 @@ try {
         publication.id +
         " hash " +
         publication.contentHash +
-        ". Uses explicit start/end fields; source grid labels may disagree. Cancelled classes and all marks are simulated, not verified past teaching or attendance.",
+        ". Uses explicit start/end fields; source grid labels may disagree. Missing class types and THEORY are represented as LECTURE only in this synthetic dataset. Cancelled classes and all marks are simulated, not verified past teaching or attendance.",
       sessions,
     };
     const filename = path.join(directory, c.id + ".json");
@@ -165,7 +175,16 @@ try {
       students: students.length,
       sessions: sessions.length,
       filename,
-      sourceIssues: [...new Set(weekly.flatMap((r) => inspectRow(r).issues))],
+      sourceIssues: [
+        ...new Set(
+          weekly.flatMap((r) => [
+            ...inspectRow({ ...r, session_type: r.originalSessionType }).issues,
+            ...(r.originalSessionType !== r.session_type
+              ? ["MOCK_LECTURE_DEFAULT"]
+              : []),
+          ]),
+        ),
+      ],
     });
   }
   console.log(
