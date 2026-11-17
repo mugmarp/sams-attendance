@@ -67,7 +67,7 @@ function renderReport() {
   $("#empty-report").hidden = visible.length > 0;
   $("#report-rules").textContent = report.rules;
   $("#report-context").textContent =
-    `Live report · policy v${report.course.policyVersion} · ${report.pendingClaims || 0} pending review requests. Each student's denominator follows recorded enrollment dates.`;
+    `${report.course.isPractice ? "Synthetic practice history · " : ""}Live report · policy v${report.course.policyVersion} · ${report.pendingClaims || 0} pending review requests. Each student's denominator follows recorded enrollment dates.`;
   if (user.role === "ADMIN") {
     $("#policy-controls").hidden = false;
     $("#enrollment-controls").hidden = false;
@@ -100,7 +100,7 @@ async function loadReport() {
 }
 async function loadCourses() {
   try {
-    const courses = await api("/admin/courses?" + (scope?.query() || ""));
+    const courses = await api("/admin/courses?" + (scope?.query() || "") + "&practice=" + ($("#practice-filter")?.value || "all"));
     if ($("#scope-count"))
       $("#scope-count").textContent =
         `${courses.length} offerings in this scope${courses.length === 100 ? "; refine the filters to narrow this bounded list" : ""}.`;
@@ -108,7 +108,7 @@ async function loadCourses() {
       ? courses
           .map(
             (c) =>
-              `<a class="card course" href="/admin/eligibility/${c.id}"><span class="code">${escape(c.code)}</span><h2>${escape(c.title)}</h2><p class="small muted">${escape(c.academicYear)} · Semester ${c.semester} · ${escape(c.program)}</p><p class="small">${escape(c.examiner?.name)} · ${c._count?.enrollments || 0} enrolled students</p><p>View attendance report →</p></a>`,
+              `<a class="card course" href="/admin/eligibility/${c.id}"><span class="code">${escape(c.code)}</span>${c.isPractice ? '<span class="badge">Practice history</span>' : ""}<h2>${escape(c.title)}</h2><p class="small muted">${escape(c.academicYear)} · Semester ${c.semester} · ${escape(c.program)}</p><p class="small">${escape(c.examiner?.name)} · ${c._count?.enrollments || 0} enrolled students</p><p>View attendance report →</p></a>`,
           )
           .join("")
       : '<div class="card">No courses yet. Create a course below.</div>';
@@ -503,3 +503,5 @@ function fillCourseAudiences() {
     )
     .join("");
 }
+
+if (user && !courseId && $("#practice-filter")) $("#practice-filter").onchange = loadCourses;

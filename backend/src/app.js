@@ -26,6 +26,7 @@ for (const [route, page] of [
   ["/login", "login"],
   ["/account", "account"],
   ["/admin/accounts", "accounts"],
+  ["/admin/rooms", "rooms"],
   ["/admin/course-plans", "course-plans"],
   ["/student/courses", "courses"],
   ["/timetable", "timetable"],

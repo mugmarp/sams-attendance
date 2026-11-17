@@ -766,6 +766,222 @@
       ]
     },
     {
+      "name": "Stage an inactive reference room",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/rooms",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Stage an inactive reference room. Uses an isolated seeded database; room data here is synthetic. Expected HTTP 201.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"{{roomCode}}\",\n  \"name\": \"Postman room {{runId}}\",\n  \"sourceNote\": \"Synthetic Postman venue source\",\n  \"reason\": \"Exercise reference room review\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set(\"roomCode\",\"PM-\"+pm.collectionVariables.get(\"runId\").toUpperCase());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Expected status\",()=>pm.response.to.have.status(201));",
+              "pm.collectionVariables.set(\"roomId\",pm.response.json().id);",
+              "pm.test(\"Unverified capacity stays unknown\",()=>pm.expect(pm.response.json().capacity).to.eql(null));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Room review rejects an active unreviewed venue",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/admin/rooms/{{roomId}}",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Room review rejects an active unreviewed venue. Uses an isolated seeded database; room data here is synthetic. Expected HTTP 400.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"{{roomCode}}\",\n  \"name\": \"Postman room {{runId}}\",\n  \"sourceNote\": \"Synthetic Postman venue source\",\n  \"reason\": \"Exercise reference room review\",\n  \"isActive\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Expected status\",()=>pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Review and activate a project room",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/admin/rooms/{{roomId}}",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Review and activate a project room. Uses an isolated seeded database; room data here is synthetic. Expected HTTP 200.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"{{roomCode}}\",\n  \"name\": \"Postman room {{runId}}\",\n  \"sourceNote\": \"Synthetic Postman venue source\",\n  \"reason\": \"Exercise reference room review\",\n  \"isActive\": true,\n  \"reviewStatus\": \"REVIEWED\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Expected status\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"Reviewed room is active\",()=>pm.expect(pm.response.json().isActive).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student can search reviewed rooms",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/rooms?search=Postman&limit=200",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{studentToken}}"
+          }
+        ],
+        "description": "Student can search reviewed rooms. Uses an isolated seeded database; room data here is synthetic. Expected HTTP 200."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Expected status\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"Room list is bounded\",()=>pm.expect(pm.response.json().length).to.be.at.most(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student cannot create rooms",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/admin/rooms",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{studentToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Student cannot create rooms. Uses an isolated seeded database; room data here is synthetic. Expected HTTP 403.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"{{roomCode}}\",\n  \"name\": \"Postman room {{runId}}\",\n  \"sourceNote\": \"Synthetic Postman venue source\",\n  \"reason\": \"Exercise reference room review\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Expected status\",()=>pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registrar can filter reference room records",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/rooms?status=REFERENCE&limit=10",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "description": "Registrar can filter reference room records. Uses an isolated seeded database; room data here is synthetic. Expected HTTP 200."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Expected status\",()=>pm.response.to.have.status(200));",
+              "pm.test(\"Only reference rooms\",()=>pm.expect(pm.response.json().every(r=>r.reviewStatus===\"REFERENCE\")).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Resolve the signed-in student course setup",
       "request": {
         "method": "POST",

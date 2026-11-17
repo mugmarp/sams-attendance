@@ -1,9 +1,9 @@
 {
   "date": "2026-11-17",
   "branch": "main",
-  "requests": 139,
-  "assertions": 367,
+  "requests": 145,
+  "assertions": 377,
   "failures": 0,
   "database": "isolated PostgreSQL, synthetic records only",
-  "note": "Reverified against isolated PostgreSQL after adding authenticated workspace bootstrap; no live mutating collection run."
+  "note": "Reverified in isolated PostgreSQL with room review success, invalid and authorization cases; history CLI covered by backend integration tests. No live mutating collection run."
 }

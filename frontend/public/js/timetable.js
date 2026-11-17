@@ -1,3 +1,4 @@
+import { roomOptions } from "./room-options.js";
 import { getCatalogue, allProgrammes } from "./academic-ui.js";
 import { api } from "./api.js";
 import {
@@ -464,3 +465,5 @@ if (user) {
     };
   }
 }
+
+if (user && setup) void roomOptions($("#mapped-room"));

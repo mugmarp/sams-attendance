@@ -1,3 +1,4 @@
+import roomRoutes from "./rooms.js";
 import coursePlanRoutes from "./course-plans.js";
 import catalogueRoutes from "./catalogue.js";
 import {
@@ -115,6 +116,7 @@ router.use((req, _res, next) => {
 });
 router.use(syncRoutes);
 router.use(academicRoutes);
+router.use(roomRoutes);
 router.use(catalogueRoutes);
 router.use(coursePlanRoutes);
 router.get(

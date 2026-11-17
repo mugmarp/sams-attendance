@@ -28,6 +28,7 @@ before(async () => {
   process.env.JWT_SECRET = "test-access-secret-at-least-32-characters";
   process.env.JWT_REFRESH_SECRET = "test-refresh-secret-at-least-32-characters";
   app = (await import("../src/app.js")).default;
+  await db.mockHistoryBatch.deleteMany();
   await db.studentCourseSetup.deleteMany();
   await db.coursePlanItem.deleteMany();
   await db.coursePlan.deleteMany();
@@ -42,6 +43,7 @@ before(async () => {
   await db.enrollment.deleteMany();
   await db.session.deleteMany();
   await db.timetableEntry.deleteMany();
+  await db.room.deleteMany();
   await db.academicTerm.deleteMany();
   await db.timetablePublication.deleteMany();
   await db.courseAudience.deleteMany();
@@ -2512,4 +2514,54 @@ test("workspace returns temporary-password restrictions and rejects a revoked ac
   assert.equal(result.body.day, undefined);
   await db.user.update({ where: { id: user.id }, data: { authVersion: { increment: 1 } } });
   assert.equal((await request(app).post('/api/auth/workspace').set(auth(token))).status, 401);
+});
+
+test("room catalogue requires registrar review and rejects duplicate aliases", async () => {
+  const token = await login("admin@test.example"), learner = await login("learner@test.example");
+  const body = {code:"ROOM-"+randomUUID().slice(0,8).toUpperCase(),name:"Room "+randomUUID(),aliases:["Alias "+randomUUID()],reviewStatus:"REFERENCE",isActive:true,sourceNote:"Verified test room source",reason:"Review test room"};
+  assert.equal((await request(app).post('/api/admin/rooms').set(auth(learner)).send(body)).status,403);
+  assert.equal((await request(app).post('/api/admin/rooms').set(auth(token)).send(body)).status,400);
+  const saved=await request(app).post('/api/admin/rooms').set(auth(token)).send({...body,reviewStatus:"REVIEWED"});
+  assert.equal(saved.status,201);
+  assert.equal((await request(app).post('/api/admin/rooms').set(auth(token)).send({...body,code:body.code+"X",name:body.name+"X",reviewStatus:"REVIEWED"})).status,409);
+  const list=await request(app).get('/api/rooms?search='+encodeURIComponent(body.name)).set(auth(learner));
+  assert.equal(list.body[0].id,saved.body.id);
+  assert.equal(list.body[0].capacity,null);
+});
+
+test("reviewed room booking detects conflicts across offerings and accepts non-overlap", async () => {
+  const {roomBooking,roomLock}=await import('../src/services/rooms.js');
+  const room=await db.room.create({data:{code:"BOOK-"+randomUUID(),name:"Booking "+randomUUID(),aliases:[],reviewStatus:"REVIEWED",isActive:true,sourceNote:"Test reviewed venue"}});
+  const start=new Date(Date.now()+86400000), end=new Date(start.getTime()+3600000);
+  const saved=await db.session.create({data:{courseId,naturalKey:"room:"+randomUUID(),startTime:start,endTime:end,roomId:room.id,room:room.name}});
+  await assert.rejects(()=>db.$transaction(async tx=>{await roomLock(tx);await roomBooking(tx,room.name,start,end);}),/overlaps another/);
+  const next=await db.$transaction(tx=>roomBooking(tx,room.name,end,new Date(end.getTime()+3600000)));
+  assert.equal(next.roomId,room.id);
+  assert.equal((await db.$transaction(tx=>roomBooking(tx,room.name,start,end,[saved.id]))).roomId,room.id);
+});
+
+test("historical mock import is audited, enrolment-aware, repeatable and rejects real identities", async () => {
+  const {previewMockHistory,applyMockHistory}=await import('../src/services/mock-history.js');
+  const registrar = await db.user.findUniqueOrThrow({where:{email:"admin@test.example"}});
+  const hash=(await db.user.findUniqueOrThrow({where:{id:studentId}})).passwordHash;
+  const teacher=await db.user.create({data:{email:randomUUID()+"@test.example",name:"Synthetic lecturer",role:"EXAMINER",dataOrigin:"SYNTHETIC",passwordHash:hash}});
+  const learner=await db.user.create({data:{email:randomUUID()+"@test.example",name:"Synthetic history learner",role:"STUDENT",year:2,dataOrigin:"SYNTHETIC",studyAcademicYear:"2020/2021",studySemester:1,passwordHash:hash}});
+  const term=await db.academicTerm.create({data:{academicYear:"2020/2021",semester:1,startsOn:new Date('2020-08-01'),endsOn:new Date('2020-12-01'),excludedDates:[{date:"2020-08-03",reason:"Test exclusion"}],sourceUrl:"https://example.org/calendar",sourceNote:"Isolated mock history test"}});
+  const source=await db.course.create({data:{code:"HIST"+randomUUID().slice(0,6),title:"Historical mock test",program:"BSE",year:2,semester:1,academicYear:term.academicYear,examinerId:teacher.id}});
+  const input={batchKey:"test-history:"+randomUUID(),termId:term.id,sourceCourseId:source.id,sourceNote:"Synthetic reconstruction for isolated integration test",studentIds:[learner.id],from:"2020-08-01",to:"2020-08-31",sessions:[{key:"class-one",startTime:"2020-08-04T08:00:00+03:00",endTime:"2020-08-04T10:00:00+03:00",room:"Reference lab",sessionType:"LAB",status:"COMPLETED"},{key:"class-two",startTime:"2020-08-05T08:00:00+03:00",endTime:"2020-08-05T10:00:00+03:00",room:null,sessionType:"LECTURE",status:"CANCELLED"}]};
+  await assert.rejects(()=>previewMockHistory(db,{...input,studentIds:[studentId]},registrar.id),/synthetic student/);
+  await assert.rejects(()=>previewMockHistory(db,{...input,sessions:[{...input.sessions[0],startTime:"2020-08-03T08:00:00+03:00",endTime:"2020-08-03T10:00:00+03:00"}]},registrar.id),/excluded/);
+  await assert.rejects(()=>previewMockHistory(db,{...input,sessions:[input.sessions[0],input.sessions[0]]},registrar.id),/Duplicate/);
+  const plan=await previewMockHistory(db,input,registrar.id);
+  assert.equal(await db.mockHistoryBatch.count({where:{batchKey:input.batchKey}}),0);
+  await assert.rejects(()=>applyMockHistory(db,input,registrar.id,'wrong-hash'),/preview changed/);
+  const result=await applyMockHistory(db,input,registrar.id,plan.fingerprint);
+  assert.equal(await db.attendance.count({where:{session:{courseId:result.courseId}}}),1);
+  assert.equal(await db.attendanceChange.count({where:{attendance:{session:{courseId:result.courseId}}}}),1);
+  const {getStudentAttendanceSummary}=await import('../src/services/eligibility.js');
+  const summary=(await getStudentAttendanceSummary(learner.id)).find(r=>r.courseId===result.courseId);
+  assert.equal(summary.totalSessions,1);assert.equal(summary.isPractice,true);
+  const replay=await applyMockHistory(db,input,registrar.id,plan.fingerprint);assert.equal(replay.alreadyApplied,true);
+  assert.equal(await db.attendance.count({where:{session:{courseId:result.courseId}}}),1);
+  await assert.rejects(()=>applyMockHistory(db,{...input,sourceNote:"Changed synthetic history source note"},registrar.id,plan.fingerprint),/different manifest/);
 });

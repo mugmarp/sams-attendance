@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-17",
+  "environment": "isolated PostgreSQL; synthetic fixtures",
+  "backend": {
+    "tests": 71,
+    "failures": 0
+  },
+  "browser": {
+    "tests": 48,
+    "failures": 0
+  },
+  "postman": {
+    "requests": 145,
+    "assertions": 377,
+    "failures": 0
+  },
+  "deployment": "pending",
+  "historicalImport": "pending hosted preview"
+}

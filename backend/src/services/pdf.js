@@ -30,7 +30,7 @@ export async function generateEligibilityPDF(courseId, frozenReport) {
       doc
         .font("Helvetica")
         .fontSize(10)
-        .text(`${course.code}: ${course.title}`)
+        .text(`${course.code}: ${course.title}${course.isPractice ? " (synthetic practice history)" : ""}`)
         .text(
           `${course.academicYear} / Semester ${course.semester} | ${course.program} | Policy v${course.policyVersion || 1} | Threshold: ${course.attendanceThreshold}%`,
         )

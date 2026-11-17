@@ -76,8 +76,10 @@ function renderWorkspace(user) {
   if (user.role === "ADMIN") links.push(["/admin/accounts", "Accounts"]);
   if (user.role === "ADMIN")
     links.push(["/admin/course-plans", "Course setup"]);
+  if (user.role === "ADMIN") links.push(["/admin/rooms", "Rooms"]);
   links.push(["/account", "My account"]);
   const icons = {
+    "/admin/rooms": '<path d="M4 21V3h16v18M8 7h8M8 11h8M10 21v-6h4v6"/>',
     "/student/courses": '<path d="M4 4h7v16H4zM13 4h7v16h-7z"/>',
     "/admin/course-plans": '<path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h4"/>',
     "/account":

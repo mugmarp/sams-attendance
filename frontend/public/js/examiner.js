@@ -1,3 +1,4 @@
+import { roomOptions } from "./room-options.js";
 import { api, retryable } from "./api.js";
 import {
   $,
@@ -566,3 +567,5 @@ if (user && !sessionId) {
     }
   };
 }
+
+if (user) void roomOptions($("#create-room"));

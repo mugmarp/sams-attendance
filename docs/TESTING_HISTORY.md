@@ -1,5 +1,9 @@
 # SAMS testing history and API evidence
 
+## Rooms and historical practice import — 17 November 2026
+
+[Room and history verification](ROOMS_AND_MOCK_HISTORY.md) records 71 backend tests, 48 browser tests and 145 Postman requests with 377 assertions, all passing in an isolated database. New coverage checks venue review/booking and restricted, audited, repeatable historical imports. Full private runner reports remain outside Git.
+
 ## Workspace startup — 17 November 2026
 
 [Workspace navigation fix](WORKSPACE_NAVIGATION_FIX_2026-11-17.md) records the single-response startup, immediate destination shell, held-response authorization checks and live acceptance status. The API collection now includes four workspace cases; its isolated run completed 139 requests and 367 assertions without failures. Browser recovery checks allow the existing 30-second abandoned-tab synchronization lease to expire after a reload. This lease protects duplicate submissions and was not shortened for the performance change.

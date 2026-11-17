@@ -33,6 +33,7 @@ enum CheckInMethod {
   MANUAL
 }
 model User {
+  mockHistoryBatches MockHistoryBatch[]
   courseSetups StudentCourseSetup[]
   id String @id @default(cuid())
   email String @unique
@@ -109,6 +110,8 @@ model Session {
   course Course @relation(fields: [courseId], references: [id])
   startTime DateTime
   endTime DateTime
+  roomId String?
+  venue Room? @relation(fields: [roomId], references: [id])
   room String?
   sessionType SessionType @default(LECTURE)
   status SessionStatus @default(SCHEDULED)
@@ -120,6 +123,7 @@ model Session {
   claims AttendanceClaim[]
   @@unique([timetableEntryId, timetableDate])
   @@index([courseId, startTime])
+  @@index([roomId, startTime, endTime])
 }
 model Enrollment {
   origin String @default("MANUAL")
@@ -244,6 +248,8 @@ model TimetableEntry {
   weekday Int
   startMinute Int
   endMinute Int
+  roomId String?
+  venue Room? @relation(fields: [roomId], references: [id])
   room String?
   sessionType SessionType
   version Int @default(1)
@@ -357,4 +363,30 @@ model StudentCourseSetup {
   confirmedAt DateTime?
   updatedAt DateTime @updatedAt
   @@unique([studentId, planId])
+}
+
+model Room {
+  id String @id @default(cuid())
+  code String @unique
+  name String
+  campus String?
+  building String?
+  roomType String @default("UNSPECIFIED")
+  capacity Int?
+  aliases String[]
+  reviewStatus String @default("REFERENCE")
+  isActive Boolean @default(false)
+  sourceNote String
+  sessions Session[]
+  entries TimetableEntry[]
+  updatedAt DateTime @updatedAt
+}
+model MockHistoryBatch {
+  id String @id @default(cuid())
+  batchKey String @unique
+  manifestHash String
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  summary Json
+  createdAt DateTime @default(now())
 }

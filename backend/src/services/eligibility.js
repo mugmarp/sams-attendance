@@ -3,6 +3,7 @@ import { NotFoundError } from "../utils/errors.js";
 import { attendanceResult } from "./rules.js";
 const select = {
   id: true,
+  isPractice: true,
   code: true,
   title: true,
   program: true,
@@ -49,7 +50,7 @@ export async function courseReport(tx, courseId) {
     course,
     students,
     pendingClaims,
-    rules: `Completed classes within each student's recorded enrollment dates only. PRESENT${course.countLate ? "/LATE" : ""}${course.countExcused ? "/EXCUSED" : ""} count. Policy v${course.policyVersion}; threshold ${course.attendanceThreshold}%. Legacy undated enrollments remain unbounded. Attendance qualification only; fees and coursework are not assessed.`,
+    rules: `${course.isPractice ? "Synthetic practice history; not an institutional attendance record. " : ""}Completed classes within each student's recorded enrollment dates only. PRESENT${course.countLate ? "/LATE" : ""}${course.countExcused ? "/EXCUSED" : ""} count. Policy v${course.policyVersion}; threshold ${course.attendanceThreshold}%. Legacy undated enrollments remain unbounded. Attendance qualification only; fees and coursework are not assessed.`,
   };
 }
 export async function getCourseEligibility(courseId) {
@@ -59,7 +60,7 @@ export async function getCourseEligibility(courseId) {
 }
 export async function getStudentAttendanceSummary(studentId) {
   const rows = await prisma.$queryRaw`
-    SELECT c.id AS "courseId",c.code AS "courseCode",c.title AS "courseTitle",c."academicYear",c.semester,c."attendanceThreshold",c."policyVersion",c."countLate",c."countExcused",
+    SELECT c.id AS "courseId",c."isPractice",c.code AS "courseCode",c.title AS "courseTitle",c."academicYear",c.semester,c."attendanceThreshold",c."policyVersion",c."countLate",c."countExcused",
       e."effectiveFrom",e."effectiveUntil",count(s.id)::int AS "totalSessions",
       count(a.id) FILTER (WHERE a.status='PRESENT' OR (a.status='LATE' AND c."countLate") OR (a.status='EXCUSED' AND c."countExcused"))::int AS "presentCount"
     FROM "Enrollment" e JOIN "Course" c ON c.id=e."courseId"

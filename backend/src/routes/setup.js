@@ -1,3 +1,4 @@
+import { roomLock, roomBooking } from "../services/rooms.js";
 import { passwordSchema } from "../utils/passwordPolicy.js";
 import {
   profileData,
@@ -286,10 +287,13 @@ router.post(
       throw new ForbiddenError("This course belongs to another examiner");
     res.status(201).json(
       await prisma.$transaction(async (tx) => {
+        await roomLock(tx);
         await tx.$queryRaw`SELECT id FROM "Course" WHERE id=${course.id} FOR UPDATE`;
+        const venue = await roomBooking(tx, req.body.room, req.body.startTime, req.body.endTime, [], course.isPractice);
         const saved = await tx.session.create({
           data: {
             ...req.body,
+            ...venue,
             startTime: new Date(req.body.startTime),
             endTime: new Date(req.body.endTime),
             courseId: course.id,

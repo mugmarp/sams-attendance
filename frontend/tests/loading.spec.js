@@ -253,7 +253,7 @@ test("installed navigation uses a versioned shell without waiting for a stalled 
   let response;
   handlers.fetch({ request: { method: "GET", mode: "navigate", url: "https://sams.test/student/checkin" }, respondWith: (value) => (response = value) });
   expect(await Promise.race([response, new Promise((resolve) => setTimeout(() => resolve("timeout"), 300))])).toBe(saved);
-  expect(cacheName).toBe("sams-workspace-v13");
+  expect(cacheName).toBe("sams-workspace-v14");
   expect(networkRequests).toBe(0);
   for (const path of ["/api/student/day", "/student/not-a-route"]) {
     let intercepted = false;
