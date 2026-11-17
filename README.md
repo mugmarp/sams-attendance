@@ -187,7 +187,7 @@ Saved records remain on the browser after sign-out. Reconcile pending work befor
 
 Import `postman/SAMS.postman_collection.json` and `postman/SAMS.local.postman_environment.json`. The collection contains descriptions, response examples and assertions, and captures tokens and record IDs automatically.
 
-The verified regression baseline is **65 backend tests, 44 browser tests, 135 Postman requests and 351 assertions**. The 15 November navigation release includes the latest delayed-response and cached-shell checks; see [performance fixes and executed evidence](docs/NAVIGATION_PERFORMANCE_FIXES_2026-11-15.md). Passing these checks does not establish that all remaining audit findings are covered. See the [testing-history index](docs/TESTING_HISTORY.md) for dated evidence and limits.
+The workspace startup change combines identity, server time, course reconciliation and initial student data in one authenticated response. A destination heading and navigation appear while verification is pending; protected forms remain hidden. See the [17 November navigation correction and release evidence](docs/WORKSPACE_NAVIGATION_FIX_2026-11-17.md). The verified regression baseline is **68 backend tests, 47 browser tests, 139 Postman requests and 367 assertions**; the report records intermediate failures and verification limits. Passing these checks does not establish that all remaining audit findings are covered. See the [testing-history index](docs/TESTING_HISTORY.md) for dated evidence and limits.
 
 Run mutating tests and the full collection only against a separate disposable database named `sams_test`. The backend API tests clear its fixtures. Never point them at the hosted pilot or real attendance records.
 

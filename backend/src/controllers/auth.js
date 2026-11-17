@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { studentDay } from "../services/student-day.js";
+import { getStudentAttendanceSummary } from "../services/eligibility.js";
 import { ensureStudentCourses } from "../services/course-setup.js";
 import bcrypt from "bcryptjs";
 import { prisma } from "../config/db.js";
@@ -79,4 +82,23 @@ export const me = asyncHandler(async (req, res) => {
   });
   if (!user?.isActive) throw new UnauthorizedError();
   res.json(user);
+});
+
+// One authenticated response supplies the destination's initial student state.
+// Client role hints select a view, never another identity or server permissions.
+export const workspace = asyncHandler(async (req, res) => {
+  const started = performance.now();
+  const { view } = z.object({ view: z.enum(["profile", "student-day", "student-summary", "student-workspace"]).default("profile") }).strict().parse(req.body || {});
+  let user = await prisma.user.findUniqueOrThrow({ where: { id: req.user.userId }, select: publicUser });
+  if (!user.isActive) throw new UnauthorizedError();
+  const result = {};
+  if (user.role === "STUDENT" && !user.mustChangePassword && view !== "profile") {
+    await ensureStudentCourses(user.id);
+    user = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: publicUser });
+    if (view === "student-day") result.day = await studentDay(user.id);
+    if (view === "student-summary") result.summary = await getStudentAttendanceSummary(user.id);
+  }
+  res.set("Cache-Control", "no-store");
+  res.set("Server-Timing", `workspace;dur=${(performance.now() - started).toFixed(1)}`);
+  res.json({ user, now: new Date().toISOString(), timeZone: "Africa/Kampala", ...result });
 });

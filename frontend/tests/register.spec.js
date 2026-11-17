@@ -134,7 +134,9 @@ test("prepared lecturer roster and provisional marks survive offline reload and 
     fullPage: true,
   });
   await page.context().setOffline(false);
-  await expect(page.locator("#register-outbox")).toContainText("synced");
+  // Reload can abandon a renewable 30-second cross-tab lease. Wait for its
+  // documented expiry plus the 3-second retry, without changing duplicate protection.
+  await expect(page.locator("#register-outbox")).toContainText("synced", { timeout: 45000 });
   await expect(page.locator("#class-count")).toHaveText("1 / 3 attended");
   const attendance = await db.attendance.findUnique({
     where: {

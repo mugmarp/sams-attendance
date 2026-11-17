@@ -26,7 +26,7 @@ import {
   authenticatedRateLimit,
 } from "../middleware/rateLimit.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { login, refresh, me } from "../controllers/auth.js";
+import { login, refresh, me, workspace } from "../controllers/auth.js";
 import {
   ForbiddenError,
   NotFoundError,
@@ -100,6 +100,7 @@ router.post(
 router.get("/auth/me", authenticate, me);
 router.use(authenticate);
 router.use(authenticatedRateLimit);
+router.post("/auth/workspace", workspace);
 router.use(accountRoutes);
 router.use((req, _res, next) => {
   if (req.user.mustChangePassword)

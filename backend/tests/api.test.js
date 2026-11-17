@@ -2473,3 +2473,43 @@ test("code windows and accepted submissions are audited without plaintext codes 
     await db.course.delete({ where: { id: c.id } });
   }
 });
+
+test("workspace bundles the authenticated student's initial view without exposing code secrets", async () => {
+  const token = await login("learner@test.example");
+  const day = await request(app).post("/api/auth/workspace").send({ view: "student-day" }).set(auth(token));
+  assert.equal(day.status, 200);
+  assert.equal(day.body.user.id, studentId);
+  assert.equal(day.body.timeZone, "Africa/Kampala");
+  assert.ok(day.body.now && Array.isArray(day.body.day.classes));
+  assert.equal(JSON.stringify(day.body).includes('"checkinSecret"'), false);
+  assert.equal(JSON.stringify(day.body).includes('"passwordHash"'), false);
+  assert.match(day.headers['server-timing'], /workspace;dur=/);
+  assert.equal(day.headers['cache-control'], 'no-store');
+  const summary = await request(app).post("/api/auth/workspace").send({ view: "student-summary" }).set(auth(token));
+  assert.equal(summary.status, 200);
+  assert.ok(Array.isArray(summary.body.summary));
+});
+
+test("workspace validates view/identity and does not return student data to other roles", async () => {
+  assert.equal((await request(app).post('/api/auth/workspace')).status, 401);
+  const token = await login("teacher@test.example");
+  for (const body of [{ view: 'invalid' }, { view: 'profile', studentId }])
+    assert.equal((await request(app).post('/api/auth/workspace').send(body).set(auth(token))).status, 400);
+  const result = await request(app).post('/api/auth/workspace').send({ view: 'student-day' }).set(auth(token));
+  assert.equal(result.status, 200);
+  assert.equal(result.body.user.role, 'EXAMINER');
+  assert.equal(result.body.day, undefined);
+});
+
+test("workspace returns temporary-password restrictions and rejects a revoked account", async () => {
+  const sample = await db.user.findUniqueOrThrow({ where: { id: studentId } });
+  const email = `workspace-${randomUUID()}@test.example`;
+  const user = await db.user.create({ data: { name: 'Restricted workspace student', email, role: 'STUDENT', passwordHash: sample.passwordHash, mustChangePassword: true } });
+  const token = await login(email);
+  const result = await request(app).post('/api/auth/workspace').send({ view: 'student-day' }).set(auth(token));
+  assert.equal(result.status, 200);
+  assert.equal(result.body.user.mustChangePassword, true);
+  assert.equal(result.body.day, undefined);
+  await db.user.update({ where: { id: user.id }, data: { authVersion: { increment: 1 } } });
+  assert.equal((await request(app).post('/api/auth/workspace').set(auth(token))).status, 401);
+});

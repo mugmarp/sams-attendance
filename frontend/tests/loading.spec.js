@@ -57,26 +57,29 @@ for (const outcome of ["empty", "active", "failed"]) {
     await page.route("**/api/student/sessions/upcoming", (route) =>
       route.fulfill({ json: classes }),
     );
-    await page.route("**/api/student/day", async (route) => {
+    await page.route("**/api/auth/workspace", async (route) => {
+      const response = await route.fetch();
+      const workspace = await response.json();
       await dayPending;
       await route.fulfill(outcome === "failed" ? {
         status: 503,
         json: { error: { message: "Class data unavailable" } },
       } : {
-        json: {
+        json: { ...workspace, day: {
           profile: { name: "Loading test student", regNo: "2025/BSE/999/PS" },
           classes,
           weekly: { events: [] },
-        },
+        } },
       });
     });
+    if (outcome === "failed") await page.route("**/api/student/day", (route) => route.fulfill({ status: 503, json: { error: { message: "Class data unavailable" } } }));
     try {
-      const dayRequested = page.waitForRequest("**/api/student/day");
+      const dayRequested = page.waitForRequest("**/api/auth/workspace");
       await page.goto("/student/checkin");
       // A slow review panel must not prevent the primary request or loading UI.
       await dayRequested;
-      await expect(page.locator("#class-loading")).toBeVisible();
-      await expect(page.locator("#checkin-view")).toHaveAttribute("aria-busy", "true");
+      await expect(page.locator("#workspace-preview")).toBeVisible();
+      await expect(page.locator("[data-page-content]")).toBeHidden();
       await expect(page.locator("#checkin-form")).toBeHidden();
       await expect(page.getByRole("heading", { name: "No class in progress", exact: true })).toHaveCount(0);
       releaseDay();
@@ -120,14 +123,14 @@ test("account form waits for identity and workspace initialization", async ({
   await seedSession(page, request, "examiner@demo.sams.test");
   let release;
   const pending = new Promise((r) => (release = r));
-  await page.route("**/api/auth/me", async (route) => {
+  await page.route("**/api/auth/workspace", async (route) => {
     await pending;
     await route.continue();
   });
   await page.goto("/account");
-  await expect(page.locator("#page-loading")).toBeVisible();
+  await expect(page.locator("#workspace-preview")).toBeVisible();
   await expect(page.locator("#password-form")).toBeHidden();
-  await expect(page.locator("#site-header")).toBeHidden();
+  await expect(page.locator("#site-header")).toBeVisible();
   release();
   await expect(page.locator("#site-header")).toBeVisible();
   await expect(page.locator("#password-form")).toBeVisible();
@@ -140,7 +143,7 @@ test("wrong-role navigation never flashes registrar content before redirect", as
   await seedSession(page, request, "student@demo.sams.test");
   let release;
   const pending = new Promise((r) => (release = r));
-  await page.route("**/api/auth/me", async (route) => {
+  await page.route("**/api/auth/workspace", async (route) => {
     await pending;
     await route.continue();
   });
@@ -194,25 +197,22 @@ test("new loading markup remains usable with older cached login and workspace mo
   await expect(page.locator("#page-loading")).toBeHidden();
 });
 
-test("student navigation reveals its workspace before slow clock/setup and coalesces class refreshes", async ({ page, request }) => {
+test("student navigation shows the destination shell during verification and uses one startup response", async ({ page, request }) => {
   await seedSession(page, request, "student@demo.sams.test");
-  let releaseSetup, releaseDay, releaseClock;
-  const setupPending = new Promise((r) => (releaseSetup = r));
+  let releaseWorkspace, releaseDay;
+  const workspacePending = new Promise((r) => (releaseWorkspace = r));
   const dayPending = new Promise((r) => (releaseDay = r));
-  const clockPending = new Promise((r) => (releaseClock = r));
-  let days = 0, legacyReads = 0;
-  await page.route("**/api/health", async (route) => {
-    await clockPending;
-    await route.continue();
+  let days = 0, startup = 0, legacyReads = 0;
+  await page.route("**/api/auth/workspace", async (route) => {
+    startup++;
+    const response = await route.fetch();
+    const workspace = await response.json();
+    await workspacePending;
+    await route.fulfill({ json: { ...workspace, day: { profile: { name: "Navigation test student" }, classes: [], weekly: { events: [] } } } });
   });
-  await page.route("**/api/student/course-setup", async (route) => {
-    await setupPending;
-    await route.continue();
-  });
-  await page.route("**/api/student/sessions/upcoming", async (route) => {
-    legacyReads++;
-    await route.continue();
-  });
+  for (const path of ["auth/me", "student/course-setup", "student/sessions/upcoming"]) {
+    await page.route("**/api/" + path, async (route) => { legacyReads++; await route.continue(); });
+  }
   await page.route("**/api/student/day", async (route) => {
     days++;
     await dayPending;
@@ -221,22 +221,21 @@ test("student navigation reveals its workspace before slow clock/setup and coale
   try {
     await page.goto("/student/checkin");
     await expect(page.getByRole("link", { name: "My attendance", exact: true })).toBeVisible();
-    await expect(page.locator("#class-loading")).toBeVisible();
+    await expect(page.locator("#workspace-preview")).toBeVisible();
+    await expect(page.locator("[data-page-content]")).toBeHidden();
+    await expect.poll(() => startup).toBe(1);
     expect(days).toBe(0);
-    releaseSetup();
-    await expect.poll(() => days).toBe(1);
+    releaseWorkspace();
+    await expect(page.locator("#class-loading")).toBeHidden();
+    await expect(page.locator("#workspace-preview")).toHaveCount(0);
+    expect(days).toBe(0);
+    expect(legacyReads).toBe(0);
     await page.evaluate(() => { dispatchEvent(new Event("focus")); dispatchEvent(new Event("online")); });
-    // No second request may start while the first is still unresolved.
+    await expect.poll(() => days).toBe(1);
     await page.waitForTimeout(300);
     expect(days).toBe(1);
     releaseDay();
-    await expect(page.locator("#class-loading")).toBeHidden();
-    await page.waitForTimeout(300);
-    expect(days).toBe(1);
-    expect(legacyReads).toBe(0);
-  } finally {
-    releaseClock(); releaseSetup(); releaseDay();
-  }
+  } finally { releaseWorkspace(); releaseDay(); }
 });
 
 test("installed navigation uses a versioned shell without waiting for a stalled network", async () => {
@@ -254,11 +253,57 @@ test("installed navigation uses a versioned shell without waiting for a stalled 
   let response;
   handlers.fetch({ request: { method: "GET", mode: "navigate", url: "https://sams.test/student/checkin" }, respondWith: (value) => (response = value) });
   expect(await Promise.race([response, new Promise((resolve) => setTimeout(() => resolve("timeout"), 300))])).toBe(saved);
-  expect(cacheName).toBe("sams-workspace-v12");
+  expect(cacheName).toBe("sams-workspace-v13");
   expect(networkRequests).toBe(0);
   for (const path of ["/api/student/day", "/student/not-a-route"]) {
     let intercepted = false;
     handlers.fetch({ request: { method: "GET", mode: "navigate", url: "https://sams.test" + path }, respondWith: () => (intercepted = true) });
     expect(intercepted).toBe(false);
   }
+});
+
+for (const outcome of ["revoked", "changed-role"]) {
+  test(`pending navigation keeps protected content hidden when identity is ${outcome}`, async ({ page, request }) => {
+    await seedSession(page, request, "student@demo.sams.test");
+    if (outcome === "changed-role") await page.addInitScript(() => {
+      const user = JSON.parse(localStorage.getItem("user"));
+      user.role = "ADMIN";
+      localStorage.setItem("user", JSON.stringify(user));
+    });
+    let release;
+    const pending = new Promise((resolve) => (release = resolve));
+    await page.route("**/api/auth/workspace", async (route) => {
+      await pending;
+      if (outcome === "revoked") await route.fulfill({ status: 401, json: { error: { message: "This sign-in has ended" } } });
+      else await route.continue();
+    });
+    try {
+      await page.goto(outcome === "changed-role" ? "/admin/accounts" : "/account");
+      await expect(page.locator("#workspace-preview")).toBeVisible();
+      await expect(page.locator("[data-page-content]")).toBeHidden();
+      release();
+      if (outcome === "revoked") {
+        await expect(page).toHaveURL(/\/login$/);
+        await expect(page.locator("#login-form")).toBeVisible();
+      } else {
+        await expect(page).toHaveURL(/\/student\/checkin$/);
+        await expect(page.locator("#checkin-view")).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Account management", exact: true })).toHaveCount(0);
+      }
+    } finally { release(); }
+  });
+}
+
+test("student module tolerates a cached common module without the optional bootstrap export", async ({ page, request }) => {
+  await seedSession(page, request, "student@demo.sams.test");
+  const { readFileSync } = await import("node:fs");
+  const common = readFileSync(new URL("../public/js/common.js", import.meta.url), "utf8")
+    .replace("export let workspaceData =", "let workspaceData =");
+  let dayReads = 0;
+  await page.route("**/js/common.js", (route) => route.fulfill({ contentType: "application/javascript", body: common }));
+  await page.route("**/api/student/day", async (route) => { dayReads++; await route.continue(); });
+  await page.goto("/student/checkin");
+  await expect(page.locator("#workspace-preview")).toHaveCount(0);
+  await expect(page.locator("[data-page-content]")).toBeVisible();
+  await expect.poll(() => dayReads).toBe(1);
 });

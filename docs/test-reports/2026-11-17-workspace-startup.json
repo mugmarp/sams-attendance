@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-17",
+  "backend": {
+    "tests": 68,
+    "failures": 0
+  },
+  "browser": {
+    "tests": 47,
+    "failures": 0
+  },
+  "postman": {
+    "requests": 139,
+    "assertions": 367,
+    "failures": 0
+  },
+  "environment": "isolated PostgreSQL; synthetic records; desktop Chromium",
+  "syntax": "backend and frontend passed",
+  "live": "activation pending; no hosted attendance submitted",
+  "limitations": [
+    "No physical phone or institutional capacity measurement",
+    "Fresh data remains subject to connection latency",
+    "Intermediate failed runs retained privately; see linked narrative"
+  ]
+}

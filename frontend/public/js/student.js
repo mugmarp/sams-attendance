@@ -1,3 +1,4 @@
+import * as workspaceState from "./common.js";
 import { dayModel, eventProgress } from "./day-model.js";
 import {
   $,
@@ -10,7 +11,7 @@ import {
   currentDate,
   day,
 } from "./common.js";
-import { studentData, attempts, queue, remove, sync } from "./offline.js";
+import { studentData, saveSnapshot, attempts, queue, remove, sync } from "./offline.js";
 import {
   operations,
   enqueueOperation,
@@ -22,6 +23,7 @@ let dayData = null,
   candidateKey = "";
 let classes = [],
   reviewAttempt = null;
+let initialDay = workspaceState.workspaceData?.day, initialSummary = workspaceState.workspaceData?.summary;
 const summaryView = location.pathname.endsWith("/summary");
 function eventCard(event, title) {
   if (!event)
@@ -113,7 +115,12 @@ function loadClasses() {
 async function readClasses() {
   try {
     await coursesReady;
-    const context = await studentData(user.id, "/student/day");
+    const context = initialDay ? { data: initialDay, cached: false }
+      : await studentData(user.id, "/student/day");
+    if (initialDay) {
+      initialDay = null;
+      await saveSnapshot(user.id, "/student/day", context.data).catch(() => {});
+    }
     classes = context.data.classes;
     dayData = context.data;
     dayCached = context.cached;
@@ -189,10 +196,12 @@ async function flush() {
 async function loadSummary() {
   try {
     await coursesReady;
-    const { data, cached } = await studentData(
-      user.id,
-      "/student/attendance/summary",
-    );
+    const { data, cached } = initialSummary ? { data: initialSummary, cached: false }
+      : await studentData(user.id, "/student/attendance/summary");
+    if (initialSummary) {
+      initialSummary = null;
+      await saveSnapshot(user.id, "/student/attendance/summary", data).catch(() => {});
+    }
     $("#summaries").innerHTML = data.length
       ? data
           .map(

@@ -3,7 +3,7 @@ import { cachedUser } from "./api.js";
 // This is a visual readiness gate; API authorization remains server-side.
 function revealReadyPage() {
   const content = document.querySelector("[data-page-content]");
-  if (!content) return;
+  if (!content || document.body.dataset.sessionState === "verifying") return;
   const header = document.querySelector("#site-header");
   const login = document.querySelector("#login-form");
   const ready = header
@@ -19,7 +19,7 @@ const observer = new MutationObserver(revealReadyPage);
 observer.observe(document.documentElement, {
   subtree: true,
   attributes: true,
-  attributeFilter: ["class", "hidden"],
+  attributeFilter: ["class", "hidden", "data-session-state"],
   childList: true,
 });
 addEventListener("load", revealReadyPage, { once: true });

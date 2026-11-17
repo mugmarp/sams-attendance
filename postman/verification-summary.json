@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-13",
-  "branch": "migration/javascript-assignment",
-  "requests": 135,
-  "assertions": 351,
+  "date": "2026-11-17",
+  "branch": "main",
+  "requests": 139,
+  "assertions": 367,
   "failures": 0,
   "database": "isolated PostgreSQL, synthetic records only",
-  "note": "Reverified after attendance workflow fixes; no live mutating collection run."
+  "note": "Reverified against isolated PostgreSQL after adding authenticated workspace bootstrap; no live mutating collection run."
 }

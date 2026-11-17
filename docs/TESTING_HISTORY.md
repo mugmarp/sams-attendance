@@ -1,5 +1,9 @@
 # SAMS testing history and API evidence
 
+## Workspace startup — 17 November 2026
+
+[Workspace navigation fix](WORKSPACE_NAVIGATION_FIX_2026-11-17.md) records the single-response startup, immediate destination shell, held-response authorization checks and live acceptance status. The API collection now includes four workspace cases; its isolated run completed 139 requests and 367 assertions without failures. Browser recovery checks allow the existing 30-second abandoned-tab synchronization lease to expire after a reload. This lease protects duplicate submissions and was not shortened for the performance change.
+
 ## Student class-loading correction — 13 November 2026
 
 [Check-in loading fix](CHECKIN_LOADING_FIX_2026-11-13.md) records the correction to the code form appearing before class state was known. Three new delayed-response tests cover empty, active and failed class loads while reviews remain pending. All seven focused loading tests and frontend syntax checks passed. Broader verification and live release evidence are recorded in the linked report; prior API totals are not a new API execution claim.

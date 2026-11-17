@@ -56,77 +56,7 @@ export function notice(text) {
     node.hidden = !text;
   }
 }
-export let coursesReady = Promise.resolve();
-export async function init(roles) {
-  let user = cachedUser();
-  if (!user) {
-    location.replace("/login");
-    return null;
-  }
-  const session = captureSession(user.id);
-  const checkIdentity = () => {
-    if (!sameSession(session)) location.replace("/login");
-  };
-  addEventListener("sams:session", checkIdentity);
-  try {
-    if (navigator.onLine) user = await api("/auth/me", { session });
-    updateUser(user, session);
-  } catch (error) {
-    if (!retryable(error)) {
-      clearSession(session);
-      location.replace("/login");
-      return null;
-    }
-  }
-  if (user.mustChangePassword && location.pathname !== "/account") {
-    location.replace("/account");
-    return null;
-  }
-  if (!roles.includes(user.role)) {
-    location.replace(home(user.role));
-    return null;
-  }
-  let clockFlight = null,
-    lastClockSync = -Infinity;
-  const refreshClock = () => {
-    if (clockFlight || performance.now() - lastClockSync < 15000)
-      return clockFlight;
-    const started = Date.now();
-    clockFlight = api("/health")
-      .then((health) => {
-        const timestamp = Date.parse(health.now);
-        if (Number.isFinite(timestamp)) {
-          serverOffset = timestamp - (started + Date.now()) / 2;
-          try { sessionStorage.setItem("sams.clock", JSON.stringify({ offset: serverOffset, savedAt: Date.now() })); } catch {}
-          dispatchEvent(new Event("sams:clock"));
-        }
-        lastClockSync = performance.now();
-      })
-      .catch(() => {})
-      .finally(() => {
-        clockFlight = null;
-      });
-    return clockFlight;
-  };
-  if (navigator.onLine) void refreshClock();
-  addEventListener("online", refreshClock);
-  addEventListener("focus", refreshClock);
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) refreshClock();
-  });
-  setInterval(() => {
-    if (!document.hidden) refreshClock();
-  }, 300000);
-  if (
-    user.role === "STUDENT" &&
-    location.pathname !== "/student/courses" &&
-    location.pathname !== "/account"
-  ) {
-    coursesReady = navigator.onLine
-      ? api("/student/course-setup", { method: "POST", body: {}, session })
-        .catch(() => { /* My courses presents reconciliation errors. */ })
-      : Promise.resolve();
-  }
+function renderWorkspace(user) {
   const links =
     user.role === "STUDENT"
       ? [
@@ -178,7 +108,7 @@ export async function init(roles) {
       : location.pathname.includes("/session/")
         ? "Class register"
         : links.find(([path]) => active(path))?.[1] || "Attendance";
-  const initials = user.name
+  const initials = String(user.name || "SAMS user")
     .split(/\s+/)
     .slice(0, 2)
     .map((name) => name[0])
@@ -186,6 +116,103 @@ export async function init(roles) {
   document.body.classList.add("workspace");
   $("#site-header").innerHTML =
     `<aside class="sidebar"><a class="brand" href="${home(user.role)}"><span class="brand-mark">S</span><span>SAMS<small>MUST attendance</small></span></a><p class="nav-caption">WORKSPACE</p><nav aria-label="Main navigation">${links.map(([path, label]) => `<a href="${path}" ${active(path) ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24" aria-hidden="true">${icons[path]}</svg>${label}</a>`).join("")}</nav><div class="sidebar-bottom"><div class="profile"><span class="avatar">${escape(initials)}</span><div><strong>${escape(user.name)}</strong><small>${user.role === "EXAMINER" ? "Lecturer" : user.role === "ADMIN" ? "Registrar" : "Student"}</small></div></div><button id="logout">Sign out</button></div></aside><div class="workspace-topbar"><span class="workspace-title">${escape(title)}</span><div class="workspace-date"><time id="current-date"></time><span>Africa/Kampala · EAT</span></div></div>`;
+  $("#site-header").hidden = false;
+  $("#current-date").textContent = time(currentDate());
+}
+export let workspaceData = {};
+export let coursesReady = Promise.resolve();
+export async function init(roles) {
+  let user = cachedUser();
+  if (!user) {
+    location.replace("/login");
+    return null;
+  }
+  const session = captureSession(user.id);
+  const checkIdentity = () => {
+    if (!sameSession(session)) location.replace("/login");
+  };
+  addEventListener("sams:session", checkIdentity);
+  const studentView = location.pathname === "/student/checkin" ? "student-day"
+    : location.pathname === "/student/summary" ? "student-summary"
+    : location.pathname === "/timetable" && user.role === "STUDENT" ? "student-workspace" : "profile";
+  const started = Date.now();
+  // Only a neutral shell is shown from cached identity. Page data/actions stay gated.
+  document.body.dataset.sessionState = "verifying";
+  if (roles.includes(user.role) && (!user.mustChangePassword || location.pathname === "/account")) {
+    renderWorkspace(user);
+    $("#logout").onclick = () => { clearSession(session); location.assign("/login"); };
+    const preview = document.createElement("main");
+    preview.id = "workspace-preview";
+    preview.className = "stack narrow";
+    preview.setAttribute("aria-busy", "true");
+    const heading = document.createElement("h1");
+    heading.textContent = $(".workspace-title").textContent;
+    const status = document.createElement("p");
+    status.setAttribute("role", "status");
+    status.textContent = studentView === "student-day" ? "Loading your classes…"
+      : studentView === "student-summary" ? "Loading your attendance…" : "Loading this page…";
+    preview.append(heading, status);
+    document.querySelector("[data-page-content]").before(preview);
+    $("#page-loading").hidden = true;
+  }
+  try {
+    workspaceData = navigator.onLine
+      ? await api("/auth/workspace", { method: "POST", body: { view: studentView }, session }) : { user };
+    user = workspaceData.user;
+    updateUser(user, session);
+    const now = Date.parse(workspaceData.now);
+    if (Number.isFinite(now)) {
+      serverOffset = now - (started + Date.now()) / 2;
+      try { sessionStorage.setItem("sams.clock", JSON.stringify({ offset: serverOffset, savedAt: Date.now() })); } catch {}
+    }
+  } catch (error) {
+    if (!retryable(error)) {
+      clearSession(session);
+      location.replace("/login");
+      return null;
+    }
+  }
+  if (user.mustChangePassword && location.pathname !== "/account") {
+    location.replace("/account");
+    return null;
+  }
+  if (!roles.includes(user.role)) {
+    location.replace(home(user.role));
+    return null;
+  }
+  let clockFlight = null,
+    lastClockSync = -Infinity;
+  const refreshClock = () => {
+    if (clockFlight || performance.now() - lastClockSync < 15000)
+      return clockFlight;
+    const started = Date.now();
+    clockFlight = api("/health")
+      .then((health) => {
+        const timestamp = Date.parse(health.now);
+        if (Number.isFinite(timestamp)) {
+          serverOffset = timestamp - (started + Date.now()) / 2;
+          try { sessionStorage.setItem("sams.clock", JSON.stringify({ offset: serverOffset, savedAt: Date.now() })); } catch {}
+          dispatchEvent(new Event("sams:clock"));
+        }
+        lastClockSync = performance.now();
+      })
+      .catch(() => {})
+      .finally(() => {
+        clockFlight = null;
+      });
+    return clockFlight;
+  };
+  // Initial time arrives in the same authenticated workspace response.
+  addEventListener("online", refreshClock);
+  addEventListener("focus", refreshClock);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshClock();
+  });
+  setInterval(() => {
+    if (!document.hidden) refreshClock();
+  }, 300000);
+  coursesReady = Promise.resolve();
+  renderWorkspace(user);
   const renderDate = () => {
     const date = currentDate();
     $("#current-date").dateTime = date.toISOString();
@@ -243,6 +270,8 @@ export async function init(roles) {
     });
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   }
+  document.body.dataset.sessionState = "ready";
+  document.querySelector("#workspace-preview")?.remove();
   const content = document.querySelector("[data-page-content]");
   if (content) content.hidden = false;
   const loading = document.querySelector("#page-loading");
